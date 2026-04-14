@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: kanflow-api
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false   # set manually in Render dashboard
+      - key: JWT_SECRET
+        sync: false   # set manually in Render dashboard
+      - key: FRONTEND_URL
+        sync: false   # set after Vercel deploy, e.g. https://kanflow.vercel.app

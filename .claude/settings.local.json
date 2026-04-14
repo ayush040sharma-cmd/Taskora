@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(psql --version)",
+      "Bash(brew services:*)",
+      "Bash(psql -U ayushsharma -c \"CREATE DATABASE kanban_db;\")",
+      "Bash(psql -U ayushsharma -d postgres -c \"CREATE DATABASE kanban_db;\")",
+      "Bash(psql -U ayushsharma -d kanban_db -f /Users/ayushsharma/Documents/Kanban_Project/backend/schema.sql)",
+      "Read(//tmp/**)",
+      "Bash(curl -s http://localhost:5000/health)",
+      "Bash(pkill -f \"node server.js\")",
+      "Bash(pkill -f \"nodemon\")",
+      "Read(//private/tmp/**)",
+      "Bash(curl -s http://localhost:3001/health)",
+      "Bash(vercel --version)",
+      "Bash(railway --version)",
+      "Bash(gh --version)",
+      "Bash(npm --version)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ]
+  }
+}

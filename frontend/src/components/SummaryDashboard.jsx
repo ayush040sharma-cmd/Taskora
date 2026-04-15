@@ -96,6 +96,49 @@ function timeAgo(ts) {
 
 const PRIORITY_COLORS = { high: "#ef4444", medium: "#f59e0b", low: "#10b981" };
 
+// ── Auto-Classification Config ────────────────────────────────────────────────
+// Add / edit type strings here — matching is case-insensitive.
+// Any type not found falls into "Other".
+const CATEGORY_MAP = {
+  "New Work":    ["feature", "story", "rfp", "enhancement", "epic", "new", "request"],
+  "Fixes":       ["bug", "incident", "hotfix", "defect", "fix", "patch"],
+  "Maintenance": ["chore", "tech debt", "upgrade", "refactor", "dependency", "normal", "maintenance", "update"],
+  "Knowledge":   ["documentation", "research", "spike", "test", "doc", "analysis"],
+  "Risk":        ["security", "compliance", "vulnerability", "audit", "risk"],
+};
+
+const CATEGORY_COLORS = {
+  "New Work":    "#6366f1",
+  "Fixes":       "#ef4444",
+  "Maintenance": "#f59e0b",
+  "Knowledge":   "#14b8a6",
+  "Risk":        "#f97316",
+  "Other":       "#94a3b8",
+};
+
+// Classify a raw type string → category name
+function classifyType(rawType = "") {
+  const t = rawType.toLowerCase().trim();
+  for (const [category, keywords] of Object.entries(CATEGORY_MAP)) {
+    if (keywords.some(k => t === k || t.includes(k))) return category;
+  }
+  return "Other";
+}
+
+// Aggregate type_breakdown rows into category counts
+function buildCategoryBreakdown(typeBreakdown) {
+  const counts = {};
+  typeBreakdown.forEach(({ type, count }) => {
+    const cat = classifyType(type);
+    counts[cat] = (counts[cat] || 0) + parseInt(count);
+  });
+  // Return in defined order, only non-zero + Other
+  const ordered = [...Object.keys(CATEGORY_MAP), "Other"];
+  return ordered
+    .filter(cat => counts[cat] > 0)
+    .map(cat => ({ category: cat, count: counts[cat] }));
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function SummaryDashboard({ workspaceId }) {
   const [data, setData]         = useState(null);
@@ -129,10 +172,7 @@ export default function SummaryDashboard({ workspaceId }) {
   const priorityMap = {};
   priority_breakdown.forEach(r => { priorityMap[r.priority] = parseInt(r.count); });
 
-  const TYPE_COLORS  = { normal: "#6366f1", upgrade: "#f59e0b", rfp: "#ef4444" };
-  const TYPE_LABELS  = { normal: "Normal", upgrade: "Upgrade", rfp: "RFP" };
-  const typeMap = {};
-  type_breakdown.forEach(r => { typeMap[r.type] = parseInt(r.count); });
+  const categoryBreakdown = buildCategoryBreakdown(type_breakdown);
 
   const statCards = [
     { label: "Completed this week", value: stats.completed_this_week, icon: "✅", color: "#10b981", bg: "#f0fdf4" },
@@ -214,20 +254,30 @@ export default function SummaryDashboard({ workspaceId }) {
           )}
         </div>
 
-        {/* ── Types of work ── */}
+        {/* ── Work classification ── */}
         <div className="sum-card">
           <div className="sum-card-title">Types of work</div>
-          <div className="sum-bars">
-            {["normal", "upgrade", "rfp"].map(t => (
-              <HorizBar
-                key={t}
-                label={TYPE_LABELS[t]}
-                count={typeMap[t] || 0}
-                total={totalTasks}
-                color={TYPE_COLORS[t]}
-              />
+          <div className="sum-classify-legend">
+            {Object.entries(CATEGORY_COLORS).filter(([c]) => c !== "Other").map(([cat, color]) => (
+              <span key={cat} className="sum-classify-pill" style={{ background: color + "18", color }}>
+                <span className="sum-classify-dot" style={{ background: color }} />{cat}
+              </span>
             ))}
-            {totalTasks === 0 && <div className="sum-empty-note">No tasks yet</div>}
+          </div>
+          <div className="sum-bars" style={{ marginTop: 14 }}>
+            {categoryBreakdown.length === 0 ? (
+              <div className="sum-empty-note">No tasks yet</div>
+            ) : (
+              categoryBreakdown.map(({ category, count }) => (
+                <HorizBar
+                  key={category}
+                  label={category}
+                  count={count}
+                  total={totalTasks}
+                  color={CATEGORY_COLORS[category] || CATEGORY_COLORS["Other"]}
+                />
+              ))
+            )}
           </div>
         </div>
 

@@ -1974,6 +1974,28 @@ input, textarea, select { font-family: inherit; outline: none; }
 }
 .sum-activity-time { font-size: 11px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
 
+.sum-classify-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.sum-classify-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 99px;
+}
+.sum-classify-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
 .sum-wl-sub { font-size: 13px; color: var(--text-secondary); margin: -10px 0 18px; }
 .sum-wl-table { display: flex; flex-direction: column; gap: 0; }
 .sum-wl-header {

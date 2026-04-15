@@ -1974,8 +1974,85 @@ input, textarea, select { font-family: inherit; outline: none; }
 }
 .sum-activity-time { font-size: 11px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
 
+.sum-wl-card { margin-top: 16px; }
+.sum-wl-sub { font-size: 13px; color: var(--text-secondary); margin: -10px 0 18px; }
+.sum-wl-table { display: flex; flex-direction: column; gap: 0; }
+.sum-wl-header {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 16px;
+  padding: 0 0 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+.sum-wl-row {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 16px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.sum-wl-row:last-child { border-bottom: none; }
+.sum-wl-assignee { display: flex; align-items: center; gap: 10px; }
+.sum-wl-avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.sum-wl-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.sum-wl-task-count { font-size: 11px; color: var(--text-muted); }
+.sum-wl-bar-wrap { display: flex; align-items: center; gap: 10px; }
+.sum-wl-bar-track {
+  flex: 1;
+  height: 22px;
+  background: var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.sum-wl-bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.4s ease;
+  position: absolute;
+  left: 0; top: 0;
+}
+.sum-wl-bar-label {
+  position: relative;
+  z-index: 1;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  padding-left: 10px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+.sum-wl-status {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 99px;
+  flex-shrink: 0;
+  text-transform: capitalize;
+}
+.sum-wl-status--available  { background: var(--low-bg);    color: var(--low); }
+.sum-wl-status--moderate   { background: var(--medium-bg); color: var(--medium); }
+.sum-wl-status--overloaded { background: var(--high-bg);   color: var(--high); }
+
 @media (max-width: 900px) {
   .sum-stat-row { grid-template-columns: 1fr 1fr; }
   .sum-grid { grid-template-columns: 1fr; }
   .sum-card--wide { grid-column: span 1; }
+  .sum-wl-header, .sum-wl-row { grid-template-columns: 160px 1fr; }
 }

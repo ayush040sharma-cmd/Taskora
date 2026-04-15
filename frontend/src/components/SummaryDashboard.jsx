@@ -98,14 +98,18 @@ const PRIORITY_COLORS = { high: "#ef4444", medium: "#f59e0b", low: "#10b981" };
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function SummaryDashboard({ workspaceId }) {
-  const [data, setData]     = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData]         = useState(null);
+  const [workload, setWorkload] = useState([]);
+  const [loading, setLoading]   = useState(true);
 
   useEffect(() => {
     if (!workspaceId) { setLoading(false); return; }
     setLoading(true);
-    api.get(`/workspaces/${workspaceId}/summary`)
-      .then(r => setData(r.data))
+    Promise.all([
+      api.get(`/workspaces/${workspaceId}/summary`),
+      api.get(`/workload?workspace_id=${workspaceId}`),
+    ])
+      .then(([sumRes, wlRes]) => { setData(sumRes.data); setWorkload(wlRes.data || []); })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [workspaceId]);
@@ -226,6 +230,46 @@ export default function SummaryDashboard({ workspaceId }) {
             {totalTasks === 0 && <div className="sum-empty-note">No tasks yet</div>}
           </div>
         </div>
+      </div>
+
+      {/* ── Team Workload ── */}
+      <div className="sum-card sum-wl-card">
+        <div className="sum-card-title">Team workload</div>
+        <p className="sum-wl-sub">Monitor the capacity of your team</p>
+
+        {workload.length === 0 ? (
+          <div className="sum-empty-note">No assigned tasks yet — assign tasks to team members to see workload.</div>
+        ) : (
+          <div className="sum-wl-table">
+            <div className="sum-wl-header">
+              <span>Assignee</span>
+              <span>Work distribution</span>
+            </div>
+            {workload.map(member => {
+              const pct     = Math.min(100, Math.round(member.load_percent || 0));
+              const color   = pct >= 90 ? "#ef4444" : pct >= 70 ? "#f59e0b" : "#10b981";
+              const initials = member.name?.slice(0, 2).toUpperCase() || "??";
+              return (
+                <div key={member.user_id} className="sum-wl-row">
+                  <div className="sum-wl-assignee">
+                    <div className="sum-wl-avatar" style={{ background: color }}>{initials}</div>
+                    <div>
+                      <div className="sum-wl-name">{member.name}</div>
+                      <div className="sum-wl-task-count">{member.task_count} task{member.task_count !== 1 ? "s" : ""}</div>
+                    </div>
+                  </div>
+                  <div className="sum-wl-bar-wrap">
+                    <div className="sum-wl-bar-track">
+                      <div className="sum-wl-bar-fill" style={{ width: `${pct}%`, background: color }} />
+                      <span className="sum-wl-bar-label">{pct}%</span>
+                    </div>
+                    <span className={`sum-wl-status sum-wl-status--${member.status}`}>{member.status}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

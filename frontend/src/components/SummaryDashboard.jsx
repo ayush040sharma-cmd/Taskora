@@ -1,0 +1,232 @@
+import { useState, useEffect } from "react";
+import api from "../api/api";
+
+// ── Donut Chart (pure SVG) ────────────────────────────────────────────────────
+function DonutChart({ data, total }) {
+  const SIZE = 160;
+  const R = 56;
+  const C = 2 * Math.PI * R;
+  const cx = SIZE / 2;
+  const cy = SIZE / 2;
+
+  const COLORS = { todo: "#94a3b8", inprogress: "#6366f1", done: "#10b981" };
+  const LABELS = { todo: "To Do", inprogress: "In Progress", done: "Done" };
+
+  let offset = 0;
+  const slices = data.map(({ status, count }) => {
+    const pct   = total ? count / total : 0;
+    const dash  = pct * C;
+    const gap   = C - dash;
+    const slice = { status, count, pct, dash, gap, offset };
+    offset += dash;
+    return slice;
+  });
+
+  if (total === 0) {
+    return (
+      <div className="sum-donut-empty">
+        <svg width={SIZE} height={SIZE}>
+          <circle cx={cx} cy={cy} r={R} fill="none" stroke="#e2e8f0" strokeWidth={18} />
+        </svg>
+        <p>No tasks yet</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="sum-donut-wrap">
+      <svg width={SIZE} height={SIZE}>
+        {slices.map(s => (
+          <circle
+            key={s.status}
+            cx={cx} cy={cy} r={R}
+            fill="none"
+            stroke={COLORS[s.status] || "#cbd5e1"}
+            strokeWidth={18}
+            strokeDasharray={`${s.dash} ${s.gap}`}
+            strokeDashoffset={-s.offset + C / 4}
+            strokeLinecap="butt"
+            style={{ transition: "stroke-dasharray 0.4s ease" }}
+          />
+        ))}
+        <text x={cx} y={cy - 8} textAnchor="middle" fontSize="22" fontWeight="800" fill="#0f172a">{total}</text>
+        <text x={cx} y={cy + 12} textAnchor="middle" fontSize="11" fill="#64748b">Total tasks</text>
+      </svg>
+      <div className="sum-donut-legend">
+        {slices.map(s => (
+          <div key={s.status} className="sum-legend-item">
+            <div className="sum-legend-dot" style={{ background: COLORS[s.status] }} />
+            <span className="sum-legend-label">{LABELS[s.status] || s.status}</span>
+            <span className="sum-legend-count">{s.count}</span>
+            <span className="sum-legend-pct">{Math.round(s.pct * 100)}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Priority / Type Bar ───────────────────────────────────────────────────────
+function HorizBar({ label, count, total, color }) {
+  const pct = total ? Math.round((count / total) * 100) : 0;
+  return (
+    <div className="sum-hbar-row">
+      <div className="sum-hbar-label">{label}</div>
+      <div className="sum-hbar-track">
+        <div className="sum-hbar-fill" style={{ width: `${pct}%`, background: color }} />
+      </div>
+      <div className="sum-hbar-meta">
+        <span className="sum-hbar-count">{count}</span>
+        <span className="sum-hbar-pct">{pct}%</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Activity Feed ─────────────────────────────────────────────────────────────
+function timeAgo(ts) {
+  const diff = Date.now() - new Date(ts).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1)  return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+const PRIORITY_COLORS = { high: "#ef4444", medium: "#f59e0b", low: "#10b981" };
+
+// ── Main Component ────────────────────────────────────────────────────────────
+export default function SummaryDashboard({ workspaceId }) {
+  const [data, setData]     = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!workspaceId) { setLoading(false); return; }
+    setLoading(true);
+    api.get(`/workspaces/${workspaceId}/summary`)
+      .then(r => setData(r.data))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [workspaceId]);
+
+  if (loading) return <div className="wl-loading">Loading summary…</div>;
+  if (!data)   return <div className="wl-empty">Select a workspace to see the summary.</div>;
+
+  const { stats, status_breakdown, priority_breakdown, type_breakdown, recent_activity } = data;
+
+  // normalise status rows into a fixed ordered array
+  const statusMap = { todo: 0, inprogress: 0, done: 0 };
+  status_breakdown.forEach(r => { statusMap[r.status] = parseInt(r.count); });
+  const statusRows = Object.entries(statusMap).map(([status, count]) => ({ status, count }));
+  const totalTasks = parseInt(stats.total_tasks);
+
+  const PRIORITY_ORDER = ["high", "medium", "low"];
+  const priorityMap = {};
+  priority_breakdown.forEach(r => { priorityMap[r.priority] = parseInt(r.count); });
+
+  const TYPE_COLORS  = { normal: "#6366f1", upgrade: "#f59e0b", rfp: "#ef4444" };
+  const TYPE_LABELS  = { normal: "Normal", upgrade: "Upgrade", rfp: "RFP" };
+  const typeMap = {};
+  type_breakdown.forEach(r => { typeMap[r.type] = parseInt(r.count); });
+
+  const statCards = [
+    { label: "Completed this week", value: stats.completed_this_week, icon: "✅", color: "#10b981", bg: "#f0fdf4" },
+    { label: "Created this week",   value: stats.created_this_week,   icon: "➕", color: "#6366f1", bg: "#f5f3ff" },
+    { label: "Due in next 7 days",  value: stats.due_soon,            icon: "⏰", color: "#f59e0b", bg: "#fffbeb" },
+    { label: "Active tasks",        value: stats.active_tasks,        icon: "🔄", color: "#3b82f6", bg: "#eff6ff" },
+  ];
+
+  return (
+    <div className="sum-root">
+      {/* ── Stat cards ── */}
+      <div className="sum-stat-row">
+        {statCards.map(c => (
+          <div key={c.label} className="sum-stat-card" style={{ borderTop: `3px solid ${c.color}` }}>
+            <div className="sum-stat-icon" style={{ background: c.bg }}>{c.icon}</div>
+            <div className="sum-stat-body">
+              <div className="sum-stat-value" style={{ color: c.color }}>{c.value}</div>
+              <div className="sum-stat-label">{c.label}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="sum-grid">
+        {/* ── Status donut ── */}
+        <div className="sum-card">
+          <div className="sum-card-title">Status overview</div>
+          <DonutChart data={statusRows} total={totalTasks} />
+        </div>
+
+        {/* ── Priority breakdown ── */}
+        <div className="sum-card">
+          <div className="sum-card-title">Priority breakdown</div>
+          <div className="sum-bars">
+            {PRIORITY_ORDER.map(p => (
+              <HorizBar
+                key={p}
+                label={p.charAt(0).toUpperCase() + p.slice(1)}
+                count={priorityMap[p] || 0}
+                total={totalTasks}
+                color={PRIORITY_COLORS[p]}
+              />
+            ))}
+            {totalTasks === 0 && <div className="sum-empty-note">No tasks yet</div>}
+          </div>
+        </div>
+
+        {/* ── Recent activity ── */}
+        <div className="sum-card sum-card--wide">
+          <div className="sum-card-title">Recent activity</div>
+          {recent_activity.length === 0 ? (
+            <div className="sum-empty-note">No activity yet — create some tasks!</div>
+          ) : (
+            <div className="sum-activity-list">
+              {recent_activity.map((a, i) => (
+                <div key={i} className="sum-activity-row">
+                  <div
+                    className="sum-activity-dot"
+                    style={{ background: a.event === "completed" ? "#10b981" : "#6366f1" }}
+                  />
+                  <div className="sum-activity-body">
+                    <span className="sum-activity-action">
+                      {a.event === "completed" ? "Completed" : "Created"}
+                    </span>{" "}
+                    <span className="sum-activity-title">"{a.title}"</span>
+                    {a.priority && (
+                      <span
+                        className="sum-activity-badge"
+                        style={{ background: PRIORITY_COLORS[a.priority] + "22", color: PRIORITY_COLORS[a.priority] }}
+                      >
+                        {a.priority}
+                      </span>
+                    )}
+                  </div>
+                  <div className="sum-activity-time">{timeAgo(a.event_time)}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── Types of work ── */}
+        <div className="sum-card">
+          <div className="sum-card-title">Types of work</div>
+          <div className="sum-bars">
+            {["normal", "upgrade", "rfp"].map(t => (
+              <HorizBar
+                key={t}
+                label={TYPE_LABELS[t]}
+                count={typeMap[t] || 0}
+                total={totalTasks}
+                color={TYPE_COLORS[t]}
+              />
+            ))}
+            {totalTasks === 0 && <div className="sum-empty-note">No tasks yet</div>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

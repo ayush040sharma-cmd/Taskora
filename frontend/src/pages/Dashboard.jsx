@@ -7,6 +7,7 @@ import CreateTaskModal from "../components/CreateTaskModal";
 import WorkspaceModal from "../components/WorkspaceModal";
 import WorkloadDashboard from "../components/WorkloadDashboard";
 import CalendarView from "../components/CalendarView";
+import SummaryDashboard from "../components/SummaryDashboard";
 import SprintView from "../components/SprintView";
 import SprintModal from "../components/SprintModal";
 import api from "../api/api";
@@ -29,7 +30,7 @@ export default function Dashboard() {
   const [sprints, setSprints]                 = useState([]);
   const [activeSprint, setActiveSprint]       = useState(null);
   const [loading, setLoading]                 = useState(true);
-  const [view, setView]                       = useState("board"); // board | workload | calendar | sprints
+  const [view, setView]                       = useState("board"); // summary | board | workload | calendar | sprints
 
   const [showCreateTask, setShowCreateTask]       = useState(false);
   const [createTaskStatus, setCreateTaskStatus]   = useState("todo");
@@ -196,6 +197,7 @@ export default function Dashboard() {
         {/* View tabs */}
         <div className="view-tabs">
           {[
+            { id: "summary",  label: "📊 Summary" },
             { id: "board",    label: "📋 Board" },
             { id: "workload", label: "👥 Workload" },
             { id: "calendar", label: "📅 Calendar" },
@@ -212,6 +214,19 @@ export default function Dashboard() {
         </div>
 
         <div className="board-content">
+          {/* ── Summary view ── */}
+          {view === "summary" && (
+            <>
+              <div className="board-header">
+                <div className="board-title-area">
+                  <h1>Summary</h1>
+                  <p>Overview of {currentWorkspace?.name || "your workspace"}</p>
+                </div>
+              </div>
+              <SummaryDashboard workspaceId={currentWorkspace?.id} />
+            </>
+          )}
+
           {/* ── Board view ── */}
           {view === "board" && (
             <>

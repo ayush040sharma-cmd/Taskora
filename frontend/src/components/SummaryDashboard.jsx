@@ -230,10 +230,9 @@ export default function SummaryDashboard({ workspaceId }) {
             {totalTasks === 0 && <div className="sum-empty-note">No tasks yet</div>}
           </div>
         </div>
-      </div>
 
-      {/* ── Team Workload ── */}
-      <div className="sum-card sum-wl-card">
+        {/* ── Team Workload ── */}
+        <div className="sum-card">
         <div className="sum-card-title">Team workload</div>
         <p className="sum-wl-sub">Monitor the capacity of your team</p>
 
@@ -270,6 +269,7 @@ export default function SummaryDashboard({ workspaceId }) {
             })}
           </div>
         )}
+        </div>
       </div>
     </div>
   );

@@ -828,7 +828,7 @@ input, textarea, select { font-family: inherit; outline: none; }
 /* ─── Board Content ─── */
 .board-content {
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   padding: 20px 24px;
@@ -1974,7 +1974,6 @@ input, textarea, select { font-family: inherit; outline: none; }
 }
 .sum-activity-time { font-size: 11px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
 
-.sum-wl-card { margin-top: 16px; }
 .sum-wl-sub { font-size: 13px; color: var(--text-secondary); margin: -10px 0 18px; }
 .sum-wl-table { display: flex; flex-direction: column; gap: 0; }
 .sum-wl-header {

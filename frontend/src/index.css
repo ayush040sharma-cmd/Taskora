@@ -808,11 +808,14 @@ input, textarea, select { font-family: inherit; outline: none; }
 .btn-create:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,82,204,0.3); }
 .btn-create:active { transform: translateY(0); }
 
+.navbar-profile { position: relative; }
+
 .navbar-avatar {
   width: 32px;
   height: 32px;
   border-radius: 50%;
   background: var(--primary);
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -824,6 +827,80 @@ input, textarea, select { font-family: inherit; outline: none; }
   transition: box-shadow 0.2s;
 }
 .navbar-avatar:hover { box-shadow: 0 0 0 3px rgba(0,82,204,0.25); }
+
+/* ─── Profile Dropdown ─── */
+.profile-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 240px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 500;
+  overflow: hidden;
+  animation: slideIn 0.15s ease;
+}
+.profile-dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+}
+.profile-dropdown-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.profile-dropdown-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.profile-dropdown-email {
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.profile-dropdown-divider {
+  height: 1px;
+  background: var(--border);
+}
+.profile-dropdown-menu {
+  padding: 6px 0;
+}
+.profile-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+.profile-menu-item:hover { background: var(--main-bg); }
+.profile-menu-item--danger { color: #ef4444; }
+.profile-menu-item--danger:hover { background: #fef2f2; }
 
 /* ─── Board Content ─── */
 .board-content {

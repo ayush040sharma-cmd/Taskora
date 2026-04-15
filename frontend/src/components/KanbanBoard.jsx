@@ -13,7 +13,7 @@ const IconPlus = () => (
   </svg>
 );
 
-export default function KanbanBoard({ columns, onDragEnd, onAddTask, onDeleteTask }) {
+export default function KanbanBoard({ columns, onDragEnd, onAddTask, onDeleteTask, onUpdateTask }) {
   return (
     <DragDropContext onDragEnd={onDragEnd}>
       <div className="kanban-board">
@@ -53,6 +53,7 @@ export default function KanbanBoard({ columns, onDragEnd, onAddTask, onDeleteTas
                           task={task}
                           index={index}
                           onDelete={onDeleteTask}
+                          onUpdate={onUpdateTask}
                         />
                       ))}
                       {provided.placeholder}

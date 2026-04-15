@@ -17,7 +17,7 @@ export default function Navbar({ workspaceName, onCreateTask, user }) {
   return (
     <header className="navbar">
       <div className="navbar-breadcrumb">
-        <span>Projects</span>
+        <span>Taskora</span>
         <span>/</span>
         <span className="navbar-breadcrumb-current">{workspaceName || "Select a workspace"}</span>
       </div>

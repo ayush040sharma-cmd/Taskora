@@ -2656,3 +2656,20 @@ input, textarea, select { font-family: inherit; outline: none; }
   .mgr-team-grid { grid-template-columns: 1fr; }
   .sim-modal { width: calc(100vw - 16px); }
 }
+
+/* ── Task type selector grid (8 types) ─────────────────────── */
+.task-type-selector--grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.task-type-selector--grid .task-type-btn {
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 10px 10px 8px;
+  gap: 2px;
+}
+.task-type-icon { font-size: 16px; margin-bottom: 2px; }
+@media (max-width: 520px) {
+  .task-type-selector--grid { grid-template-columns: repeat(2, 1fr); }
+}

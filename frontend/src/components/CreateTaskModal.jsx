@@ -7,13 +7,22 @@ const IconX = () => (
   </svg>
 );
 
-const TYPE_CAP = { normal: "10–20%", upgrade: "30–40%", rfp: "50–70%" };
+const TYPE_META = {
+  task:         { label: "Task",         desc: "General work item",      icon: "📋" },
+  bug:          { label: "Bug",          desc: "Something is broken",    icon: "🐛" },
+  story:        { label: "Story",        desc: "User-facing feature",    icon: "📖" },
+  rfp:          { label: "RFP",          desc: "Request for proposal",   icon: "📑" },
+  proposal:     { label: "Proposal",     desc: "Sales proposal (2-3d)",  icon: "📝" },
+  presentation: { label: "Presentation", desc: "Deck / demo (1-2d)",     icon: "🎤" },
+  upgrade:      { label: "Upgrade",      desc: "Version upgrade (1wk)",  icon: "⬆️" },
+  poc:          { label: "POC",          desc: "Proof of concept (1-2m)",icon: "🔬" },
+};
 
 export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "todo", sprints = [] }) {
   const [form, setForm] = useState({
     title: "", description: "", status: defaultStatus,
     priority: "medium", due_date: "", start_date: "",
-    type: "normal", estimated_days: 3, progress: 0,
+    type: "task", estimated_days: 3, progress: 0,
     assigned_user_id: "", sprint_id: "",
   });
   const [loading, setLoading] = useState(false);
@@ -100,14 +109,17 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
             {/* Task Type */}
             <div className="modal-form-group">
               <label className="modal-label">Task Type</label>
-              <div className="task-type-selector">
-                {["normal","upgrade","rfp"].map(t => (
-                  <button key={t} type="button"
-                    className={`task-type-btn task-type--${t} ${form.type === t ? "active" : ""}`}
+              <div className="task-type-selector task-type-selector--grid">
+                {Object.entries(TYPE_META).map(([t, meta]) => (
+                  <button
+                    key={t}
+                    type="button"
+                    className={`task-type-btn ${form.type === t ? "active" : ""}`}
                     onClick={() => set("type", t)}
                   >
-                    <strong>{t === "rfp" ? "RFP" : t === "upgrade" ? "Upgrade" : "Normal"}</strong>
-                    <span>{TYPE_CAP[t]} capacity</span>
+                    <span className="task-type-icon">{meta.icon}</span>
+                    <strong>{meta.label}</strong>
+                    <span>{meta.desc}</span>
                   </button>
                 ))}
               </div>

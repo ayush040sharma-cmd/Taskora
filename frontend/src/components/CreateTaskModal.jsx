@@ -8,14 +8,14 @@ const IconX = () => (
 );
 
 const TYPE_META = {
-  task:         { label: "Task",         desc: "General work item",      icon: "📋" },
-  bug:          { label: "Bug",          desc: "Something is broken",    icon: "🐛" },
-  story:        { label: "Story",        desc: "User-facing feature",    icon: "📖" },
-  rfp:          { label: "RFP",          desc: "Request for proposal",   icon: "📑" },
-  proposal:     { label: "Proposal",     desc: "Sales proposal (2-3d)",  icon: "📝" },
-  presentation: { label: "Presentation", desc: "Deck / demo (1-2d)",     icon: "🎤" },
-  upgrade:      { label: "Upgrade",      desc: "Version upgrade (1wk)",  icon: "⬆️" },
-  poc:          { label: "POC",          desc: "Proof of concept (1-2m)",icon: "🔬" },
+  task:         { label: "Task",         desc: "General work item",   icon: "📋", days: 1,  range: "~1 day"    },
+  bug:          { label: "Bug",          desc: "Something is broken", icon: "🐛", days: 1,  range: "~1 day"    },
+  story:        { label: "Story",        desc: "User-facing feature", icon: "📖", days: 3,  range: "~3 days"   },
+  rfp:          { label: "RFP",          desc: "Request for proposal",icon: "📑", days: 15, range: "2–3 weeks" },
+  proposal:     { label: "Proposal",     desc: "Sales proposal",      icon: "📝", days: 2,  range: "2–3 days"  },
+  presentation: { label: "Presentation", desc: "Deck / demo",         icon: "🎤", days: 1,  range: "1–2 days"  },
+  upgrade:      { label: "Upgrade",      desc: "Version upgrade",     icon: "⬆️", days: 5,  range: "~1 week"   },
+  poc:          { label: "POC",          desc: "Proof of concept",    icon: "🔬", days: 30, range: "1–2 months"},
 };
 
 export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "todo", sprints = [] }) {
@@ -25,13 +25,44 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
     type: "task", estimated_days: 3, progress: 0,
     assigned_user_id: "", sprint_id: "",
   });
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState("");
-  const [users, setUsers]     = useState([]);
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState("");
+  const [users, setUsers]         = useState([]);
   const [userSearch, setUserSearch] = useState("");
   const [workloadWarn, setWorkloadWarn] = useState("");
+  const [daysAutoFilled, setDaysAutoFilled] = useState(false);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  // Auto-fill estimated_days + compute due_date when type changes
+  const selectType = (t) => {
+    const meta = TYPE_META[t];
+    const days = meta?.days ?? 1;
+    setForm(f => {
+      const newForm = { ...f, type: t, estimated_days: days };
+      // If start_date is set, auto-compute due_date
+      if (f.start_date) {
+        const due = new Date(f.start_date);
+        due.setDate(due.getDate() + days);
+        newForm.due_date = due.toISOString().split("T")[0];
+      }
+      return newForm;
+    });
+    setDaysAutoFilled(true);
+  };
+
+  // Recompute due_date when start_date changes (if estimated_days set)
+  const handleStartDate = (val) => {
+    setForm(f => {
+      const newForm = { ...f, start_date: val };
+      if (val && f.estimated_days) {
+        const due = new Date(val);
+        due.setDate(due.getDate() + Number(f.estimated_days));
+        newForm.due_date = due.toISOString().split("T")[0];
+      }
+      return newForm;
+    });
+  };
 
   // Search users for assignment
   useEffect(() => {
@@ -115,11 +146,12 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
                     key={t}
                     type="button"
                     className={`task-type-btn ${form.type === t ? "active" : ""}`}
-                    onClick={() => set("type", t)}
+                    onClick={() => selectType(t)}
                   >
                     <span className="task-type-icon">{meta.icon}</span>
                     <strong>{meta.label}</strong>
                     <span>{meta.desc}</span>
+                    <span className="task-type-range">{meta.range}</span>
                   </button>
                 ))}
               </div>
@@ -151,7 +183,7 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
               <div className="modal-form-group">
                 <label className="modal-label">Start Date</label>
                 <input type="date" className="modal-input" value={form.start_date}
-                  onChange={e => set("start_date", e.target.value)} />
+                  onChange={e => handleStartDate(e.target.value)} />
               </div>
               {/* Due date */}
               <div className="modal-form-group">
@@ -164,9 +196,27 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
             <div className="modal-row">
               {/* Estimated days */}
               <div className="modal-form-group">
-                <label className="modal-label">Estimated Days</label>
-                <input type="number" className="modal-input" min="1" max="90"
-                  value={form.estimated_days} onChange={e => set("estimated_days", e.target.value)} />
+                <label className="modal-label">
+                  Estimated Duration
+                  {daysAutoFilled && (
+                    <span className="task-autofill-badge">
+                      ✦ auto-filled · {TYPE_META[form.type]?.range}
+                    </span>
+                  )}
+                </label>
+                <div className="task-duration-wrap">
+                  <input
+                    type="number"
+                    className="modal-input task-duration-input"
+                    min="1" max="180"
+                    value={form.estimated_days}
+                    onChange={e => {
+                      set("estimated_days", e.target.value);
+                      setDaysAutoFilled(false);
+                    }}
+                  />
+                  <span className="task-duration-unit">days</span>
+                </div>
               </div>
               {/* Progress */}
               <div className="modal-form-group">

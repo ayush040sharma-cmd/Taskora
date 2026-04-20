@@ -2673,3 +2673,43 @@ input, textarea, select { font-family: inherit; outline: none; }
 @media (max-width: 520px) {
   .task-type-selector--grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ── Task type card range label ─────────────────────────────── */
+.task-type-range {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 1px;
+  font-weight: 500;
+}
+.task-type-btn.active .task-type-range {
+  color: rgba(99,102,241,0.7);
+}
+
+/* ── Auto-fill badge on label ───────────────────────────────── */
+.task-autofill-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #6366f1;
+  background: #ede9fe;
+  padding: 2px 7px;
+  border-radius: 99px;
+  letter-spacing: 0.01em;
+}
+
+/* ── Duration input row ─────────────────────────────────────── */
+.task-duration-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.task-duration-input {
+  max-width: 100px;
+}
+.task-duration-unit {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+}

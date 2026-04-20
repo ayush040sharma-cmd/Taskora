@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import ProfileModal from "./ProfileModal";
+import AccountSettingsModal from "./AccountSettingsModal";
+import NotificationBell from "./NotificationBell";
 
 const IconSearch = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -38,6 +41,8 @@ export default function Navbar({ workspaceName, onCreateTask, user }) {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const ref = useRef(null);
 
   const getInitials = (name = "") =>
@@ -56,6 +61,7 @@ export default function Navbar({ workspaceName, onCreateTask, user }) {
   };
 
   return (
+    <>
     <header className="navbar">
       <div className="navbar-breadcrumb">
         <span>Taskora</span>
@@ -73,6 +79,7 @@ export default function Navbar({ workspaceName, onCreateTask, user }) {
           <IconPlus />
           Create
         </button>
+        <NotificationBell />
 
         {/* Avatar + dropdown */}
         <div className="navbar-profile" ref={ref}>
@@ -95,11 +102,11 @@ export default function Navbar({ workspaceName, onCreateTask, user }) {
 
               {/* Menu items */}
               <div className="profile-dropdown-menu">
-                <button className="profile-menu-item" onClick={() => setOpen(false)}>
+                <button className="profile-menu-item" onClick={() => { setOpen(false); setShowProfile(true); }}>
                   <IconUser />
                   <span>Profile</span>
                 </button>
-                <button className="profile-menu-item" onClick={() => setOpen(false)}>
+                <button className="profile-menu-item" onClick={() => { setOpen(false); setShowSettings(true); }}>
                   <IconSettings />
                   <span>Account settings</span>
                 </button>
@@ -118,5 +125,9 @@ export default function Navbar({ workspaceName, onCreateTask, user }) {
         </div>
       </div>
     </header>
+
+    {showProfile  && <ProfileModal        onClose={() => setShowProfile(false)} />}
+    {showSettings && <AccountSettingsModal onClose={() => setShowSettings(false)} />}
+  </>
   );
 }

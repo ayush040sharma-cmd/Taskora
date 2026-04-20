@@ -77,6 +77,41 @@ router.post("/login", async (req, res) => {
   }
 });
 
+// PUT /api/auth/profile  — update name
+router.put("/profile", auth, async (req, res) => {
+  const { name } = req.body;
+  if (!name?.trim()) return res.status(400).json({ message: "Name is required" });
+  try {
+    const result = await pool.query(
+      "UPDATE users SET name = $1 WHERE id = $2 RETURNING id, name, email",
+      [name.trim(), req.user.id]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// PUT /api/auth/password  — change password
+router.put("/password", auth, async (req, res) => {
+  const { current_password, new_password } = req.body;
+  if (!current_password || !new_password)
+    return res.status(400).json({ message: "Both current and new password are required" });
+  if (new_password.length < 6)
+    return res.status(400).json({ message: "New password must be at least 6 characters" });
+  try {
+    const result = await pool.query("SELECT password_hash FROM users WHERE id = $1", [req.user.id]);
+    const isMatch = await bcrypt.compare(current_password, result.rows[0].password_hash);
+    if (!isMatch) return res.status(401).json({ message: "Current password is incorrect" });
+
+    const hash = await bcrypt.hash(new_password, 10);
+    await pool.query("UPDATE users SET password_hash = $1 WHERE id = $2", [hash, req.user.id]);
+    res.json({ message: "Password updated successfully" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // GET /api/auth/me
 router.get("/me", auth, async (req, res) => {
   try {

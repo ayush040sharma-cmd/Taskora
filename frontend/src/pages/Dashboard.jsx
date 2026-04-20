@@ -10,6 +10,8 @@ import CalendarView from "../components/CalendarView";
 import SummaryDashboard from "../components/SummaryDashboard";
 import SprintView from "../components/SprintView";
 import SprintModal from "../components/SprintModal";
+import ManagerDashboard from "../components/ManagerDashboard";
+import CapacityPanel from "../components/CapacityPanel";
 import api from "../api/api";
 
 const EMPTY_COLS = { todo: [], inprogress: [], done: [] };
@@ -30,7 +32,7 @@ export default function Dashboard() {
   const [sprints, setSprints]                 = useState([]);
   const [activeSprint, setActiveSprint]       = useState(null);
   const [loading, setLoading]                 = useState(true);
-  const [view, setView]                       = useState("board"); // summary | board | workload | calendar | sprints
+  const [view, setView]                       = useState("board"); // summary | board | workload | calendar | sprints | manager | capacity
 
   const [showCreateTask, setShowCreateTask]       = useState(false);
   const [createTaskStatus, setCreateTaskStatus]   = useState("todo");
@@ -202,6 +204,8 @@ export default function Dashboard() {
             { id: "workload", label: "👥 Workload" },
             { id: "calendar", label: "📅 Calendar" },
             { id: "sprints",  label: "🏃 Sprints" },
+            { id: "manager",  label: "🏢 Manager" },
+            { id: "capacity", label: "⚡ Capacity" },
           ].map(v => (
             <button
               key={v.id}
@@ -287,6 +291,32 @@ export default function Dashboard() {
                 <button className="btn-secondary" onClick={() => openCreateTask("todo")}>+ Add task</button>
               </div>
               <CalendarView tasks={allTasks} onTaskClick={t => console.log("task", t)} />
+            </>
+          )}
+
+          {/* ── Manager Dashboard ── */}
+          {view === "manager" && (
+            <>
+              <div className="board-header">
+                <div className="board-title-area">
+                  <h1>Manager Dashboard</h1>
+                  <p>Team workload, predictions, approvals & audit log</p>
+                </div>
+              </div>
+              <ManagerDashboard workspaceId={currentWorkspace?.id} />
+            </>
+          )}
+
+          {/* ── Capacity Settings ── */}
+          {view === "capacity" && (
+            <>
+              <div className="board-header">
+                <div className="board-title-area">
+                  <h1>My Capacity</h1>
+                  <p>Configure your daily hours, travel mode, and leave</p>
+                </div>
+              </div>
+              <CapacityPanel />
             </>
           )}
 

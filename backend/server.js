@@ -24,11 +24,16 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use("/api/auth",      require("./routes/auth"));
-app.use("/api/workspaces",require("./routes/workspaces"));
-app.use("/api/tasks",     require("./routes/tasks"));
-app.use("/api/sprints",   require("./routes/sprints"));
-app.use("/api/workload",  require("./routes/workload"));
+app.use("/api/auth",          require("./routes/auth"));
+app.use("/api/workspaces",    require("./routes/workspaces"));
+app.use("/api/tasks",         require("./routes/tasks"));
+app.use("/api/sprints",       require("./routes/sprints"));
+app.use("/api/workload",      require("./routes/workload"));
+app.use("/api/capacity",      require("./routes/capacity"));
+app.use("/api/approvals",     require("./routes/approvals"));
+app.use("/api/notifications", require("./routes/notifications"));
+app.use("/api/simulate",      require("./routes/simulate"));
+app.use("/api/audit",         require("./routes/audit"));
 
 app.get("/health", (req, res) => res.json({ status: "ok", timestamp: new Date().toISOString() }));
 

@@ -583,15 +583,6 @@ export default function Dashboard() {
             </>
           )}
 
-          {/* ── Members ── */}
-          {view === "members" && (
-            <>
-              <div className="board-header">
-                <div className="board-title-area"><h1>Members</h1><p>Manage who has access to {currentWorkspace?.name || "this workspace"}</p></div>
-              </div>
-              <MembersPanel workspaceId={currentWorkspace?.id} />
-            </>
-          )}
 
           {/* ── Integrations ── */}
           {view === "integrations" && (
@@ -633,15 +624,6 @@ export default function Dashboard() {
             </>
           )}
 
-          {/* ── Analytics ── */}
-          {view === "analytics" && (
-            <>
-              <div className="board-header">
-                <div className="board-title-area"><h1>Analytics</h1><p>Velocity, throughput, completion trends, and team insights</p></div>
-              </div>
-              <AnalyticsDashboard workspaceId={currentWorkspace?.id} />
-            </>
-          )}
 
           {/* ── Simulation ── */}
           {view === "simulation" && (

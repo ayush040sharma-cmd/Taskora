@@ -7,6 +7,8 @@ import { useState, useEffect, useCallback } from "react";
 import api from "../api/api";
 import { useAuth } from "../context/AuthContext";
 import WorkloadDashboard from "./WorkloadDashboard";
+import MembersPanel from "./MembersPanel";
+import AnalyticsDashboard from "./AnalyticsDashboard";
 
 const STATUS_COLOR = {
   available:  "#10b981",
@@ -341,9 +343,11 @@ export default function ManagerDashboard({ workspaceId }) {
     ? Math.round(team.filter(m => !m.on_leave).reduce((s, m) => s + (m.load_percent || 0), 0) / Math.max(1, team.filter(m => !m.on_leave).length))
     : 0;
 
-  const TABS = ["workload", "team", "predictions", "approvals", "audit"];
+  const TABS = ["workload", "analytics", "members", "team", "predictions", "approvals", "audit"];
   const TAB_LABELS = {
     workload:    "👥 Workload",
+    analytics:   "📈 Analytics",
+    members:     "👤 Members",
     team:        "⚙️ Capacity",
     predictions: "🤖 AI Predictions",
     approvals:   "✅ Approvals",
@@ -385,6 +389,16 @@ export default function ManagerDashboard({ workspaceId }) {
       {/* Workload */}
       {activeTab === "workload" && (
         <WorkloadDashboard workspaceId={workspaceId} />
+      )}
+
+      {/* Analytics */}
+      {activeTab === "analytics" && (
+        <AnalyticsDashboard workspaceId={workspaceId} />
+      )}
+
+      {/* Members */}
+      {activeTab === "members" && (
+        <MembersPanel workspaceId={workspaceId} />
       )}
 
       {/* Capacity / member cards */}

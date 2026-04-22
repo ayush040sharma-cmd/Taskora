@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: taskora-api
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: DATABASE_URL
+        fromDatabase:
+          name: taskora-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        sync: false   # set to your Vercel URL after deploy
+
+databases:
+  - name: taskora-db
+    plan: free
+    databaseName: taskora
+    user: taskora_user

@@ -1,22 +1,36 @@
+import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
-const NAV_VIEWS = [
-  { id: "summary",   icon: "📊", label: "Summary" },
-  { id: "board",     icon: "📋", label: "Board" },
-  { id: "workload",  icon: "👥", label: "Workload" },
-  { id: "calendar",  icon: "📅", label: "Calendar" },
-  { id: "sprints",   icon: "🏃", label: "Sprints" },
-  { id: "manager",   icon: "🏢", label: "Manager" },
-  { id: "capacity",  icon: "⚡", label: "Capacity" },
+// Primary views — always visible
+const PRIMARY_VIEWS = [
+  { id: "board",    icon: "📋", label: "Board" },
+  { id: "summary",  icon: "📊", label: "Summary" },
+  { id: "workload", icon: "👥", label: "Team" },
+  { id: "calendar", icon: "📅", label: "Calendar" },
+  { id: "sprints",  icon: "🏃", label: "Sprints" },
+];
+
+// Secondary views — shown when "More" is expanded
+const MORE_VIEWS = [
+  { id: "manager",       icon: "🏢", label: "Manager" },
+  { id: "capacity",      icon: "⚡", label: "Capacity" },
+  { id: "members",       icon: "👤", label: "Members" },
+  { id: "analytics",     icon: "📈", label: "Analytics" },
+  { id: "gantt",         icon: "🗓", label: "Gantt" },
+  { id: "ai-risk",       icon: "🔥", label: "AI Risk" },
+  { id: "integrations",  icon: "🔗", label: "Integrations" },
+  { id: "graph",         icon: "🕸",  label: "Deps" },
+  { id: "collaboration", icon: "🤝", label: "Collab" },
+  { id: "simulation",    icon: "🔬", label: "Simulate" },
 ];
 
 function getInitials(name = "") {
-  return name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
+  return name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2) || "?";
 }
 
 function WorkspaceAvatar({ name, size = 28 }) {
-  const colors = ["#6366f1","#8b5cf6","#06b6d4","#10b981","#f59e0b","#ef4444"];
+  const colors = ["#6366f1", "#8b5cf6", "#06b6d4", "#10b981", "#f59e0b", "#ef4444"];
   const idx = name ? name.charCodeAt(0) % colors.length : 0;
   return (
     <div style={{
@@ -36,9 +50,14 @@ export default function Sidebar({
   onNewWorkspace,
   activeView,
   onViewChange,
+  onOpenPalette,
 }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [showMore, setShowMore] = useState(false);
+
+  // If active view is a "more" view, auto-expand
+  const activeIsMore = MORE_VIEWS.some(v => v.id === activeView);
 
   return (
     <aside className="sidebar">
@@ -55,13 +74,45 @@ export default function Sidebar({
         <span className="sidebar-ai-badge">AI</span>
       </div>
 
-      {/* Views nav */}
+      {/* ⌘K launcher */}
+      <button className="sidebar-cmd-btn" onClick={onOpenPalette} title="Command palette (⌘K)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <span>Search or jump to…</span>
+        <kbd>⌘K</kbd>
+      </button>
+
+      {/* Primary views */}
       <div className="sidebar-section-label">VIEWS</div>
       <nav className="sidebar-nav">
-        {NAV_VIEWS.map(v => (
+        {PRIMARY_VIEWS.map(v => (
           <button
             key={v.id}
             className={`sidebar-nav-item ${activeView === v.id ? "active" : ""}`}
+            onClick={() => onViewChange?.(v.id)}
+          >
+            <span className="sidebar-nav-icon">{v.icon}</span>
+            <span>{v.label}</span>
+          </button>
+        ))}
+
+        {/* More toggle */}
+        <button
+          className={`sidebar-nav-item sidebar-more-btn ${activeIsMore ? "active" : ""}`}
+          onClick={() => setShowMore(v => !v)}
+        >
+          <span className="sidebar-nav-icon">
+            {showMore || activeIsMore ? "▾" : "▸"}
+          </span>
+          <span>More</span>
+        </button>
+
+        {/* More views expanded */}
+        {(showMore || activeIsMore) && MORE_VIEWS.map(v => (
+          <button
+            key={v.id}
+            className={`sidebar-nav-item sidebar-nav-item--sub ${activeView === v.id ? "active" : ""}`}
             onClick={() => onViewChange?.(v.id)}
           >
             <span className="sidebar-nav-icon">{v.icon}</span>

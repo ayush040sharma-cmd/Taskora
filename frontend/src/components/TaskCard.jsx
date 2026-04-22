@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Draggable } from "@hello-pangea/dnd";
 import ProgressBar from "./ProgressBar";
 import api from "../api/api";
@@ -8,6 +8,8 @@ const IconCal    = () => <svg width="11" height="11" viewBox="0 0 24 24" fill="n
 const IconMsg    = () => <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>;
 const IconLink   = () => <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>;
 const IconBrain  = () => <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-5 0V7a2.5 2.5 0 0 1 2.5-2.5Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5"/><path d="M20 7a2 2 0 0 0-2-2h-2"/><path d="M4 7a2 2 0 0 1 2-2h2"/><path d="M20 14a2 2 0 0 1-2 2h-2"/><path d="M4 14a2 2 0 0 0 2 2h2"/></svg>;
+const IconClock  = () => <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
+const IconStuck  = () => <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>;
 
 const TYPE_META = {
   task:         { label: "Task",         icon: "📋" },
@@ -45,7 +47,24 @@ function isOverdue(d) {
   return new Date(d) < new Date(new Date().toDateString());
 }
 
-// Workload status badge for assignee
+function isDueSoon(d) {
+  if (!d) return false;
+  const due  = new Date(d);
+  const now  = new Date();
+  const diff = (due - now) / (1000 * 60 * 60); // hours
+  return diff >= 0 && diff <= 48;
+}
+
+// Task stuck in "inprogress" for 5+ days without update
+function isStuck(task) {
+  if (task.status !== "inprogress") return false;
+  const ref = task.updated_at || task.created_at;
+  if (!ref) return false;
+  const days = (Date.now() - new Date(ref)) / (1000 * 60 * 60 * 24);
+  return days >= 5;
+}
+
+// Workload status badge
 function WorkloadBadge({ task }) {
   if (!task.assigned_user_id) return null;
   if (task.assignee_on_leave)   return <span className="wl-badge wl-badge--leave" title="On leave">🏖 Leave</span>;
@@ -86,9 +105,7 @@ function InsightPanel({ task }) {
         </div>
       )}
       {task.ai_suggestion && (
-        <div className="task-insight-suggestion">
-          💡 {task.ai_suggestion}
-        </div>
+        <div className="task-insight-suggestion">💡 {task.ai_suggestion}</div>
       )}
       {task.ai_fallback && (
         <div className="task-insight-fallback">Rule-based analysis</div>
@@ -98,15 +115,39 @@ function InsightPanel({ task }) {
 }
 
 export default function TaskCard({ task, index, onDelete, onUpdate, onOpenDetail }) {
-  const [progress, setProgress] = useState(task.progress || 0);
-  const [editing, setEditing]   = useState(false);
-  const [tempPct, setTempPct]   = useState(task.progress || 0);
-  const [hovered, setHovered]   = useState(false);
+  const [progress, setProgress]     = useState(task.progress || 0);
+  const [editingPct, setEditingPct] = useState(false);
+  const [tempPct, setTempPct]       = useState(task.progress || 0);
+  const [hovered, setHovered]       = useState(false);
+
+  // Inline title editing
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft]     = useState(task.title);
+  const titleInputRef = useRef(null);
+
+  useEffect(() => {
+    if (editingTitle) {
+      titleInputRef.current?.focus();
+      titleInputRef.current?.select();
+    }
+  }, [editingTitle]);
+
+  const saveTitle = async () => {
+    const trimmed = titleDraft.trim();
+    setEditingTitle(false);
+    if (!trimmed || trimmed === task.title) { setTitleDraft(task.title); return; }
+    try {
+      const res = await api.put(`/tasks/${task.id}`, { title: trimmed });
+      onUpdate && onUpdate(res.data);
+    } catch {
+      setTitleDraft(task.title);
+    }
+  };
 
   const saveProgress = async (val) => {
     const pct = Math.max(0, Math.min(100, Number(val)));
     setProgress(pct);
-    setEditing(false);
+    setEditingPct(false);
     try {
       const res = await api.put(`/tasks/${task.id}`, { progress: pct });
       onUpdate && onUpdate(res.data);
@@ -117,6 +158,12 @@ export default function TaskCard({ task, index, onDelete, onUpdate, onOpenDetail
   const riskLevel = getRiskLevel(task.risk_score);
   const riskMeta  = riskLevel ? RISK_LEVELS[riskLevel] : null;
   const isBlocked = (task.blocking_dep_count || 0) > 0;
+  const stuck     = isStuck(task);
+  const overdue   = isOverdue(task.due_date);
+  const dueSoon   = !overdue && isDueSoon(task.due_date);
+
+  // Card state classes
+  const stateClass = overdue ? "task-card--overdue" : stuck ? "task-card--stuck" : "";
 
   return (
     <Draggable draggableId={String(task.id)} index={index}>
@@ -125,11 +172,23 @@ export default function TaskCard({ task, index, onDelete, onUpdate, onOpenDetail
           ref={provided.innerRef}
           {...provided.draggableProps}
           {...provided.dragHandleProps}
-          className={`task-card ${snapshot.isDragging ? "dragging" : ""} ${isBlocked ? "task-card--blocked" : ""}`}
+          className={`task-card ${snapshot.isDragging ? "dragging" : ""} ${isBlocked ? "task-card--blocked" : ""} ${stateClass}`}
           style={provided.draggableProps.style}
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
         >
+          {/* Status strip — overdue / stuck */}
+          {overdue && (
+            <div className="task-status-strip task-status-strip--overdue">
+              <IconCal /> Overdue
+            </div>
+          )}
+          {!overdue && stuck && (
+            <div className="task-status-strip task-status-strip--stuck">
+              <IconStuck /> Stuck 5+ days
+            </div>
+          )}
+
           {/* Blocked indicator strip */}
           {isBlocked && (
             <div className="task-blocked-bar" title={`Blocked by ${task.blocking_dep_count} unresolved dependenc${task.blocking_dep_count === 1 ? "y" : "ies"}`}>
@@ -140,14 +199,34 @@ export default function TaskCard({ task, index, onDelete, onUpdate, onOpenDetail
 
           {/* Title row */}
           <div className="task-card-top">
-            <div
-              className="task-card-title"
-              onClick={e => { e.stopPropagation(); onOpenDetail && onOpenDetail(task); }}
-              style={{ cursor: "pointer" }}
-              title="Open task details"
-            >
-              {task.title}
-            </div>
+            {editingTitle ? (
+              <input
+                ref={titleInputRef}
+                className="task-title-input"
+                value={titleDraft}
+                onChange={e => setTitleDraft(e.target.value)}
+                onBlur={saveTitle}
+                onKeyDown={e => {
+                  if (e.key === "Enter") { e.preventDefault(); saveTitle(); }
+                  if (e.key === "Escape") { setEditingTitle(false); setTitleDraft(task.title); }
+                }}
+                onClick={e => e.stopPropagation()}
+                onMouseDown={e => e.stopPropagation()}
+              />
+            ) : (
+              <div
+                className="task-card-title"
+                onClick={e => { e.stopPropagation(); onOpenDetail && onOpenDetail(task); }}
+                onDoubleClick={e => {
+                  e.stopPropagation();
+                  setTitleDraft(task.title);
+                  setEditingTitle(true);
+                }}
+                title="Click to open · Double-click to rename"
+              >
+                {task.title}
+              </div>
+            )}
             <button
               className="task-card-delete"
               onClick={e => { e.stopPropagation(); onDelete(task.id); }}
@@ -157,7 +236,7 @@ export default function TaskCard({ task, index, onDelete, onUpdate, onOpenDetail
             </button>
           </div>
 
-          {/* Type + Priority + Risk badge */}
+          {/* Type + Priority + Risk badge + Due date */}
           <div className="task-card-meta">
             {task.type && (
               <span className={`wl-type-badge wl-type--${task.type}`}>
@@ -178,8 +257,11 @@ export default function TaskCard({ task, index, onDelete, onUpdate, onOpenDetail
               </span>
             )}
             {task.due_date && (
-              <span className={`task-due-date ${isOverdue(task.due_date) ? "overdue" : ""}`}>
-                <IconCal />
+              <span
+                className={`task-due-date ${overdue ? "overdue" : ""} ${dueSoon ? "due-soon" : ""}`}
+                title={overdue ? "Overdue!" : dueSoon ? "Due within 48 hours" : ""}
+              >
+                {dueSoon ? <IconClock /> : <IconCal />}
                 {formatDate(task.due_date)}
               </span>
             )}
@@ -189,9 +271,9 @@ export default function TaskCard({ task, index, onDelete, onUpdate, onOpenDetail
           <WorkloadBadge task={task} />
 
           {/* Progress bar */}
-          <div className="task-card-progress" onClick={e => { e.stopPropagation(); setEditing(true); setTempPct(progress); }}>
+          <div className="task-card-progress" onClick={e => { e.stopPropagation(); setEditingPct(true); setTempPct(progress); }}>
             <ProgressBar progress={progress} height={5} showLabel={false} />
-            {editing ? (
+            {editingPct ? (
               <div className="task-progress-edit" onClick={e => e.stopPropagation()}>
                 <input
                   type="range" min="0" max="100" step="5"
@@ -202,7 +284,7 @@ export default function TaskCard({ task, index, onDelete, onUpdate, onOpenDetail
                 />
                 <span className="task-progress-pct">{tempPct}%</span>
                 <button className="task-progress-save" onClick={() => saveProgress(tempPct)}>✓</button>
-                <button className="task-progress-cancel" onClick={() => setEditing(false)}>✕</button>
+                <button className="task-progress-cancel" onClick={() => setEditingPct(false)}>✕</button>
               </div>
             ) : (
               <span className="task-progress-pct-label">{progress}%</span>
@@ -235,7 +317,7 @@ export default function TaskCard({ task, index, onDelete, onUpdate, onOpenDetail
           </div>
 
           {/* AI hover insight panel */}
-          {hovered && !snapshot.isDragging && <InsightPanel task={task} />}
+          {hovered && !snapshot.isDragging && !editingTitle && <InsightPanel task={task} />}
         </div>
       )}
     </Draggable>

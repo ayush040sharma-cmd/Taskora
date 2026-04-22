@@ -17,11 +17,14 @@ const authLimiter = rateLimit({
 
 // POST /api/auth/register
 router.post("/register", authLimiter, async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, role } = req.body;
 
   if (!name || !email || !password) {
     return res.status(400).json({ message: "Name, email, and password are required" });
   }
+
+  // Only allow safe role values; default to manager for solo/business/manager users
+  const safeRole = ["manager", "member"].includes(role) ? role : "manager";
 
   try {
     const existing = await pool.query("SELECT id FROM users WHERE email = $1", [email]);
@@ -33,8 +36,8 @@ router.post("/register", authLimiter, async (req, res) => {
     const password_hash = await bcrypt.hash(password, salt);
 
     const userResult = await pool.query(
-      "INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, 'manager') RETURNING id, name, email, role",
-      [name, email, password_hash]
+      "INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role",
+      [name, email, password_hash, safeRole]
     );
     const user = userResult.rows[0];
 

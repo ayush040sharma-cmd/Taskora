@@ -84,16 +84,17 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
     return () => clearTimeout(t);
   }, [userSearch]);
 
-  const selectUser = async (user) => {
+  const selectUser = (user) => {
     set("assigned_user_id", user.id);
     setUserSearch(user.name);
     setUsers([]);
-    // Check their workload
-    try {
-      const res = await api.get(`/workload/users?q=${encodeURIComponent(user.email)}`);
-      // rough check — just warn if many tasks
+    if (user.on_leave) {
+      setWorkloadWarn("⚠️ This person is currently on leave — they cannot take new tasks.");
+    } else if (user.travel_mode) {
+      setWorkloadWarn("✈️ This person is travelling and has reduced capacity.");
+    } else {
       setWorkloadWarn("");
-    } catch {}
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -129,7 +130,6 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
         <form onSubmit={handleSubmit}>
           <div className="modal-body" style={{ maxHeight: "70vh", overflowY: "auto" }}>
             {error && <div className="auth-error-banner" style={{ marginBottom: 14 }}>{error}</div>}
-            {workloadWarn && <div className="wl-warning" style={{ marginBottom: 14 }}>{workloadWarn}</div>}
 
             {/* Title */}
             <div className="modal-form-group">
@@ -243,15 +243,22 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
               {users.length > 0 && (
                 <div className="user-dropdown">
                   {users.map(u => (
-                    <div key={u.id} className="user-dropdown-item" onClick={() => selectUser(u)}>
+                    <div key={u.id} className={`user-dropdown-item ${u.on_leave ? "user-dropdown-item--leave" : ""}`} onClick={() => selectUser(u)}>
                       <div className="user-dropdown-avatar">{u.name.slice(0,2).toUpperCase()}</div>
-                      <div>
-                        <div className="user-dropdown-name">{u.name}</div>
+                      <div style={{ flex: 1 }}>
+                        <div className="user-dropdown-name">
+                          {u.name}
+                          {u.on_leave && <span className="user-status-chip user-status-chip--leave">🌴 On Leave</span>}
+                          {!u.on_leave && u.travel_mode && <span className="user-status-chip user-status-chip--travel">✈️ Travelling</span>}
+                        </div>
                         <div className="user-dropdown-email">{u.email}</div>
                       </div>
                     </div>
                   ))}
                 </div>
+              )}
+              {workloadWarn && (
+                <div className="user-workload-warn">{workloadWarn}</div>
               )}
             </div>
 

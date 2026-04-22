@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import ProfileModal from "./ProfileModal";
 import AccountSettingsModal from "./AccountSettingsModal";
 import NotificationBell from "./NotificationBell";
+import api from "../api/api";
 
 const IconSearch = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -43,7 +44,17 @@ export default function Navbar({ workspaceName, onCreateTask, user }) {
   const [open, setOpen] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [myStatus, setMyStatus] = useState(null); // null | "on_leave" | "travel"
   const ref = useRef(null);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    api.get("/capacity/me").then(res => {
+      if (res.data.on_leave) setMyStatus("on_leave");
+      else if (res.data.travel_mode) setMyStatus("travel");
+      else setMyStatus(null);
+    }).catch(() => {});
+  }, [user?.id]);
 
   const getInitials = (name = "") =>
     name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
@@ -81,9 +92,25 @@ export default function Navbar({ workspaceName, onCreateTask, user }) {
         </button>
         <NotificationBell />
 
+        {/* Status pill — shown when on leave or travelling */}
+        {myStatus === "on_leave" && (
+          <div className="navbar-status-pill navbar-status-pill--leave" title="You are marked as on leave">
+            🌴 On Leave
+          </div>
+        )}
+        {myStatus === "travel" && (
+          <div className="navbar-status-pill navbar-status-pill--travel" title="You are in travel mode (reduced capacity)">
+            ✈️ Travelling
+          </div>
+        )}
+
         {/* Avatar + dropdown */}
         <div className="navbar-profile" ref={ref}>
-          <button className="navbar-avatar" onClick={() => setOpen(v => !v)} title={user?.name}>
+          <button
+            className={`navbar-avatar ${myStatus === "on_leave" ? "navbar-avatar--leave" : myStatus === "travel" ? "navbar-avatar--travel" : ""}`}
+            onClick={() => setOpen(v => !v)}
+            title={user?.name}
+          >
             {getInitials(user?.name)}
           </button>
 
@@ -91,10 +118,18 @@ export default function Navbar({ workspaceName, onCreateTask, user }) {
             <div className="profile-dropdown">
               {/* Header */}
               <div className="profile-dropdown-header">
-                <div className="profile-dropdown-avatar">{getInitials(user?.name)}</div>
+                <div className={`profile-dropdown-avatar ${myStatus === "on_leave" ? "avatar--leave" : myStatus === "travel" ? "avatar--travel" : ""}`}>
+                  {getInitials(user?.name)}
+                </div>
                 <div className="profile-dropdown-info">
                   <div className="profile-dropdown-name">{user?.name}</div>
                   <div className="profile-dropdown-email">{user?.email}</div>
+                  {myStatus === "on_leave" && (
+                    <div className="profile-status-badge profile-status-badge--leave">🌴 On Leave</div>
+                  )}
+                  {myStatus === "travel" && (
+                    <div className="profile-status-badge profile-status-badge--travel">✈️ Travelling</div>
+                  )}
                 </div>
               </div>
 

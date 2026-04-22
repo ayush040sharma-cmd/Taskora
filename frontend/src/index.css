@@ -5378,4 +5378,54 @@ input, textarea, select { font-family: inherit; outline: none; }
   background: #e2e8f0; border: none; cursor: pointer; padding: 0; transition: background 0.15s;
 }
 .help-guide-dot.active { background: #6366f1; }
+
+/* ── Leave / Travel status — Navbar pill ─────────────────────────────────── */
+.navbar-status-pill {
+  display: flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 20px;
+  font-size: 12px; font-weight: 600; white-space: nowrap;
+  animation: status-pulse 2.5s ease-in-out infinite;
+}
+.navbar-status-pill--leave  { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+.navbar-status-pill--travel { background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; } 50% { opacity: 0.7; }
+}
+
+/* Avatar ring when on leave / travelling */
+.navbar-avatar--leave  { outline: 2px solid #22c55e; outline-offset: 2px; }
+.navbar-avatar--travel { outline: 2px solid #38bdf8; outline-offset: 2px; }
+
+/* Profile dropdown status badge */
+.profile-status-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-top: 4px; padding: 2px 8px; border-radius: 12px;
+  font-size: 11px; font-weight: 600;
+}
+.profile-status-badge--leave  { background: #dcfce7; color: #15803d; }
+.profile-status-badge--travel { background: #e0f2fe; color: #0369a1; }
+
+/* Profile dropdown avatar ring */
+.avatar--leave  { outline: 2px solid #22c55e; outline-offset: 2px; }
+.avatar--travel { outline: 2px solid #38bdf8; outline-offset: 2px; }
+
+/* ── Assignee dropdown — leave / travel chips ────────────────────────────── */
+.user-status-chip {
+  display: inline-flex; align-items: center;
+  margin-left: 6px; padding: 1px 7px; border-radius: 10px;
+  font-size: 10px; font-weight: 600; vertical-align: middle;
+}
+.user-status-chip--leave  { background: #dcfce7; color: #15803d; }
+.user-status-chip--travel { background: #e0f2fe; color: #0369a1; }
+
+/* Dim on-leave items in dropdown */
+.user-dropdown-item--leave { opacity: 0.75; }
+.user-dropdown-item--leave:hover { opacity: 1; }
+
+/* Warning box below the assignee field */
+.user-workload-warn {
+  margin-top: 6px; padding: 8px 12px;
+  border-radius: 8px; font-size: 12px; font-weight: 500;
+  background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa;
+}
 .help-guide-actions { display: flex; justify-content: space-between; gap: 8px; }

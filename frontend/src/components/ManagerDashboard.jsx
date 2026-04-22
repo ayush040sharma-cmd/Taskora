@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback } from "react";
 import api from "../api/api";
 import { useAuth } from "../context/AuthContext";
+import WorkloadDashboard from "./WorkloadDashboard";
 
 const STATUS_COLOR = {
   available:  "#10b981",
@@ -299,7 +300,7 @@ export default function ManagerDashboard({ workspaceId }) {
   const [predictions, setPredictions] = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [editMember,  setEditMember]  = useState(null);
-  const [activeTab,   setActiveTab]   = useState("team"); // team | predictions | approvals | audit
+  const [activeTab,   setActiveTab]   = useState("workload"); // workload | team | predictions | approvals | audit
 
   const canManage = !!user;
 
@@ -340,8 +341,14 @@ export default function ManagerDashboard({ workspaceId }) {
     ? Math.round(team.filter(m => !m.on_leave).reduce((s, m) => s + (m.load_percent || 0), 0) / Math.max(1, team.filter(m => !m.on_leave).length))
     : 0;
 
-  const TABS = ["team", "predictions", "approvals", "audit"];
-  const TAB_LABELS = { team: "Team Workload", predictions: "AI Predictions", approvals: "Approvals", audit: "Audit Log" };
+  const TABS = ["workload", "team", "predictions", "approvals", "audit"];
+  const TAB_LABELS = {
+    workload:    "👥 Workload",
+    team:        "⚙️ Capacity",
+    predictions: "🤖 AI Predictions",
+    approvals:   "✅ Approvals",
+    audit:       "📋 Audit Log",
+  };
 
   return (
     <div className="mgr-root">
@@ -375,7 +382,12 @@ export default function ManagerDashboard({ workspaceId }) {
         ))}
       </div>
 
-      {/* Team Workload */}
+      {/* Workload */}
+      {activeTab === "workload" && (
+        <WorkloadDashboard workspaceId={workspaceId} />
+      )}
+
+      {/* Capacity / member cards */}
       {activeTab === "team" && (
         <div className="mgr-team-grid">
           {team.map(m => (

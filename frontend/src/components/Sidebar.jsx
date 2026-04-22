@@ -6,14 +6,13 @@ import { useNavigate } from "react-router-dom";
 const PRIMARY_VIEWS = [
   { id: "board",    icon: "📋", label: "Board" },
   { id: "summary",  icon: "📊", label: "Summary" },
-  { id: "workload", icon: "👥", label: "Team" },
   { id: "calendar", icon: "📅", label: "Calendar" },
   { id: "sprints",  icon: "🏃", label: "Sprints" },
+  { id: "manager",  icon: "🏢", label: "Manager" },
 ];
 
 // Secondary views — shown when "More" is expanded
 const MORE_VIEWS = [
-  { id: "manager",       icon: "🏢", label: "Manager" },
   { id: "capacity",      icon: "⚡", label: "Capacity" },
   { id: "members",       icon: "👤", label: "Members" },
   { id: "analytics",     icon: "📈", label: "Analytics" },

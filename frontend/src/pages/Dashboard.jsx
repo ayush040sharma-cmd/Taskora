@@ -452,11 +452,9 @@ export default function Dashboard() {
                   <p>{totalTasks} task{totalTasks !== 1 ? "s" : ""} · Press <kbd className="inline-kbd">N</kbd> to add</p>
                 </div>
                 <div className="board-header-actions">
-                  <button className="btn-secondary" onClick={() => openCreateTask("todo")}>+ Add task</button>
+                  <button className="btn-primary" onClick={() => openCreateTask("todo")}>+ New task</button>
                 </div>
               </div>
-
-              <AIInsightsPanel workspaceId={currentWorkspace?.id} />
 
               <FilterBar
                 filters={filters}
@@ -504,15 +502,6 @@ export default function Dashboard() {
             </>
           )}
 
-          {/* ── Workload ── */}
-          {view === "workload" && (
-            <>
-              <div className="board-header">
-                <div className="board-title-area"><h1>Team Workload</h1><p>Capacity and task distribution</p></div>
-              </div>
-              <WorkloadDashboard workspaceId={currentWorkspace?.id} />
-            </>
-          )}
 
           {/* ── Calendar ── */}
           {view === "calendar" && (
@@ -578,9 +567,8 @@ export default function Dashboard() {
           {view === "manager" && (
             <>
               <div className="board-header">
-                <div className="board-title-area"><h1>Manager Dashboard</h1><p>Team workload, predictions, approvals & audit log</p></div>
+                <div className="board-title-area"><h1>Manager</h1><p>Team workload, capacity, predictions, approvals & audit log</p></div>
               </div>
-              <AIInsightsPanel workspaceId={currentWorkspace?.id} />
               <ManagerDashboard workspaceId={currentWorkspace?.id} />
             </>
           )}

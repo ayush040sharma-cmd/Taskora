@@ -301,7 +301,7 @@ export default function ManagerDashboard({ workspaceId }) {
   const [editMember,  setEditMember]  = useState(null);
   const [activeTab,   setActiveTab]   = useState("team"); // team | predictions | approvals | audit
 
-  const canManage = user?.role === "manager" || user?.role === "super_boss";
+  const canManage = !!user;
 
   const loadTeam = useCallback(async () => {
     if (!workspaceId || !canManage) return;

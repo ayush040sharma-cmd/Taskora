@@ -33,7 +33,7 @@ router.post("/register", authLimiter, async (req, res) => {
     const password_hash = await bcrypt.hash(password, salt);
 
     const userResult = await pool.query(
-      "INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3) RETURNING id, name, email",
+      "INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, 'manager') RETURNING id, name, email, role",
       [name, email, password_hash]
     );
     const user = userResult.rows[0];
@@ -45,7 +45,7 @@ router.post("/register", authLimiter, async (req, res) => {
     );
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, name: user.name },
+      { id: user.id, email: user.email, name: user.name, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
@@ -78,7 +78,7 @@ router.post("/login", authLimiter, async (req, res) => {
     if (!isMatch) return res.status(401).json({ message: "Invalid email or password" });
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, name: user.name },
+      { id: user.id, email: user.email, name: user.name, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
@@ -86,7 +86,7 @@ router.post("/login", authLimiter, async (req, res) => {
     // Update last login timestamp
     await pool.query("UPDATE users SET last_login_at = NOW() WHERE id = $1", [user.id]);
 
-    res.json({ token, user: { id: user.id, name: user.name, email: user.email } });
+    res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
   } catch (err) {
     console.error("Login error:", err);
     res.status(500).json({ message: "Server error during login" });
@@ -97,14 +97,14 @@ router.post("/login", authLimiter, async (req, res) => {
 router.post("/refresh", auth, async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT id, name, email FROM users WHERE id = $1",
+      "SELECT id, name, email, role FROM users WHERE id = $1",
       [req.user.id]
     );
     const user = result.rows[0];
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, name: user.name },
+      { id: user.id, email: user.email, name: user.name, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );

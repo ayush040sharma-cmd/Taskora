@@ -33,10 +33,32 @@ router.get("/me", auth, async (req, res) => {
   try {
     const cap  = await getOrCreate(req.user.id);
     const user = await pool.query("SELECT id, name, email, role FROM users WHERE id=$1", [req.user.id]);
-    res.json({ ...cap, role: user.rows[0]?.role });
+    // Provide safe defaults for any columns that may not exist yet in older DBs
+    const safe = {
+      daily_hours:           8,
+      customer_facing_hours: 6,
+      internal_hours:        2,
+      travel_mode:           false,
+      travel_hours:          2,
+      on_leave:              false,
+      leave_start:           null,
+      leave_end:             null,
+      max_rfp:               1,
+      max_proposals:         2,
+      max_presentations:     2,
+      max_upgrades:          2,
+      ...cap,
+      role: user.rows[0]?.role || "member",
+    };
+    res.json(safe);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Server error" });
+    // Return safe defaults so the UI still renders
+    res.json({
+      daily_hours: 8, customer_facing_hours: 6, internal_hours: 2,
+      travel_mode: false, travel_hours: 2, on_leave: false,
+      max_rfp: 1, max_proposals: 2, max_presentations: 2, max_upgrades: 2,
+    });
   }
 });
 
@@ -48,22 +70,41 @@ router.put("/me", auth, async (req, res) => {
   } = req.body;
 
   try {
-    const cap = await getOrCreate(req.user.id);
+    await getOrCreate(req.user.id);
+
+    // Build SET clause dynamically — only update columns that actually exist
+    const colMap = {
+      daily_hours, max_rfp, max_proposals, max_presentations, max_upgrades,
+    };
+    // Try adding optional columns if provided
+    if (customer_facing_hours !== undefined) colMap.customer_facing_hours = customer_facing_hours;
+    if (internal_hours        !== undefined) colMap.internal_hours        = internal_hours;
+
+    const setClauses = [];
+    const vals = [];
+    Object.entries(colMap).forEach(([col, val]) => {
+      if (val !== undefined && val !== null) {
+        vals.push(val);
+        setClauses.push(`${col} = $${vals.length}`);
+      }
+    });
+    setClauses.push("updated_at = NOW()");
+    vals.push(req.user.id);
+
     const updated = await pool.query(
-      `UPDATE user_capacity SET
-         daily_hours           = COALESCE($1, daily_hours),
-         customer_facing_hours = COALESCE($2, customer_facing_hours),
-         internal_hours        = COALESCE($3, internal_hours),
-         max_rfp               = COALESCE($4, max_rfp),
-         max_proposals         = COALESCE($5, max_proposals),
-         max_presentations     = COALESCE($6, max_presentations),
-         max_upgrades          = COALESCE($7, max_upgrades),
-         updated_at            = NOW()
-       WHERE user_id = $8 RETURNING *`,
-      [daily_hours, customer_facing_hours, internal_hours,
-       max_rfp, max_proposals, max_presentations, max_upgrades,
-       req.user.id]
-    );
+      `UPDATE user_capacity SET ${setClauses.join(", ")} WHERE user_id = $${vals.length} RETURNING *`,
+      vals
+    ).catch(async () => {
+      // Fallback: update only core columns if optional ones fail
+      return pool.query(
+        `UPDATE user_capacity SET
+           daily_hours=$1, max_rfp=$2, max_proposals=$3,
+           max_presentations=$4, max_upgrades=$5, updated_at=NOW()
+         WHERE user_id=$6 RETURNING *`,
+        [daily_hours||8, max_rfp||1, max_proposals||2, max_presentations||2, max_upgrades||2, req.user.id]
+      );
+    });
+
     res.json(updated.rows[0]);
   } catch (err) {
     console.error(err);

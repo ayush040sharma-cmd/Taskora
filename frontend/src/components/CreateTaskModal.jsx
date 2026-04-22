@@ -22,8 +22,11 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
   const [form, setForm] = useState({
     title: "", description: "", status: defaultStatus,
     priority: "medium", due_date: "", start_date: "",
-    type: "task", estimated_days: 3, progress: 0,
+    type: "task", estimated_days: 1, progress: 0,
     assigned_user_id: "", sprint_id: "",
+    estimated_duration: 1,  // system suggested (from TYPE_META)
+    final_duration: 1,      // user confirmed
+    recurrence: "",         // none | daily | weekly | monthly
   });
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState("");
@@ -39,8 +42,13 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
     const meta = TYPE_META[t];
     const days = meta?.days ?? 1;
     setForm(f => {
-      const newForm = { ...f, type: t, estimated_days: days };
-      // If start_date is set, auto-compute due_date
+      const newForm = {
+        ...f,
+        type: t,
+        estimated_days:     days,
+        estimated_duration: days,   // system suggested — locked at type selection
+        final_duration:     days,   // starts equal; user can edit
+      };
       if (f.start_date) {
         const due = new Date(f.start_date);
         due.setDate(due.getDate() + days);
@@ -260,6 +268,18 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
                 </select>
               </div>
             )}
+
+            {/* Recurrence — Phase 10 */}
+            <div className="modal-form-group">
+              <label className="modal-label">🔁 Recurrence</label>
+              <select className="modal-select" value={form.recurrence}
+                onChange={e => set("recurrence", e.target.value)}>
+                <option value="">None (one-time)</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </div>
           </div>
 
           <div className="modal-footer">

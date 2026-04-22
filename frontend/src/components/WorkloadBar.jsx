@@ -1,17 +1,21 @@
-/** Battery-style workload capacity indicator */
-export default function WorkloadBar({ percent = 0, maxCapacity = 100 }) {
-  const pct = Math.max(0, Math.min(100, percent));
+/** Battery-style workload capacity indicator — matches spec thresholds */
+export default function WorkloadBar({ percent = 0 }) {
+  // Spec: Green < 80%, Yellow 80-100%, Red > 100%
+  const pct    = Math.max(0, percent);
+  const fillPct = Math.min(100, pct); // visual bar capped at 100%
+
   const color =
-    pct >= 90 ? "#de350b" :
-    pct >= 70 ? "#ff8b00" :
+    pct > 100 ? "#de350b" :
+    pct >= 80 ? "#ff8b00" :
                 "#00875a";
+
   const label =
-    pct >= 90 ? "Overloaded" :
-    pct >= 70 ? "Moderate"   :
+    pct > 100 ? "Overloaded" :
+    pct >= 80 ? "At capacity" :
                 "Available";
 
   const segments = 10;
-  const filled = Math.round((pct / 100) * segments);
+  const filled = Math.round((fillPct / 100) * segments);
 
   return (
     <div className="workload-bar-wrap">

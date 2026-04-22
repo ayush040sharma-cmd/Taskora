@@ -9,11 +9,11 @@ const COLUMNS = [
 
 const IconPlus = () => (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
   </svg>
 );
 
-export default function KanbanBoard({ columns, onDragEnd, onAddTask, onDeleteTask, onUpdateTask }) {
+export default function KanbanBoard({ columns, onDragEnd, onAddTask, onDeleteTask, onUpdateTask, onOpenDetail }) {
   return (
     <DragDropContext onDragEnd={onDragEnd}>
       <div className="kanban-board">
@@ -54,6 +54,7 @@ export default function KanbanBoard({ columns, onDragEnd, onAddTask, onDeleteTas
                           index={index}
                           onDelete={onDeleteTask}
                           onUpdate={onUpdateTask}
+                          onOpenDetail={onOpenDetail}
                         />
                       ))}
                       {provided.placeholder}
@@ -62,10 +63,7 @@ export default function KanbanBoard({ columns, onDragEnd, onAddTask, onDeleteTas
                 )}
               </Droppable>
 
-              <button
-                className="kanban-add-task"
-                onClick={() => onAddTask(col.id)}
-              >
+              <button className="kanban-add-task" onClick={() => onAddTask(col.id)}>
                 <IconPlus />
                 Add task
               </button>

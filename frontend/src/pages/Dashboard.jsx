@@ -12,7 +12,21 @@ import SprintView from "../components/SprintView";
 import SprintModal from "../components/SprintModal";
 import ManagerDashboard from "../components/ManagerDashboard";
 import CapacityPanel from "../components/CapacityPanel";
+import MembersPanel from "../components/MembersPanel";
+import FilterBar from "../components/FilterBar";
+import IntegrationsPanel from "../components/IntegrationsPanel";
+import DependencyGraph from "../components/DependencyGraph";
+import CollaborationScore from "../components/CollaborationScore";
+import SimulationPanel from "../components/SimulationPanel";
+import AIRiskHeatmap from "../components/AIRiskHeatmap";
+import NLChat from "../components/NLChat";
+import GanttChart from "../components/GanttChart";
+import AnalyticsDashboard from "../components/AnalyticsDashboard";
+import HelpGuide from "../components/HelpGuide";
+import TaskDetailModal from "../components/TaskDetailModal";
 import api from "../api/api";
+import { useSocket } from "../hooks/useSocket";
+import AIInsightsPanel from "../components/AIInsightsPanel";
 
 const EMPTY_COLS = { todo: [], inprogress: [], done: [] };
 
@@ -32,12 +46,14 @@ export default function Dashboard() {
   const [sprints, setSprints]                 = useState([]);
   const [activeSprint, setActiveSprint]       = useState(null);
   const [loading, setLoading]                 = useState(true);
-  const [view, setView]                       = useState("board"); // summary | board | workload | calendar | sprints | manager | capacity
+  const [view, setView]                       = useState("board"); // summary | board | workload | calendar | sprints | manager | capacity | members
 
   const [showCreateTask, setShowCreateTask]       = useState(false);
   const [createTaskStatus, setCreateTaskStatus]   = useState("todo");
   const [showWorkspaceModal, setShowWorkspaceModal] = useState(false);
   const [showSprintModal, setShowSprintModal]     = useState(false);
+  const [detailTask, setDetailTask]               = useState(null);
+  const [filters, setFilters] = useState({ search: "", type: "", priority: "", status: "", assignee: "" });
 
   const [toast, setToast] = useState(null);
   const showToast = (msg, type = "success") => {
@@ -168,6 +184,70 @@ export default function Dashboard() {
     setShowCreateTask(true);
   };
 
+  // ── Real-time socket events ──────────────────────────────────────
+  useSocket(currentWorkspace?.id, {
+    "task:created": (task) => {
+      setAllTasks(prev => {
+        if (prev.find(t => t.id === task.id)) return prev; // already exists (own action)
+        return [...prev, task];
+      });
+      setColumns(prev => {
+        const col = task.status in prev ? task.status : "todo";
+        if (prev[col]?.find(t => t.id === task.id)) return prev;
+        return { ...prev, [col]: [...(prev[col] || []), task] };
+      });
+    },
+    "task:updated": (task) => {
+      setAllTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...task } : t));
+      setColumns(prev => {
+        const next = { todo: [], inprogress: [], done: [] };
+        [...prev.todo, ...prev.inprogress, ...prev.done]
+          .map(t => t.id === task.id ? { ...t, ...task } : t)
+          .forEach(t => { if (next[t.status]) next[t.status].push(t); });
+        return next;
+      });
+    },
+    "task:deleted": ({ id }) => {
+      setAllTasks(prev => prev.filter(t => t.id !== id));
+      setColumns(prev => ({
+        todo:       prev.todo.filter(t => t.id !== id),
+        inprogress: prev.inprogress.filter(t => t.id !== id),
+        done:       prev.done.filter(t => t.id !== id),
+      }));
+    },
+  });
+
+  // ── Filter logic ─────────────────────────────────────────────────
+  const applyFilters = (tasks) => {
+    return tasks.filter(t => {
+      if (filters.search && !t.title.toLowerCase().includes(filters.search.toLowerCase())) return false;
+      if (filters.type && t.type !== filters.type) return false;
+      if (filters.priority && t.priority !== filters.priority) return false;
+      if (filters.status && t.status !== filters.status) return false;
+      if (filters.assignee) {
+        if (filters.assignee === "__unassigned__" && t.assigned_user_id) return false;
+        if (filters.assignee !== "__unassigned__" && String(t.assigned_user_id) !== filters.assignee) return false;
+      }
+      return true;
+    });
+  };
+
+  const filteredTasks   = applyFilters(allTasks);
+  const filteredColumns = {
+    todo:       filteredTasks.filter(t => t.status === "todo"),
+    inprogress: filteredTasks.filter(t => t.status === "inprogress"),
+    done:       filteredTasks.filter(t => t.status === "done"),
+  };
+
+  // Unique assignees for filter dropdown
+  const assignees = Array.from(
+    new Map(
+      allTasks
+        .filter(t => t.assigned_user_id && t.assignee_name)
+        .map(t => [t.assigned_user_id, { id: t.assigned_user_id, name: t.assignee_name }])
+    ).values()
+  );
+
   if (loading) {
     return (
       <div className="loading-screen">
@@ -206,6 +286,15 @@ export default function Dashboard() {
             { id: "sprints",  label: "🏃 Sprints" },
             { id: "manager",  label: "🏢 Manager" },
             { id: "capacity", label: "⚡ Capacity" },
+            { id: "members",       label: "👥 Members" },
+            { id: "integrations",  label: "🔗 Integrations" },
+            { id: "graph",         label: "🕸 Dependencies" },
+            { id: "collaboration", label: "🤝 Collaboration" },
+            { id: "simulation",    label: "⚡ Simulate" },
+            { id: "ai-risk",       label: "🔥 AI Risk" },
+            { id: "chat",          label: "💬 AI Chat" },
+            { id: "gantt",         label: "📅 Gantt" },
+            { id: "analytics",     label: "📈 Analytics" },
           ].map(v => (
             <button
               key={v.id}
@@ -244,14 +333,27 @@ export default function Dashboard() {
                 </div>
               </div>
 
+              {/* AI Insights Panel */}
+              <AIInsightsPanel workspaceId={currentWorkspace?.id} />
+
+              {/* Filter bar */}
+              <FilterBar
+                filters={filters}
+                onChange={setFilters}
+                assignees={assignees}
+                totalTasks={totalTasks}
+                filteredCount={filteredTasks.length}
+              />
+
               {currentWorkspace ? (
                 <div className="kanban-scroll">
                   <KanbanBoard
-                    columns={columns}
+                    columns={filteredColumns}
                     onDragEnd={handleDragEnd}
                     onAddTask={openCreateTask}
                     onDeleteTask={handleDeleteTask}
                     onUpdateTask={handleTaskUpdated}
+                    onOpenDetail={setDetailTask}
                   />
                 </div>
               ) : (
@@ -290,7 +392,11 @@ export default function Dashboard() {
                 </div>
                 <button className="btn-secondary" onClick={() => openCreateTask("todo")}>+ Add task</button>
               </div>
-              <CalendarView tasks={allTasks} onTaskClick={t => console.log("task", t)} />
+              <CalendarView
+                tasks={allTasks}
+                workspaceId={currentWorkspace?.id}
+                onTaskClick={setDetailTask}
+              />
             </>
           )}
 
@@ -303,6 +409,7 @@ export default function Dashboard() {
                   <p>Team workload, predictions, approvals & audit log</p>
                 </div>
               </div>
+              <AIInsightsPanel workspaceId={currentWorkspace?.id} />
               <ManagerDashboard workspaceId={currentWorkspace?.id} />
             </>
           )}
@@ -317,6 +424,123 @@ export default function Dashboard() {
                 </div>
               </div>
               <CapacityPanel />
+            </>
+          )}
+
+          {/* ── Members view ── */}
+          {view === "members" && (
+            <>
+              <div className="board-header">
+                <div className="board-title-area">
+                  <h1>Members</h1>
+                  <p>Manage who has access to {currentWorkspace?.name || "this workspace"}</p>
+                </div>
+              </div>
+              <MembersPanel workspaceId={currentWorkspace?.id} />
+            </>
+          )}
+
+          {/* ── Integrations view ── */}
+          {view === "integrations" && (
+            <>
+              <div className="board-header">
+                <div className="board-title-area">
+                  <h1>Integrations</h1>
+                  <p>Connect Slack, GitHub, Jira, and more</p>
+                </div>
+              </div>
+              <IntegrationsPanel workspaceId={currentWorkspace?.id} />
+            </>
+          )}
+
+          {/* ── AI Risk Heatmap ── */}
+          {view === "ai-risk" && (
+            <>
+              <div className="board-header">
+                <div className="board-title-area">
+                  <h1>AI Risk Intelligence</h1>
+                  <p>Per-task risk predictions, heatmap, and prescriptive actions</p>
+                </div>
+              </div>
+              <AIRiskHeatmap workspaceId={currentWorkspace?.id} />
+            </>
+          )}
+
+          {/* ── NL Chat ── */}
+          {view === "chat" && (
+            <>
+              <div className="board-header">
+                <div className="board-title-area">
+                  <h1>AI Workspace Assistant</h1>
+                  <p>Ask questions about your tasks, team, and deadlines in plain English</p>
+                </div>
+              </div>
+              <NLChat workspaceId={currentWorkspace?.id} />
+            </>
+          )}
+
+          {/* ── Gantt Chart ── */}
+          {view === "gantt" && (
+            <>
+              <div className="board-header">
+                <div className="board-title-area">
+                  <h1>Gantt Chart</h1>
+                  <p>Timeline view of tasks with start and due dates</p>
+                </div>
+              </div>
+              <GanttChart workspaceId={currentWorkspace?.id} />
+            </>
+          )}
+
+          {/* ── Analytics ── */}
+          {view === "analytics" && (
+            <>
+              <div className="board-header">
+                <div className="board-title-area">
+                  <h1>Analytics</h1>
+                  <p>Velocity, throughput, completion trends, and team insights</p>
+                </div>
+              </div>
+              <AnalyticsDashboard workspaceId={currentWorkspace?.id} />
+            </>
+          )}
+
+          {/* ── Simulation view ── */}
+          {view === "simulation" && (
+            <>
+              <div className="board-header">
+                <div className="board-title-area">
+                  <h1>What-If Simulation</h1>
+                  <p>Preview assignment impact before committing</p>
+                </div>
+              </div>
+              <SimulationPanel workspaceId={currentWorkspace?.id} />
+            </>
+          )}
+
+          {/* ── Dependency Graph view ── */}
+          {view === "graph" && (
+            <>
+              <div className="board-header">
+                <div className="board-title-area">
+                  <h1>Dependency Graph</h1>
+                  <p>Visualize task dependencies and identify blockers</p>
+                </div>
+              </div>
+              <DependencyGraph workspaceId={currentWorkspace?.id} />
+            </>
+          )}
+
+          {/* ── Collaboration view ── */}
+          {view === "collaboration" && (
+            <>
+              <div className="board-header">
+                <div className="board-title-area">
+                  <h1>Team Intelligence</h1>
+                  <p>Collaboration scores and engagement analytics</p>
+                </div>
+              </div>
+              <CollaborationScore workspaceId={currentWorkspace?.id} />
             </>
           )}
 
@@ -388,7 +612,20 @@ export default function Dashboard() {
         <SprintModal onClose={() => setShowSprintModal(false)} onSubmit={handleCreateSprint} />
       )}
 
+      {detailTask && (
+        <TaskDetailModal
+          task={detailTask}
+          currentUser={user}
+          onClose={() => setDetailTask(null)}
+          onUpdate={(updated) => {
+            handleTaskUpdated(updated);
+            setDetailTask(updated);
+          }}
+        />
+      )}
+
       {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
+      <HelpGuide />
     </div>
   );
 }

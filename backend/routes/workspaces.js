@@ -118,6 +118,22 @@ router.get("/:id/summary", auth, async (req, res) => {
   }
 });
 
+// PUT /api/workspaces/:id — rename workspace
+router.put("/:id", auth, async (req, res) => {
+  const { name } = req.body;
+  if (!name?.trim()) return res.status(400).json({ message: "Name is required" });
+  try {
+    const result = await pool.query(
+      "UPDATE workspaces SET name = $1 WHERE id = $2 AND user_id = $3 RETURNING *",
+      [name.trim(), req.params.id, req.user.id]
+    );
+    if (!result.rows.length) return res.status(404).json({ message: "Workspace not found" });
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // DELETE /api/workspaces/:id
 router.delete("/:id", auth, async (req, res) => {
   try {

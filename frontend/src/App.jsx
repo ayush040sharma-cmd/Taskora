@@ -4,6 +4,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import WorkspaceSetup from "./pages/WorkspaceSetup";
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth();
@@ -18,11 +19,12 @@ function PublicRoute({ children }) {
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<PublicRoute><Home /></PublicRoute>} />
-      <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-      <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="/"           element={<PublicRoute><Home /></PublicRoute>} />
+      <Route path="/login"      element={<PublicRoute><Login /></PublicRoute>} />
+      <Route path="/register"   element={<PublicRoute><Register /></PublicRoute>} />
+      <Route path="/onboarding" element={<ProtectedRoute><WorkspaceSetup /></ProtectedRoute>} />
+      <Route path="/dashboard"  element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="*"           element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require("../db");
 const auth = require("../middleware/auth");
 const { refreshUserWorkloadLog } = require("../services/workloadLogger");
+const { audit } = require("../services/auditService");
 
 // GET /api/tasks/workspace/:workspaceId
 router.get("/workspace/:workspaceId", auth, async (req, res) => {
@@ -121,6 +122,9 @@ router.post("/", auth, async (req, res) => {
       refreshUserWorkloadLog(assigned_user_id, workspace_id).catch(() => {});
     }
 
+    // Audit
+    audit({ workspace_id, actor_id: req.user.id, action: "task_created", target_type: "task", target_id: task.id, meta: { task_title: task.title, status: task.status, priority: task.priority } }).catch(() => {});
+
     res.status(201).json(task);
   } catch (err) {
     console.error("Create task error:", err);
@@ -196,6 +200,16 @@ router.put("/:id", auth, async (req, res) => {
       refreshUserWorkloadLog(updated.assigned_user_id, updated.workspace_id).catch(() => {});
     }
 
+    // Audit — only log meaningful changes, skip pure position reorders
+    if (status && status !== prevStatus) {
+      const action = status === "done" ? "task_completed" : "task_moved";
+      audit({ workspace_id: updated.workspace_id, actor_id: req.user.id, action, target_type: "task", target_id: updated.id, meta: { task_title: updated.title, from: prevStatus, to: status } }).catch(() => {});
+    } else if (assigned_user_id && assigned_user_id !== taskCheck.rows[0].assigned_user_id) {
+      audit({ workspace_id: updated.workspace_id, actor_id: req.user.id, action: "task_assigned", target_type: "task", target_id: updated.id, meta: { task_title: updated.title } }).catch(() => {});
+    } else if (title && title !== taskCheck.rows[0].title) {
+      audit({ workspace_id: updated.workspace_id, actor_id: req.user.id, action: "task_renamed", target_type: "task", target_id: updated.id, meta: { task_title: title } }).catch(() => {});
+    }
+
     res.json(updated);
   } catch (err) {
     console.error("Update task error:", err);
@@ -207,14 +221,14 @@ router.put("/:id", auth, async (req, res) => {
 router.delete("/:id", auth, async (req, res) => {
   try {
     const taskCheck = await pool.query(
-      `SELECT t.id, t.workspace_id, t.assigned_user_id FROM tasks t
+      `SELECT t.id, t.title, t.workspace_id, t.assigned_user_id FROM tasks t
        JOIN workspaces w ON t.workspace_id = w.id
        WHERE t.id = $1 AND w.user_id = $2`,
       [req.params.id, req.user.id]
     );
     if (!taskCheck.rows.length) return res.status(404).json({ message: "Task not found" });
 
-    const { workspace_id, assigned_user_id } = taskCheck.rows[0];
+    const { workspace_id, assigned_user_id, title: taskTitle } = taskCheck.rows[0];
 
     await pool.query("DELETE FROM tasks WHERE id = $1", [req.params.id]);
 
@@ -226,6 +240,9 @@ router.delete("/:id", auth, async (req, res) => {
     if (assigned_user_id) {
       refreshUserWorkloadLog(assigned_user_id, workspace_id).catch(() => {});
     }
+
+    // Audit
+    audit({ workspace_id, actor_id: req.user.id, action: "task_deleted", target_type: "task", target_id: parseInt(req.params.id), meta: { task_title: taskTitle || "Untitled" } }).catch(() => {});
 
     res.json({ message: "Task deleted" });
   } catch (err) {

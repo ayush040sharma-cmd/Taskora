@@ -15,7 +15,7 @@ import CapacityPanel from "../components/CapacityPanel";
 import MembersPanel from "../components/MembersPanel";
 import FilterBar from "../components/FilterBar";
 import IntegrationsPanel from "../components/IntegrationsPanel";
-import DependencyGraph from "../components/DependencyGraph";
+import ActivityFeed from "../components/ActivityFeed";
 import CollaborationScore from "../components/CollaborationScore";
 import SimulationPanel from "../components/SimulationPanel";
 import AIRiskHeatmap from "../components/AIRiskHeatmap";
@@ -635,13 +635,13 @@ export default function Dashboard() {
             </>
           )}
 
-          {/* ── Dependency Graph ── */}
-          {view === "graph" && (
+          {/* ── Activity Feed ── */}
+          {view === "activity" && (
             <>
               <div className="board-header">
-                <div className="board-title-area"><h1>Dependency Graph</h1><p>Visualize task dependencies and identify blockers</p></div>
+                <div className="board-title-area"><h1>Activity Feed</h1><p>All task and team events across {currentWorkspace?.name || "your workspace"}</p></div>
               </div>
-              <DependencyGraph workspaceId={currentWorkspace?.id} />
+              <ActivityFeed workspaceId={currentWorkspace?.id} />
             </>
           )}
 

@@ -7,9 +7,8 @@ const express = require("express");
 const router  = express.Router();
 const pool    = require("../db");
 const auth    = require("../middleware/auth");
-const { requireMinRole } = require("../middleware/rbac");
 
-router.get("/", auth, requireMinRole("manager"), async (req, res) => {
+router.get("/", auth, async (req, res) => {
   const { workspace_id, limit = 50, offset = 0 } = req.query;
   if (!workspace_id) return res.status(400).json({ message: "workspace_id required" });
   try {

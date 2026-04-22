@@ -17,7 +17,7 @@ const MORE_VIEWS = [
   { id: "gantt",         icon: "🗓", label: "Gantt" },
   { id: "ai-risk",       icon: "🔥", label: "AI Risk" },
   { id: "integrations",  icon: "🔗", label: "Integrations" },
-  { id: "graph",         icon: "🕸",  label: "Deps" },
+  { id: "activity",      icon: "⚡", label: "Activity" },
   { id: "collaboration", icon: "🤝", label: "Collab" },
   { id: "simulation",    icon: "🔬", label: "Simulate" },
 ];

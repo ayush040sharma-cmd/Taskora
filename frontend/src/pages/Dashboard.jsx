@@ -16,7 +16,6 @@ import MembersPanel from "../components/MembersPanel";
 import FilterBar from "../components/FilterBar";
 import IntegrationsPanel from "../components/IntegrationsPanel";
 import ActivityFeed from "../components/ActivityFeed";
-import CollaborationScore from "../components/CollaborationScore";
 import SimulationPanel from "../components/SimulationPanel";
 import AIRiskHeatmap from "../components/AIRiskHeatmap";
 import NLChat from "../components/NLChat";
@@ -645,15 +644,6 @@ export default function Dashboard() {
             </>
           )}
 
-          {/* ── Collaboration ── */}
-          {view === "collaboration" && (
-            <>
-              <div className="board-header">
-                <div className="board-title-area"><h1>Team Intelligence</h1><p>Collaboration scores and engagement analytics</p></div>
-              </div>
-              <CollaborationScore workspaceId={currentWorkspace?.id} />
-            </>
-          )}
         </div>
       </div>
 

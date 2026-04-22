@@ -18,7 +18,6 @@ const MORE_VIEWS = [
   { id: "ai-risk",       icon: "🔥", label: "AI Risk" },
   { id: "integrations",  icon: "🔗", label: "Integrations" },
   { id: "activity",      icon: "⚡", label: "Activity" },
-  { id: "collaboration", icon: "🤝", label: "Collab" },
   { id: "simulation",    icon: "🔬", label: "Simulate" },
 ];
 

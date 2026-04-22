@@ -9,6 +9,7 @@ import { useAuth } from "../context/AuthContext";
 import WorkloadDashboard from "./WorkloadDashboard";
 import MembersPanel from "./MembersPanel";
 import AnalyticsDashboard from "./AnalyticsDashboard";
+import CollaborationScore from "./CollaborationScore";
 
 const STATUS_COLOR = {
   available:  "#10b981",
@@ -343,7 +344,7 @@ export default function ManagerDashboard({ workspaceId }) {
     ? Math.round(team.filter(m => !m.on_leave).reduce((s, m) => s + (m.load_percent || 0), 0) / Math.max(1, team.filter(m => !m.on_leave).length))
     : 0;
 
-  const TABS = ["workload", "analytics", "members", "team", "predictions", "approvals", "audit"];
+  const TABS = ["workload", "analytics", "members", "team", "predictions", "approvals", "audit", "collab"];
   const TAB_LABELS = {
     workload:    "👥 Workload",
     analytics:   "📈 Analytics",
@@ -352,6 +353,7 @@ export default function ManagerDashboard({ workspaceId }) {
     predictions: "🤖 AI Predictions",
     approvals:   "✅ Approvals",
     audit:       "📋 Audit Log",
+    collab:      "🤝 Collaboration",
   };
 
   return (
@@ -432,6 +434,11 @@ export default function ManagerDashboard({ workspaceId }) {
           <div className="mgr-panel-title">Audit Log</div>
           <AuditLog workspaceId={workspaceId} />
         </div>
+      )}
+
+      {/* Collaboration */}
+      {activeTab === "collab" && (
+        <CollaborationScore workspaceId={workspaceId} />
       )}
 
       {/* Edit capacity modal */}

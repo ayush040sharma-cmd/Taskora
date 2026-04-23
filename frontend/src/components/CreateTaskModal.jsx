@@ -22,7 +22,7 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
   const [form, setForm] = useState({
     title: "", description: "", status: defaultStatus,
     priority: "medium", due_date: "", start_date: "",
-    type: "task", estimated_days: 1, progress: 0,
+    type: "task", estimated_days: 1,
     assigned_user_id: "", sprint_id: "",
     estimated_duration: 1,  // system suggested (from TYPE_META)
     final_duration: 1,      // user confirmed
@@ -105,7 +105,7 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
       await onSubmit({
         ...form,
         estimated_days: Number(form.estimated_days),
-        progress: Number(form.progress),
+        progress: 0,
         assigned_user_id: form.assigned_user_id || undefined,
         sprint_id: form.sprint_id || undefined,
         due_date: form.due_date || undefined,
@@ -201,37 +201,28 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
               </div>
             </div>
 
-            <div className="modal-row">
-              {/* Estimated days */}
-              <div className="modal-form-group">
-                <label className="modal-label">
-                  Estimated Duration
-                  {daysAutoFilled && (
-                    <span className="task-autofill-badge">
-                      ✦ auto-filled · {TYPE_META[form.type]?.range}
-                    </span>
-                  )}
-                </label>
-                <div className="task-duration-wrap">
-                  <input
-                    type="number"
-                    className="modal-input task-duration-input"
-                    min="1" max="180"
-                    value={form.estimated_days}
-                    onChange={e => {
-                      set("estimated_days", e.target.value);
-                      setDaysAutoFilled(false);
-                    }}
-                  />
-                  <span className="task-duration-unit">days</span>
-                </div>
-              </div>
-              {/* Progress */}
-              <div className="modal-form-group">
-                <label className="modal-label">Initial Progress ({form.progress}%)</label>
-                <input type="range" min="0" max="100" step="5" className="task-progress-slider"
-                  value={form.progress} onChange={e => set("progress", e.target.value)}
-                  style={{ width: "100%", marginTop: 8 }} />
+            {/* Estimated days — full width */}
+            <div className="modal-form-group">
+              <label className="modal-label">
+                Estimated Duration
+                {daysAutoFilled && (
+                  <span className="task-autofill-badge">
+                    ✦ auto-filled · {TYPE_META[form.type]?.range}
+                  </span>
+                )}
+              </label>
+              <div className="task-duration-wrap">
+                <input
+                  type="number"
+                  className="modal-input task-duration-input"
+                  min="1" max="180"
+                  value={form.estimated_days}
+                  onChange={e => {
+                    set("estimated_days", e.target.value);
+                    setDaysAutoFilled(false);
+                  }}
+                />
+                <span className="task-duration-unit">days</span>
               </div>
             </div>
 

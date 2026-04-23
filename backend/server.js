@@ -71,6 +71,7 @@ app.use("/api/calendar",      require("./routes/calendar"));
 app.use("/api/ai",            require("./routes/ai"));
 app.use("/api/integrations",  require("./routes/integrations"));
 app.use("/api/nlquery",       require("./routes/nlquery"));
+app.use("/api/channels",     require("./routes/channels"));
 
 app.get("/health", async (req, res) => {
   let dbStatus = "ok";

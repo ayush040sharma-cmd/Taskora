@@ -10,6 +10,7 @@ import WorkloadDashboard from "./WorkloadDashboard";
 import MembersPanel from "./MembersPanel";
 import AnalyticsDashboard from "./AnalyticsDashboard";
 import CollaborationScore from "./CollaborationScore";
+import ChannelView from "./ChannelView";
 
 const STATUS_COLOR = {
   available:  "#10b981",
@@ -296,8 +297,232 @@ function AuditLog({ workspaceId }) {
   );
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function timeAgoShort(dateStr) {
+  const diff = (Date.now() - new Date(dateStr)) / 1000;
+  if (diff < 60)        return "just now";
+  if (diff < 3600)      return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400)     return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 86400 * 7) return `${Math.floor(diff / 86400)}d ago`;
+  return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function relativeDueDate(dateStr) {
+  const diff = (Date.now() - new Date(dateStr)) / 1000;
+  if (diff < 86400)     return "Yesterday";
+  if (diff < 86400 * 7) return `${Math.floor(diff / 86400)} days ago`;
+  return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+// ── Manager Overview Dashboard View ──────────────────────────────────────────
+function ManagerDashView({ workspaceId, workspaceName }) {
+  const [tasks,           setTasks]           = useState([]);
+  const [activity,        setActivity]        = useState([]);
+  const [tasksLoading,    setTasksLoading]    = useState(true);
+  const [actLoading,      setActLoading]      = useState(true);
+  const [overdueOpen,     setOverdueOpen]     = useState(true);
+  const [activityOpen,    setActivityOpen]    = useState(true);
+  const [dayGroupsOpen,   setDayGroupsOpen]   = useState({});
+  const [refreshedAt,     setRefreshedAt]     = useState(Date.now());
+
+  const loadTasks = useCallback(async () => {
+    if (!workspaceId) return;
+    setTasksLoading(true);
+    try {
+      const r = await api.get(`/tasks/workspace/${workspaceId}`);
+      setTasks(r.data);
+      setRefreshedAt(Date.now());
+    } catch {}
+    finally { setTasksLoading(false); }
+  }, [workspaceId]);
+
+  const loadActivity = useCallback(async () => {
+    if (!workspaceId) return;
+    setActLoading(true);
+    try {
+      const r = await api.get(`/audit?workspace_id=${workspaceId}&limit=20`);
+      setActivity(r.data);
+    } catch {}
+    finally { setActLoading(false); }
+  }, [workspaceId]);
+
+  useEffect(() => { loadTasks(); loadActivity(); }, [loadTasks, loadActivity]);
+
+  // Compute week range
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const endOfWeek = new Date(today);
+  endOfWeek.setDate(today.getDate() + (6 - today.getDay()));
+  endOfWeek.setHours(23, 59, 59, 999);
+
+  const relevant = tasks.filter(t => {
+    if (!t.due_date || t.status === "done") return false;
+    return new Date(t.due_date) <= endOfWeek;
+  });
+  const overdue   = relevant.filter(t => new Date(t.due_date) < today);
+  const upcoming  = relevant.filter(t => new Date(t.due_date) >= today);
+
+  const dayGroups = {};
+  upcoming.forEach(t => {
+    const label = new Date(t.due_date).toLocaleDateString("en-US", { weekday: "long" });
+    if (!dayGroups[label]) dayGroups[label] = [];
+    dayGroups[label].push(t);
+  });
+
+  const minAgo = Math.floor((Date.now() - refreshedAt) / 60000);
+  const refreshLabel = minAgo === 0 ? "Just now" : `${minAgo}m ago`;
+  const PRIORITY_ICON = { high: "🔴", medium: "🟡", low: "🟢" };
+
+  function TaskRow({ task, isOverdue }) {
+    return (
+      <div className="mgr-dash-row" style={{ background: isOverdue ? "#fff8f8" : undefined }}>
+        <div className="mgr-dash-cell mgr-dash-name">
+          <span className="mgr-dash-task-name">{task.title}</span>
+        </div>
+        <div className="mgr-dash-cell mgr-dash-assignee">
+          {task.assignee_name ? (
+            <div className="mgr-dash-avatar" title={task.assignee_name}>
+              {task.assignee_name.slice(0, 2).toUpperCase()}
+            </div>
+          ) : (
+            <div className="mgr-dash-avatar mgr-dash-avatar--empty" title="Unassigned">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+              </svg>
+            </div>
+          )}
+        </div>
+        <div className="mgr-dash-cell mgr-dash-due" style={{ color: isOverdue ? "#ef4444" : "#374151", fontWeight: isOverdue ? 700 : 400 }}>
+          {isOverdue
+            ? relativeDueDate(task.due_date)
+            : new Date(task.due_date).toLocaleDateString("en-US", { weekday: "short" })}
+        </div>
+        <div className="mgr-dash-cell mgr-dash-priority">
+          {task.priority ? (PRIORITY_ICON[task.priority] || "") : ""}
+        </div>
+      </div>
+    );
+  }
+
+  function SectionHeader({ label, count, open, onToggle, isOverdue }) {
+    return (
+      <div className={`mgr-dash-section ${isOverdue ? "mgr-dash-section--overdue" : ""}`} onClick={onToggle}>
+        <span className="mgr-dash-chevron" style={{ color: isOverdue ? "#ef4444" : "#374151" }}>
+          {open ? "▼" : "▶"}
+        </span>
+        <span className="mgr-dash-section-label" style={{ color: isOverdue ? "#ef4444" : "#172b4d" }}>
+          {label}
+        </span>
+        <span className="mgr-dash-count">{count}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mgr-dash-layout">
+      {/* ── Left: Tasks Due Widget ── */}
+      <div className="mgr-dash-widget">
+        {/* Toolbar */}
+        <div className="mgr-dash-toolbar">
+          <div className="mgr-dash-toolbar-left">
+            <span className="mgr-dash-pill">Group: Due date</span>
+            <span className="mgr-dash-pill">Subtasks</span>
+            <span className="mgr-dash-pill">Columns</span>
+          </div>
+          <div className="mgr-dash-toolbar-right">
+            <span className="mgr-dash-refreshed">Refreshed {refreshLabel}</span>
+            <button className="mgr-dash-icon-btn" onClick={loadTasks} title="Refresh">↻</button>
+          </div>
+        </div>
+
+        {/* Column headers */}
+        <div className="mgr-dash-col-header">
+          <span style={{ flex: 1 }}>Name</span>
+          <span style={{ width: 52 }}>Assignee</span>
+          <span style={{ width: 84 }}>Due date</span>
+          <span style={{ width: 52 }}>Priority</span>
+        </div>
+
+        {tasksLoading ? (
+          <div className="mgr-loading" style={{ padding: "32px 0" }}>Loading tasks…</div>
+        ) : relevant.length === 0 ? (
+          <div className="mgr-dash-empty">
+            <div style={{ fontSize: 40, marginBottom: 8 }}>✅</div>
+            <div style={{ fontWeight: 600, color: "#172b4d" }}>All caught up!</div>
+            <div style={{ color: "#64748b", marginTop: 4 }}>No overdue or upcoming tasks this week.</div>
+          </div>
+        ) : (
+          <>
+            {overdue.length > 0 && (
+              <>
+                <SectionHeader label="Overdue" count={overdue.length} open={overdueOpen}
+                  onToggle={() => setOverdueOpen(v => !v)} isOverdue />
+                {overdueOpen && overdue.map(t => <TaskRow key={t.id} task={t} isOverdue />)}
+                {overdueOpen && <div className="mgr-dash-add-row">+ Add Task</div>}
+              </>
+            )}
+            {Object.entries(dayGroups).map(([day, dayTasks]) => (
+              <div key={day}>
+                <SectionHeader label={day} count={dayTasks.length}
+                  open={dayGroupsOpen[day] !== false}
+                  onToggle={() => setDayGroupsOpen(p => ({ ...p, [day]: p[day] === false ? true : false }))} />
+                {dayGroupsOpen[day] !== false && dayTasks.map(t => <TaskRow key={t.id} task={t} />)}
+                {dayGroupsOpen[day] !== false && <div className="mgr-dash-add-row">+ Add Task</div>}
+              </div>
+            ))}
+          </>
+        )}
+      </div>
+
+      {/* ── Right: Latest Activity ── */}
+      <div className="mgr-dash-activity">
+        <div className="mgr-dash-activity-header">
+          <span>Latest Activity</span>
+          <button className="mgr-dash-icon-btn" onClick={() => setActivityOpen(v => !v)}>
+            {activityOpen ? "▾" : "▸"}
+          </button>
+        </div>
+        {activityOpen && (
+          <div className="mgr-dash-activity-body">
+            <div className="mgr-dash-upgrade-banner">
+              <div className="mgr-dash-upgrade-title">
+                Only the last 24 hours of activity is available on your current plan
+              </div>
+              <div className="mgr-dash-upgrade-cta">
+                Upgrade to <strong>Pro</strong> to unlock 7 days of Activity
+              </div>
+            </div>
+            {actLoading ? (
+              <div className="mgr-loading" style={{ padding: "20px 16px" }}>Loading…</div>
+            ) : activity.length === 0 ? (
+              <div style={{ padding: "20px 16px", color: "#94a3b8", fontSize: 13, textAlign: "center" }}>
+                No recent activity
+              </div>
+            ) : activity.slice(0, 15).map(e => (
+              <div key={e.id} className="mgr-dash-act-row">
+                <div className="mgr-dash-act-avatar">
+                  {(e.actor_name || "?").slice(0, 2).toUpperCase()}
+                </div>
+                <div className="mgr-dash-act-body">
+                  <div>
+                    <span className="mgr-dash-act-actor">{e.actor_name || "Someone"}</span>
+                    {" "}<span className="mgr-dash-act-action">{e.action?.replace(/_/g, " ")}</span>
+                    {e.meta?.task_title && (
+                      <span className="mgr-dash-act-task"> "{e.meta.task_title}"</span>
+                    )}
+                  </div>
+                  <div className="mgr-dash-act-time">{timeAgoShort(e.created_at)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────────
-export default function ManagerDashboard({ workspaceId }) {
+export default function ManagerDashboard({ workspaceId, workspaceName }) {
   const { user } = useAuth();
   const [team,        setTeam]        = useState([]);
   const [predictions, setPredictions] = useState([]);
@@ -344,8 +569,9 @@ export default function ManagerDashboard({ workspaceId }) {
     ? Math.round(team.filter(m => !m.on_leave).reduce((s, m) => s + (m.load_percent || 0), 0) / Math.max(1, team.filter(m => !m.on_leave).length))
     : 0;
 
-  const TABS = ["workload", "analytics", "members", "team", "predictions", "approvals", "audit", "collab"];
+  const TABS = ["dashboard", "workload", "analytics", "members", "team", "predictions", "approvals", "audit", "collab", "channel"];
   const TAB_LABELS = {
+    dashboard:   "🗂️ Dashboard",
     workload:    "👥 Workload",
     analytics:   "📈 Analytics",
     members:     "👤 Members",
@@ -354,6 +580,7 @@ export default function ManagerDashboard({ workspaceId }) {
     approvals:   "✅ Approvals",
     audit:       "📋 Audit Log",
     collab:      "🤝 Collaboration",
+    channel:     "💬 Channel",
   };
 
   return (
@@ -387,6 +614,11 @@ export default function ManagerDashboard({ workspaceId }) {
           </button>
         ))}
       </div>
+
+      {/* Dashboard Overview */}
+      {activeTab === "dashboard" && (
+        <ManagerDashView workspaceId={workspaceId} />
+      )}
 
       {/* Workload */}
       {activeTab === "workload" && (
@@ -439,6 +671,11 @@ export default function ManagerDashboard({ workspaceId }) {
       {/* Collaboration */}
       {activeTab === "collab" && (
         <CollaborationScore workspaceId={workspaceId} />
+      )}
+
+      {/* Channel */}
+      {activeTab === "channel" && (
+        <ChannelView workspaceId={workspaceId} workspaceName={workspaceName} />
       )}
 
       {/* Edit capacity modal */}

@@ -200,4 +200,73 @@ router.put("/onboarding", auth, async (req, res) => {
   }
 });
 
+// POST /api/auth/demo — instant demo login (creates/resets demo account)
+router.post("/demo", authLimiter, async (req, res) => {
+  const DEMO_EMAIL = "demo@taskora.app";
+  const DEMO_NAME  = "Demo User";
+
+  try {
+    let user;
+    const existing = await pool.query("SELECT id, name, email, role FROM users WHERE email = $1", [DEMO_EMAIL]);
+
+    if (existing.rows.length > 0) {
+      user = existing.rows[0];
+      await pool.query("UPDATE users SET last_login_at = NOW() WHERE id = $1", [user.id]);
+    } else {
+      const bcrypt = require("bcryptjs");
+      const hash = await bcrypt.hash("demo-password-not-for-login-" + Date.now(), 10);
+      const result = await pool.query(
+        "INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role",
+        [DEMO_NAME, DEMO_EMAIL, hash, "manager"]
+      );
+      user = result.rows[0];
+
+      // Create demo workspace
+      const ws = await pool.query(
+        "INSERT INTO workspaces (name, user_id) VALUES ($1, $2) RETURNING id",
+        ["Taskora Demo Workspace", user.id]
+      );
+      const workspaceId = ws.rows[0].id;
+
+      // Seed demo tasks with correct schema column names
+      const demoTasks = [
+        { title: "Design new landing page",    type: "task",    status: "done",        priority: "high",   est: 16, pos: 1 },
+        { title: "Fix checkout flow bug",      type: "bug",     status: "done",        priority: "high",   est: 8,  pos: 2 },
+        { title: "Sprint planning — Q3",       type: "story",   status: "done",        priority: "medium", est: 4,  pos: 3 },
+        { title: "Q3 feature roadmap doc",     type: "story",   status: "in_progress", priority: "high",   est: 40, pos: 1 },
+        { title: "API rate limiting setup",    type: "upgrade", status: "in_progress", priority: "medium", est: 24, pos: 2 },
+        { title: "Mobile responsive audit",    type: "task",    status: "review",      priority: "medium", est: 16, pos: 1 },
+        { title: "Write integration docs",     type: "task",    status: "todo",        priority: "low",    est: 16, pos: 1 },
+        { title: "Add Slack notifications",    type: "upgrade", status: "todo",        priority: "medium", est: 32, pos: 2 },
+        { title: "Enterprise RFP — Acme Corp", type: "rfp",     status: "todo",        priority: "high",   est: 40, pos: 3 },
+        { title: "User onboarding flow v2",    type: "story",   status: "todo",        priority: "low",    est: 24, pos: 4 },
+      ];
+
+      for (const t of demoTasks) {
+        await pool.query(
+          `INSERT INTO tasks
+             (title, type, status, priority, workspace_id, assigned_user_id, estimated_hours, actual_hours, position)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+          [t.title, t.type, t.status, t.priority, workspaceId, user.id, t.est, 0, t.pos]
+        ).catch(() => {});  // skip if any error (idempotent re-seed guard)
+      }
+    }
+
+    const token = jwt.sign(
+      { id: user.id, email: user.email, name: user.name, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "2h" }
+    );
+
+    res.json({
+      token,
+      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      isDemo: true,
+    });
+  } catch (err) {
+    console.error("Demo login error:", err);
+    res.status(500).json({ message: "Could not start demo session." });
+  }
+});
+
 module.exports = router;

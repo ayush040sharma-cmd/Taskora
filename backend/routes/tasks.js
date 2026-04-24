@@ -90,7 +90,7 @@ router.post("/", auth, async (req, res) => {
         title, description, status, priority, due_date, start_date,
         workspace_id, assigned_user_id, position,
         type, estimated_days, progress, sprint_id,
-        estimated_duration, final_duration, recurrence
+        estimated_hours, actual_hours, recurrence
        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
       [
         title,
@@ -106,8 +106,8 @@ router.post("/", auth, async (req, res) => {
         estimated_days || 1,
         progress || 0,
         sprint_id || null,
-        estimated_duration || estimated_days || 1,
-        final_duration      || estimated_days || 1,
+        (estimated_duration || estimated_days || 1) * 8,  // convert days to hours
+        (final_duration || estimated_days || 1) * 8,
         recurrence || null,
       ]
     );

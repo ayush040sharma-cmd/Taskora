@@ -1,10 +1,16 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import ErrorBoundary from "./components/ErrorBoundary";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import WorkspaceSetup from "./pages/WorkspaceSetup";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
+import AuthCallback from "./pages/AuthCallback";
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth();
@@ -19,12 +25,26 @@ function PublicRoute({ children }) {
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/"           element={<PublicRoute><Home /></PublicRoute>} />
-      <Route path="/login"      element={<PublicRoute><Login /></PublicRoute>} />
-      <Route path="/register"   element={<PublicRoute><Register /></PublicRoute>} />
-      <Route path="/onboarding" element={<ProtectedRoute><WorkspaceSetup /></ProtectedRoute>} />
-      <Route path="/dashboard"  element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="*"           element={<Navigate to="/" replace />} />
+      {/* Public marketing & auth routes */}
+      <Route path="/"              element={<PublicRoute><Home /></PublicRoute>} />
+      <Route path="/login"         element={<PublicRoute><Login /></PublicRoute>} />
+      <Route path="/register"      element={<PublicRoute><Register /></PublicRoute>} />
+
+      {/* OAuth callback — accessible without auth (processes token from URL) */}
+      <Route path="/auth/callback" element={<AuthCallback />} />
+
+      {/* Static pages — always accessible */}
+      <Route path="/about"         element={<About />} />
+      <Route path="/contact"       element={<Contact />} />
+      <Route path="/privacy"       element={<Privacy />} />
+      <Route path="/terms"         element={<Terms />} />
+
+      {/* Protected app routes */}
+      <Route path="/onboarding"    element={<ProtectedRoute><WorkspaceSetup /></ProtectedRoute>} />
+      <Route path="/dashboard"     element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+
+      {/* Fallback */}
+      <Route path="*"              element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
@@ -32,9 +52,11 @@ function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <AppRoutes />
-      </AuthProvider>
+      <ErrorBoundary>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }

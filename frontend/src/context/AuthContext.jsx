@@ -29,6 +29,13 @@ export function AuthProvider({ children }) {
     return data.user;
   };
 
+  // Used by OAuth callback — token + user already determined by backend
+  const loginWithToken = (token, userData) => {
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(userData));
+    setUser(userData);
+  };
+
   const updateUser = (updatedUser) => {
     localStorage.setItem("user", JSON.stringify(updatedUser));
     setUser(updatedUser);
@@ -41,7 +48,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, login, register, logout, updateUser, loginWithToken }}>
       {children}
     </AuthContext.Provider>
   );

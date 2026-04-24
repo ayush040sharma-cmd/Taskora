@@ -211,8 +211,9 @@ export default function Home() {
           <div className="lp-nav-links">
             <a href="#features">Features</a>
             <a href="#how-it-works">How it works</a>
-            <a href="#social-proof">Teams</a>
             <a href="#pricing">Pricing</a>
+            <a href="/about">About</a>
+            <a href="/contact">Contact</a>
           </div>
 
           <div className="lp-nav-actions">
@@ -626,21 +627,29 @@ export default function Home() {
             </div>
             <div className="lp-footer-col">
               <div className="lp-footer-col-title">Company</div>
-              <a href="#">About</a>
-              <a href="#">Blog</a>
-              <a href="#">Careers</a>
+              <a href="/about">About us</a>
+              <a href="/contact">Contact</a>
+              <a href="/about#timeline">Our story</a>
             </div>
             <div className="lp-footer-col">
               <div className="lp-footer-col-title">Legal</div>
-              <a href="#">Privacy</a>
-              <a href="#">Terms</a>
-              <a href="#">Security</a>
+              <a href="/privacy">Privacy policy</a>
+              <a href="/terms">Terms of service</a>
+              <a href="/contact">Security</a>
+            </div>
+            <div className="lp-footer-col">
+              <div className="lp-footer-col-title">Support</div>
+              <a href="/contact">Help center</a>
+              <a href="mailto:support@taskora.app">Email support</a>
+              <a href="/contact">Report a bug</a>
             </div>
           </div>
         </div>
         <div className="lp-footer-bottom">
-          <span>© {new Date().getFullYear()} Taskora. Built with React + Node.js + PostgreSQL.</span>
-          <span>Made for teams that execute.</span>
+          <span>© {new Date().getFullYear()} Taskora. Built by Ayush Sharma with React + Node.js + PostgreSQL.</span>
+          <span>
+            Questions? <a href="mailto:support@taskora.app" style={{color:"#94a3b8"}}>support@taskora.app</a>
+          </span>
         </div>
       </footer>
     </div>

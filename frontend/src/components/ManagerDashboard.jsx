@@ -522,7 +522,7 @@ function ManagerDashView({ workspaceId, workspaceName }) {
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────────
-export default function ManagerDashboard({ workspaceId, workspaceName }) {
+export default function ManagerDashboard({ workspaceId, workspaceName, onNavigate }) {
   const { user } = useAuth();
   const [team,        setTeam]        = useState([]);
   const [predictions, setPredictions] = useState([]);
@@ -675,7 +675,7 @@ export default function ManagerDashboard({ workspaceId, workspaceName }) {
 
       {/* Channel */}
       {activeTab === "channel" && (
-        <ChannelView workspaceId={workspaceId} workspaceName={workspaceName} />
+        <ChannelView workspaceId={workspaceId} workspaceName={workspaceName} onNavigate={onNavigate} />
       )}
 
       {/* Edit capacity modal */}

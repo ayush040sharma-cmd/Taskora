@@ -38,11 +38,17 @@ async function getIntegration(workspaceId, type) {
 }
 
 async function verifyWorkspaceAccess(workspaceId, userId) {
-  const row = await pool.query(
+  const owner = await pool.query(
     "SELECT id FROM workspaces WHERE id=$1 AND user_id=$2",
     [workspaceId, userId]
   );
-  return row.rows.length > 0;
+  if (owner.rows.length > 0) return true;
+  // Also allow workspace members
+  const member = await pool.query(
+    "SELECT id FROM workspace_members WHERE workspace_id=$1 AND user_id=$2",
+    [workspaceId, userId]
+  );
+  return member.rows.length > 0;
 }
 
 // ── Slack helpers ─────────────────────────────────────────────────────────────
@@ -392,7 +398,7 @@ function parseCSVLine(line) {
 }
 
 function mapJiraPriority(p) {
-  const map = { highest: "critical", high: "high", medium: "medium", low: "low", lowest: "low" };
+  const map = { highest: "high", high: "high", medium: "medium", low: "low", lowest: "low" };
   return map[(p || "").toLowerCase()] || "medium";
 }
 
@@ -406,9 +412,12 @@ function mapJiraStatus(s) {
 function mapJiraType(t) {
   const lc = (t || "").toLowerCase();
   if (lc.includes("bug")) return "bug";
-  if (lc.includes("story") || lc.includes("feature")) return "feature";
-  if (lc.includes("epic")) return "epic";
+  if (lc.includes("story")) return "story";
+  if (lc.includes("feature")) return "feature";
+  if (lc.includes("epic")) return "task";
   if (lc.includes("sub-task") || lc.includes("subtask")) return "task";
+  if (lc.includes("rfp")) return "rfp";
+  if (lc.includes("proposal")) return "proposal";
   return "task";
 }
 

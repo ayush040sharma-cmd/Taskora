@@ -402,13 +402,13 @@ export default function ChannelView({ workspaceId, workspaceName, onNavigate }) 
   const [loading,       setLoading]       = useState(true);
   const [text,          setText]          = useState("");
   const [sending,       setSending]       = useState(false);
-  const [banner,        setBanner]        = useState(true);
   const [activeSidebar, setActiveSidebar] = useState(null);
   const [showEmoji,     setShowEmoji]     = useState(false);
   const [showPlusMenu,  setShowPlusMenu]  = useState(false);
   const [showAddPeople, setShowAddPeople] = useState(false);
   const [showInvite,    setShowInvite]    = useState(false);
   const [showCall,      setShowCall]      = useState(false);
+  const [showHome,      setShowHome]      = useState(false);
   const [mentionQuery,  setMentionQuery]  = useState(null);
   const [mentionUsers,  setMentionUsers]  = useState([]);
 
@@ -500,6 +500,79 @@ export default function ChannelView({ workspaceId, workspaceName, onNavigate }) 
 
   const triggerFile = () => fileInputRef.current?.click();
 
+  const HomeScreen = () => (
+    <div className="ch-home">
+      <div className="ch-home-hero">
+        <div className="ch-home-icon">💬</div>
+        <h2 className="ch-home-title">#{channelName}</h2>
+        <p className="ch-home-sub">
+          This is the home of your team channel. Collaborate on tasks, share docs, and stay in sync.
+        </p>
+        <div className="ch-home-actions">
+          <button className="ch-home-btn ch-home-btn--primary" onClick={() => { setShowHome(false); }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            Go to Chat
+          </button>
+          <button className="ch-home-btn" onClick={() => setShowAddPeople(true)}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              <line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
+            </svg>
+            Add People
+          </button>
+          <button className="ch-home-btn" onClick={() => setShowInvite(true)}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="8" width="18" height="13" rx="2"/><path d="M1 8l11-5 11 5"/>
+            </svg>
+            Invite via Email
+          </button>
+          <button className="ch-home-btn" onClick={() => setShowCall(true)}>
+            🎥 Start a Call
+          </button>
+        </div>
+      </div>
+
+      <div className="ch-home-cards">
+        <FeatureCard icon="📋" title="Track Tasks" bg="#f5f3ff"
+          desc="Manage tasks, bugs, people, and more"
+          onClick={() => onNavigate ? onNavigate("board") : null} />
+        <FeatureCard icon="📄" title="Share a Doc" bg="#eff6ff"
+          desc="Take notes or share detailed documents"
+          onClick={async () => {
+            const content = "📄 A new document has been shared in this channel.";
+            try {
+              const r = await api.post(`/channels/${workspaceId}/messages`, { content });
+              setMessages(prev => [...prev, r.data]);
+              setShowHome(false);
+            } catch {}
+          }} />
+        <FeatureCard icon="🎥" title="Start a Call" bg="#f0fdf4"
+          desc="Jump on a voice or video call"
+          onClick={() => setShowCall(true)} />
+        <FeatureCard icon="👥" title="Team Members" bg="#fdf4ff"
+          desc="View followers and channel members"
+          onClick={() => setActiveSidebar("followers")} />
+      </div>
+
+      {hasMessages && (
+        <div className="ch-home-recent">
+          <div className="ch-home-recent-title">Recent messages</div>
+          {[...messages].reverse().slice(0, 3).map(m => (
+            <div key={m.id} className="ch-home-recent-row" onClick={() => setShowHome(false)}>
+              <Avatar name={m.sender_name} size={24} />
+              <div style={{ minWidth: 0 }}>
+                <span className="ch-home-recent-name">{m.sender_name}</span>
+                <span className="ch-home-recent-msg">{m.content.slice(0, 60)}{m.content.length > 60 ? "…" : ""}</span>
+              </div>
+              <span className="ch-home-recent-time">{timeAgo(m.created_at)}</span>
+            </div>
+          ))}
+          <button className="ch-home-view-all" onClick={() => setShowHome(false)}>View all messages →</button>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="ch-root">
       {/* Hidden file input */}
@@ -511,162 +584,155 @@ export default function ChannelView({ workspaceId, workspaceName, onNavigate }) 
           textareaRef.current?.focus();
         }} />
 
-      {/* ── Main ── */}
-      <div className="ch-main">
-        <div className="ch-messages">
-          {loading ? (
-            <div className="ch-center"><div className="af-spinner" /><span>Loading channel…</span></div>
-          ) : !hasMessages ? (
-            <div className="ch-empty">
-              <h2 className="ch-empty-heading">Chat in #{channelName}</h2>
-              <p className="ch-empty-sub">
-                Collaborate seamlessly across tasks and conversations. Start chatting with your team or connect tasks to stay on top of your work.
-              </p>
-              <div className="ch-empty-actions">
-                <button className="ch-cta-btn" onClick={() => setShowAddPeople(true)}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                    <line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
-                  </svg>
-                  + Add People
-                </button>
-                <button className="ch-cta-btn" onClick={() => setShowInvite(true)}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="8" width="18" height="13" rx="2"/><path d="M1 8l11-5 11 5"/>
-                  </svg>
-                  Invite via Email
-                </button>
-              </div>
-              <div className="ch-feature-cards">
-                <FeatureCard icon="📋" title="Track Tasks" bg="#f5f3ff"
-                  desc="Manage tasks, bugs, people, and more"
-                  onClick={() => onNavigate ? onNavigate("board") : alert("Navigate to Board view")} />
-                <FeatureCard icon="📄" title="Add Doc" bg="#eff6ff"
-                  desc="Take notes or create detailed documents"
-                  onClick={async () => {
-                    const content = "📄 A new document has been shared in this channel.";
-                    try {
-                      const r = await api.post(`/channels/${workspaceId}/messages`, { content });
-                      setMessages(prev => [...prev, r.data]);
-                    } catch {}
-                  }} />
-                <FeatureCard icon="🎥" title="Start a Call" bg="#f0fdf4"
-                  desc="Jump on a voice or video call"
-                  onClick={() => setShowCall(true)} />
-              </div>
-            </div>
-          ) : (
-            <div className="ch-message-list">
-              {messages.map((msg, i) => {
-                const isMe = msg.sender_id === user?.id;
-                const showName = i === 0 || messages[i - 1]?.sender_id !== msg.sender_id;
-                return (
-                  <div key={msg.id} className={`ch-msg-row ${isMe ? "ch-msg-row--me" : ""}`}>
-                    {!isMe && showName && <Avatar name={msg.sender_name} size={28} />}
-                    {!isMe && !showName && <div style={{ width: 28 }} />}
-                    <div className="ch-msg-content">
-                      {showName && !isMe && (
-                        <div className="ch-msg-sender">
-                          {msg.sender_name}
-                          <span className="ch-msg-time">{timeAgo(msg.created_at)}</span>
-                        </div>
-                      )}
-                      <div className={`ch-msg-bubble ${isMe ? "ch-msg-bubble--me" : ""}`}>{msg.content}</div>
-                      {(!showName || isMe) && <div className="ch-msg-time-small">{timeAgo(msg.created_at)}</div>}
-                    </div>
-                  </div>
-                );
-              })}
-              <div ref={bottomRef} />
-            </div>
-          )}
+      {/* ── Channel Header ── */}
+      <div className="ch-header">
+        <div className="ch-header-left">
+          <button
+            className={`ch-header-tab ${showHome ? "active" : ""}`}
+            onClick={() => setShowHome(true)}
+            title="Channel home"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+            Home
+          </button>
+          <button
+            className={`ch-header-tab ${!showHome ? "active" : ""}`}
+            onClick={() => setShowHome(false)}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            Chat {hasMessages && <span className="ch-msg-count">{messages.length}</span>}
+          </button>
         </div>
-
-        {/* Onboarding banner */}
-        {banner && !hasMessages && (
-          <div className="ch-onboarding-banner">
-            <span>👋 Send a message to #{channelName} to get the conversation started!</span>
-            <button className="ch-banner-dismiss" onClick={() => setBanner(false)}>Dismiss</button>
-          </div>
-        )}
-
-        {/* @ mention dropdown */}
-        {mentionQuery !== null && mentionUsers.length > 0 && (
-          <div className="ch-mention-dropdown">
-            {mentionUsers.map(u => (
-              <div key={u.id} className="ch-mention-item" onClick={() => insertMention(u)}>
-                <Avatar name={u.name} size={22} />
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>{u.name}</div>
-                  <div style={{ fontSize: 11, color: "#94a3b8" }}>{u.email}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Emoji picker */}
-        {showEmoji && (
-          <div className="ch-emoji-picker">
-            {EMOJIS.map(e => (
-              <button key={e} className="ch-emoji-btn" onClick={() => insertEmoji(e)}>{e}</button>
-            ))}
-          </div>
-        )}
-
-        {/* + menu */}
-        {showPlusMenu && (
-          <PlusMenu onFile={triggerFile} onClose={() => setShowPlusMenu(false)} />
-        )}
-
-        {/* ── Input bar ── */}
-        <div className="ch-input-bar">
-          <button className="ch-input-icon-btn" title="Attach / more options"
-            onClick={() => { setShowPlusMenu(v => !v); setShowEmoji(false); }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        <div className="ch-header-right">
+          <button className="ch-header-action" onClick={() => setShowAddPeople(true)} title="Add people">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              <line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
             </svg>
           </button>
-          <select className="ch-msg-type">
-            <option>Message</option>
-          </select>
-          <textarea ref={textareaRef} className="ch-input-text" rows={1}
-            placeholder={`Send a message to #${channelName}…`}
-            value={text} onChange={handleTextChange} onKeyDown={handleKeyDown} />
-          <div className="ch-input-icons">
-            <button className="ch-input-icon-btn" title="Emoji"
-              onClick={() => { setShowEmoji(v => !v); setShowPlusMenu(false); }}>😊</button>
-            <button className="ch-input-icon-btn" title="@Mention"
-              onClick={() => { setText(t => t.endsWith(" ") || t === "" ? t + "@" : t + " @"); setMentionQuery(""); textareaRef.current?.focus(); }}>@</button>
-            <button className="ch-input-icon-btn" title="Attach file" onClick={triggerFile}>📎</button>
-          </div>
-          <button className="ch-send-btn" onClick={send} disabled={!text.trim() || sending} title="Send (Enter)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-            </svg>
-          </button>
+          <button className="ch-header-action" onClick={() => setShowCall(true)} title="Start a call">🎥</button>
+          {SIDEBAR_ITEMS.map(item => (
+            <button key={item.id}
+              className={`ch-header-action ${activeSidebar === item.id ? "active" : ""}`}
+              onClick={() => setActiveSidebar(v => v === item.id ? null : item.id)}
+              title={item.label}>
+              {item.icon}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* ── Expandable sidebar panel ── */}
-      <SidebarPanel
-        activeId={activeSidebar}
-        messages={messages}
-        onClose={() => setActiveSidebar(null)}
-        workspaceId={workspaceId}
-      />
+      {/* ── Body ── */}
+      <div className="ch-body">
+        {/* ── Main content ── */}
+        <div className="ch-main">
 
-      {/* ── Icon sidebar ── */}
-      <div className="ch-sidebar">
-        {SIDEBAR_ITEMS.map(item => (
-          <button key={item.id}
-            className={`ch-sidebar-item ${activeSidebar === item.id ? "active" : ""}`}
-            onClick={() => setActiveSidebar(v => v === item.id ? null : item.id)}
-            title={item.label}>
-            <span className="ch-sidebar-icon">{item.icon}</span>
-            <span className="ch-sidebar-label">{item.label}</span>
-          </button>
-        ))}
+          {showHome || (!hasMessages && !loading) ? (
+            loading ? (
+              <div className="ch-center"><div className="af-spinner" /><span>Loading channel…</span></div>
+            ) : (
+              <HomeScreen />
+            )
+          ) : (
+            <>
+              <div className="ch-messages">
+                {loading ? (
+                  <div className="ch-center"><div className="af-spinner" /><span>Loading channel…</span></div>
+                ) : (
+                  <div className="ch-message-list">
+                    {messages.map((msg, i) => {
+                      const isMe = msg.sender_id === user?.id;
+                      const showName = i === 0 || messages[i - 1]?.sender_id !== msg.sender_id;
+                      return (
+                        <div key={msg.id} className={`ch-msg-row ${isMe ? "ch-msg-row--me" : ""}`}>
+                          {!isMe && showName && <Avatar name={msg.sender_name} size={28} />}
+                          {!isMe && !showName && <div style={{ width: 28 }} />}
+                          <div className="ch-msg-content">
+                            {showName && !isMe && (
+                              <div className="ch-msg-sender">
+                                {msg.sender_name}
+                                <span className="ch-msg-time">{timeAgo(msg.created_at)}</span>
+                              </div>
+                            )}
+                            <div className={`ch-msg-bubble ${isMe ? "ch-msg-bubble--me" : ""}`}>{msg.content}</div>
+                            {(!showName || isMe) && <div className="ch-msg-time-small">{timeAgo(msg.created_at)}</div>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <div ref={bottomRef} />
+                  </div>
+                )}
+              </div>
+
+              {/* @ mention dropdown */}
+              {mentionQuery !== null && mentionUsers.length > 0 && (
+                <div className="ch-mention-dropdown">
+                  {mentionUsers.map(u => (
+                    <div key={u.id} className="ch-mention-item" onClick={() => insertMention(u)}>
+                      <Avatar name={u.name} size={22} />
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>{u.name}</div>
+                        <div style={{ fontSize: 11, color: "#94a3b8" }}>{u.email}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Emoji picker */}
+              {showEmoji && (
+                <div className="ch-emoji-picker">
+                  {EMOJIS.map(e => (
+                    <button key={e} className="ch-emoji-btn" onClick={() => insertEmoji(e)}>{e}</button>
+                  ))}
+                </div>
+              )}
+
+              {/* + menu */}
+              {showPlusMenu && (
+                <PlusMenu onFile={triggerFile} onClose={() => setShowPlusMenu(false)} />
+              )}
+
+              {/* ── Input bar ── */}
+              <div className="ch-input-bar">
+                <button className="ch-input-icon-btn" title="Attach / more options"
+                  onClick={() => { setShowPlusMenu(v => !v); setShowEmoji(false); }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                </button>
+                <textarea ref={textareaRef} className="ch-input-text" rows={1}
+                  placeholder={`Send a message to #${channelName}…`}
+                  value={text} onChange={handleTextChange} onKeyDown={handleKeyDown} />
+                <div className="ch-input-icons">
+                  <button className="ch-input-icon-btn" title="Emoji"
+                    onClick={() => { setShowEmoji(v => !v); setShowPlusMenu(false); }}>😊</button>
+                  <button className="ch-input-icon-btn" title="@Mention"
+                    onClick={() => { setText(t => t.endsWith(" ") || t === "" ? t + "@" : t + " @"); setMentionQuery(""); textareaRef.current?.focus(); }}>@</button>
+                  <button className="ch-input-icon-btn" title="Attach file" onClick={triggerFile}>📎</button>
+                </div>
+                <button className="ch-send-btn" onClick={send} disabled={!text.trim() || sending} title="Send (Enter)">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                  </svg>
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ── Expandable sidebar panel ── */}
+        <SidebarPanel
+          activeId={activeSidebar}
+          messages={messages}
+          onClose={() => setActiveSidebar(null)}
+          workspaceId={workspaceId}
+        />
       </div>
 
       {/* ── Modals ── */}

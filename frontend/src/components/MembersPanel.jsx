@@ -135,7 +135,7 @@ export default function MembersPanel({ workspaceId }) {
     await api.post("/members", { workspace_id: workspaceId, email, role });
     showMsg(`Member added successfully`);
     setShowAdd(false);
-    load();
+    await load();
   };
 
   const handleRoleChange = async (memberId, newRole) => {

@@ -117,7 +117,7 @@ router.post("/", auth, async (req, res) => {
       [email.trim()]
     );
     if (!userRow.rows.length) {
-      return res.status(404).json({ message: `No user found with email: ${email}` });
+      return res.status(404).json({ message: `No Taskora account found for "${email}". They need to sign up first at taskora.app.` });
     }
     const target = userRow.rows[0];
 

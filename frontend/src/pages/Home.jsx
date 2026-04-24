@@ -646,7 +646,7 @@ export default function Home() {
           </div>
         </div>
         <div className="lp-footer-bottom">
-          <span>© {new Date().getFullYear()} Taskora. Built by Ayush Sharma with React + Node.js + PostgreSQL.</span>
+          <span>© {new Date().getFullYear()} Taskora. All rights reserved.</span>
           <span>
             Questions? <a href="mailto:support@taskora.app" style={{color:"#94a3b8"}}>support@taskora.app</a>
           </span>

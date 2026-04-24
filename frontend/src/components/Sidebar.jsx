@@ -13,7 +13,6 @@ const PRIMARY_VIEWS = [
 
 // Secondary views — shown when "More" is expanded
 const MORE_VIEWS = [
-  { id: "capacity",      icon: "⚡", label: "Capacity" },
   { id: "gantt",         icon: "🗓", label: "Gantt" },
   { id: "ai-risk",       icon: "🔥", label: "AI Risk" },
   { id: "integrations",  icon: "🔗", label: "Integrations" },

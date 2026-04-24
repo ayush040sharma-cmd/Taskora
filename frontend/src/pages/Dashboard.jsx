@@ -572,15 +572,6 @@ export default function Dashboard() {
             </>
           )}
 
-          {/* ── Capacity ── */}
-          {view === "capacity" && (
-            <>
-              <div className="board-header">
-                <div className="board-title-area"><h1>My Capacity</h1><p>Configure your daily hours, travel mode, and leave</p></div>
-              </div>
-              <CapacityPanel />
-            </>
-          )}
 
 
           {/* ── Integrations ── */}

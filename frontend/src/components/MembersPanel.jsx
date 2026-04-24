@@ -141,7 +141,7 @@ export default function MembersPanel({ workspaceId }) {
   const handleRoleChange = async (memberId, newRole) => {
     setChangingRole(memberId);
     try {
-      await api.put(`/members/${memberId}`, { role: newRole });
+      await api.put(`/members/${memberId}`, { role: newRole, workspace_id: workspaceId });
       setMembers(prev => prev.map(m =>
         m.member_record_id === memberId ? { ...m, role: newRole } : m
       ));
@@ -156,7 +156,7 @@ export default function MembersPanel({ workspaceId }) {
   const handleRemove = async (member) => {
     if (!window.confirm(`Remove ${member.name} from this workspace?`)) return;
     try {
-      await api.delete(`/members/${member.member_record_id}`);
+      await api.delete(`/members/${member.member_record_id}?workspace_id=${workspaceId}`);
       showMsg(`${member.name} removed`);
       load();
     } catch (err) {

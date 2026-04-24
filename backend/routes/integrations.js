@@ -45,7 +45,7 @@ async function verifyWorkspaceAccess(workspaceId, userId) {
   if (owner.rows.length > 0) return true;
   // Also allow workspace members
   const member = await pool.query(
-    "SELECT id FROM workspace_members WHERE workspace_id=$1 AND user_id=$2",
+    "SELECT user_id FROM workspace_members WHERE workspace_id=$1 AND user_id=$2",
     [workspaceId, userId]
   );
   return member.rows.length > 0;

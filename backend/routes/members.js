@@ -29,7 +29,7 @@ router.get("/", auth, async (req, res) => {
 
     // Also check if they're a member themselves
     const memberCheck = await pool.query(
-      "SELECT id FROM workspace_members WHERE workspace_id=$1 AND user_id=$2",
+      "SELECT user_id FROM workspace_members WHERE workspace_id=$1 AND user_id=$2",
       [workspace_id, req.user.id]
     );
 
@@ -39,7 +39,7 @@ router.get("/", auth, async (req, res) => {
 
     const result = await pool.query(
       `SELECT
-         wm.id       AS member_record_id,
+         wm.user_id  AS member_record_id,
          wm.role,
          wm.joined_at,
          u.id        AS user_id,
@@ -128,7 +128,7 @@ router.post("/", auth, async (req, res) => {
 
     // Check for duplicate
     const existing = await pool.query(
-      "SELECT id FROM workspace_members WHERE workspace_id=$1 AND user_id=$2",
+      "SELECT user_id FROM workspace_members WHERE workspace_id=$1 AND user_id=$2",
       [workspace_id, target.id]
     );
     if (existing.rows.length) {
@@ -169,31 +169,32 @@ router.post("/", auth, async (req, res) => {
   }
 });
 
-// ── PUT /api/members/:memberId ────────────────────────────────────────────────
-// Change a member's role
-router.put("/:memberId", auth, async (req, res) => {
-  const { role } = req.body;
-  const { memberId } = req.params;
+// ── PUT /api/members/:userId ──────────────────────────────────────────────────
+// Change a member's role  (userId = the member's user_id; workspace_id in body)
+router.put("/:userId", auth, async (req, res) => {
+  const { role, workspace_id } = req.body;
+  const { userId } = req.params;
 
   if (!VALID_ROLES.includes(role)) {
     return res.status(400).json({ message: `role must be one of: ${VALID_ROLES.join(", ")}` });
   }
+  if (!workspace_id) {
+    return res.status(400).json({ message: "workspace_id required in body" });
+  }
 
   try {
-    // Verify requester owns the workspace this member belongs to
+    // Verify requester owns the workspace
     const check = await pool.query(
-      `SELECT wm.id, wm.workspace_id FROM workspace_members wm
-       JOIN workspaces w ON w.id = wm.workspace_id
-       WHERE wm.id = $1 AND w.user_id = $2`,
-      [memberId, req.user.id]
+      "SELECT id FROM workspaces WHERE id=$1 AND user_id=$2",
+      [workspace_id, req.user.id]
     );
     if (!check.rows.length) {
       return res.status(403).json({ message: "Only workspace owners can change roles" });
     }
 
     const result = await pool.query(
-      "UPDATE workspace_members SET role=$1 WHERE id=$2 RETURNING *",
-      [role, memberId]
+      "UPDATE workspace_members SET role=$1 WHERE workspace_id=$2 AND user_id=$3 RETURNING *",
+      [role, workspace_id, userId]
     );
     res.json(result.rows[0]);
   } catch (err) {
@@ -202,24 +203,32 @@ router.put("/:memberId", auth, async (req, res) => {
   }
 });
 
-// ── DELETE /api/members/:memberId ─────────────────────────────────────────────
-// Remove a member
-router.delete("/:memberId", auth, async (req, res) => {
-  const { memberId } = req.params;
+// ── DELETE /api/members/:userId ───────────────────────────────────────────────
+// Remove a member  (userId = the member's user_id; workspace_id in query)
+router.delete("/:userId", auth, async (req, res) => {
+  const { userId } = req.params;
+  const { workspace_id } = req.query;
+
+  if (!workspace_id) {
+    return res.status(400).json({ message: "workspace_id required as query param" });
+  }
 
   try {
-    // Verify requester owns the workspace or is removing themselves
+    // Allow workspace owner OR the member themselves to remove
     const check = await pool.query(
-      `SELECT wm.id, wm.user_id, wm.workspace_id FROM workspace_members wm
+      `SELECT wm.user_id, wm.workspace_id FROM workspace_members wm
        JOIN workspaces w ON w.id = wm.workspace_id
-       WHERE wm.id = $1 AND (w.user_id = $2 OR wm.user_id = $2)`,
-      [memberId, req.user.id]
+       WHERE wm.workspace_id=$1 AND wm.user_id=$2 AND (w.user_id=$3 OR wm.user_id=$3)`,
+      [workspace_id, userId, req.user.id]
     );
     if (!check.rows.length) {
       return res.status(403).json({ message: "Permission denied" });
     }
 
-    await pool.query("DELETE FROM workspace_members WHERE id=$1", [memberId]);
+    await pool.query(
+      "DELETE FROM workspace_members WHERE workspace_id=$1 AND user_id=$2",
+      [workspace_id, userId]
+    );
     res.json({ message: "Member removed" });
   } catch (err) {
     console.error("Remove member error:", err);

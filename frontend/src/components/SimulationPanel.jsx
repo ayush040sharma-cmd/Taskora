@@ -62,13 +62,12 @@ export default function SimulationPanel({ workspaceId }) {
 
   useEffect(() => {
     if (!workspaceId) return;
-    Promise.all([
-      api.get(`/tasks/workspace/${workspaceId}`),
-      api.get(`/members?workspace_id=${workspaceId}`),
-    ]).then(([tRes, mRes]) => {
-      setTasks(tRes.data.filter(t => t.status !== "done"));
-      setMembers(mRes.data || []);
-    }).catch(() => {});
+    api.get(`/tasks/workspace/${workspaceId}`)
+      .then(r => setTasks((r.data || []).filter(t => t.status !== "done")))
+      .catch(() => {});
+    api.get(`/members?workspace_id=${workspaceId}`)
+      .then(r => setMembers(r.data || []))
+      .catch(() => {});
   }, [workspaceId]);
 
   const runSimulation = async () => {

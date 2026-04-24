@@ -8,11 +8,18 @@ const { audit } = require("../services/auditService");
 // GET /api/tasks/workspace/:workspaceId
 router.get("/workspace/:workspaceId", auth, async (req, res) => {
   try {
-    const workspace = await pool.query(
+    // Allow workspace owners AND members to view tasks
+    const ownerCheck = await pool.query(
       "SELECT id FROM workspaces WHERE id = $1 AND user_id = $2",
       [req.params.workspaceId, req.user.id]
     );
-    if (!workspace.rows.length) return res.status(403).json({ message: "Access denied" });
+    const memberCheck = await pool.query(
+      "SELECT user_id FROM workspace_members WHERE workspace_id = $1 AND user_id = $2",
+      [req.params.workspaceId, req.user.id]
+    );
+    if (!ownerCheck.rows.length && !memberCheck.rows.length) {
+      return res.status(403).json({ message: "Access denied" });
+    }
 
     const result = await pool.query(
       `SELECT t.*,

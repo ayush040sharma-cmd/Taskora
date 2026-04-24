@@ -191,40 +191,46 @@ function InviteEmailModal({ workspaceName, onClose }) {
 
 // ── Start a Call Modal ────────────────────────────────────────────────────────
 function StartCallModal({ channelName, onClose }) {
-  const link = `${window.location.origin}/call/${(channelName || "channel").replace(/\s+/g, "-").toLowerCase()}-${Date.now()}`;
+  const roomName = `taskora-${(channelName || "channel").replace(/\s+/g, "-").toLowerCase()}-${Math.random().toString(36).slice(2, 7)}`;
+  const jitsiUrl = `https://meet.jit.si/${roomName}`;
   const [copied, setCopied] = useState(false);
 
   const copy = () => {
-    navigator.clipboard.writeText(link).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+    navigator.clipboard.writeText(jitsiUrl).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+  };
+
+  const openCall = () => {
+    window.open(jitsiUrl, "_blank", "noopener,noreferrer");
+    onClose();
   };
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth: 400 }}>
         <div className="modal-header">
-          <span className="modal-title">🎥 Start a Call</span>
+          <span className="modal-title">🎥 Start a Video Call</span>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
           <div style={{ textAlign: "center", padding: "8px 0 8px" }}>
-            <div style={{ fontSize: 52, marginBottom: 10 }}>📞</div>
+            <div style={{ fontSize: 52, marginBottom: 10 }}>🎥</div>
             <div style={{ fontWeight: 600, color: "#172b4d", marginBottom: 4 }}>
               Start a call in #{channelName}
             </div>
             <div style={{ fontSize: 13, color: "#64748b", marginBottom: 16 }}>
-              Share this link with your team to join.
+              Opens a free video call via Jit.si. Share the link with your team.
             </div>
             <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 12px", fontSize: 12, color: "#64748b", wordBreak: "break-all", textAlign: "left", marginBottom: 12 }}>
-              {link}
+              {jitsiUrl}
             </div>
-            <button className="btn-primary" onClick={copy} style={{ width: "100%" }}>
-              {copied ? "✓ Copied!" : "📋 Copy Call Link"}
+            <button className="btn-secondary" onClick={copy} style={{ width: "100%", marginBottom: 8 }}>
+              {copied ? "✓ Copied!" : "📋 Copy Link"}
             </button>
           </div>
         </div>
         <div className="modal-footer">
           <button className="btn-modal-cancel" onClick={onClose}>Cancel</button>
-          <button className="btn-modal-submit" onClick={() => { copy(); onClose(); }}>Start Call</button>
+          <button className="btn-modal-submit" onClick={openCall}>🚀 Join Call Now</button>
         </div>
       </div>
     </div>
@@ -408,7 +414,7 @@ export default function ChannelView({ workspaceId, workspaceName, onNavigate }) 
   const [showAddPeople, setShowAddPeople] = useState(false);
   const [showInvite,    setShowInvite]    = useState(false);
   const [showCall,      setShowCall]      = useState(false);
-  const [showHome,      setShowHome]      = useState(false);
+  const [showHome,      setShowHome]      = useState(true);
   const [mentionQuery,  setMentionQuery]  = useState(null);
   const [mentionUsers,  setMentionUsers]  = useState([]);
 
@@ -466,7 +472,7 @@ export default function ChannelView({ workspaceId, workspaceName, onNavigate }) 
     try {
       const r = await api.post(`/channels/${workspaceId}/messages`, { content: text.trim() });
       setMessages(prev => [...prev.filter(m => m.id !== r.data.id), r.data]);
-      setText(""); setBanner(false); setMentionQuery(null); setShowEmoji(false);
+      setText(""); setMentionQuery(null); setShowEmoji(false);
     } catch {}
     finally { setSending(false); }
   };
@@ -631,7 +637,7 @@ export default function ChannelView({ workspaceId, workspaceName, onNavigate }) 
         {/* ── Main content ── */}
         <div className="ch-main">
 
-          {showHome || (!hasMessages && !loading) ? (
+          {showHome ? (
             loading ? (
               <div className="ch-center"><div className="af-spinner" /><span>Loading channel…</span></div>
             ) : (
@@ -644,6 +650,13 @@ export default function ChannelView({ workspaceId, workspaceName, onNavigate }) 
                   <div className="ch-center"><div className="af-spinner" /><span>Loading channel…</span></div>
                 ) : (
                   <div className="ch-message-list">
+                    {!hasMessages && (
+                      <div className="ch-no-messages">
+                        <div style={{ fontSize: 32, marginBottom: 8 }}>👋</div>
+                        <div style={{ fontWeight: 600, color: "#172b4d", marginBottom: 4 }}>No messages yet</div>
+                        <div style={{ fontSize: 13, color: "#64748b" }}>Be the first to send a message to #{channelName}</div>
+                      </div>
+                    )}
                     {messages.map((msg, i) => {
                       const isMe = msg.sender_id === user?.id;
                       const showName = i === 0 || messages[i - 1]?.sender_id !== msg.sender_id;

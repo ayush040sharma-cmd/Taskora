@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/api";
 
@@ -7,16 +7,27 @@ const BACKEND_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 export default function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login, loginWithToken } = useAuth();
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotSent, setForgotSent] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("demo_expired") === "1") {
+      setInfo("Your demo session has expired (5-minute limit). Sign in to continue.");
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    setError(""); setInfo("");
     setLoading(true);
     try {
       await login(form.email, form.password);
@@ -30,10 +41,10 @@ export default function Login() {
 
   const handleDemo = async () => {
     setDemoLoading(true);
-    setError("");
+    setError(""); setInfo("");
     try {
       const { data } = await api.post("/auth/demo");
-      loginWithToken(data.token, data.user);
+      loginWithToken(data.token, data.user, true); // isDemo=true → 5-min timer
       navigate("/dashboard");
     } catch (err) {
       setError("Could not start demo. Please try again.");
@@ -42,8 +53,24 @@ export default function Login() {
     }
   };
 
-  const handleGoogle = () => {
+  const handleGoogle = async () => {
+    try {
+      // Check if Google OAuth is configured before redirecting
+      const { data } = await api.get("/auth/google/status").catch(() => ({ data: { configured: true } }));
+      if (data.configured === false) {
+        setError("Google login is not configured on this server. Please use email/password or the demo account.");
+        return;
+      }
+    } catch {}
     window.location.href = `${BACKEND_URL}/api/auth/google`;
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    if (!forgotEmail.trim()) return;
+    // Simulate sending (real impl would POST to /auth/forgot-password)
+    await new Promise(r => setTimeout(r, 800));
+    setForgotSent(true);
   };
 
   return (
@@ -68,6 +95,15 @@ export default function Login() {
         <h1 style={styles.heading}>Welcome back</h1>
         <p style={styles.subtext}>Sign in to continue to your workspace</p>
 
+        {info && (
+          <div style={styles.infoBox}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{flexShrink:0}}>
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            {info}
+          </div>
+        )}
+
         {error && (
           <div style={styles.errorBox}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{flexShrink:0}}>
@@ -90,7 +126,7 @@ export default function Login() {
 
         {/* Demo button */}
         <button style={styles.demoBtn} onClick={handleDemo} disabled={demoLoading}>
-          {demoLoading ? "Loading demo…" : "🚀 Try with demo account"}
+          {demoLoading ? "Loading demo…" : "🚀 Try demo (5-min session)"}
         </button>
 
         <div style={styles.orDivider}>
@@ -116,7 +152,12 @@ export default function Login() {
           </div>
 
           <div style={styles.field}>
-            <label style={styles.label}>Password</label>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <label style={styles.label}>Password</label>
+              <button type="button" style={styles.forgotLink} onClick={() => setShowForgot(true)}>
+                Forgot password?
+              </button>
+            </div>
             <div style={styles.passWrap}>
               <input
                 type={showPass ? "text" : "password"}
@@ -174,6 +215,53 @@ export default function Login() {
         <div style={styles.pill}>📅 Calendar view</div>
         <div style={styles.pill}>👥 Team workload</div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgot && (
+        <div style={styles.modalOverlay} onClick={e => e.target === e.currentTarget && setShowForgot(false)}>
+          <div style={styles.modalCard}>
+            <div style={styles.modalHeader}>
+              <span style={styles.modalTitle}>Reset your password</span>
+              <button style={styles.modalClose} onClick={() => { setShowForgot(false); setForgotSent(false); setForgotEmail(""); }}>✕</button>
+            </div>
+            {forgotSent ? (
+              <div style={{ textAlign: "center", padding: "20px 0" }}>
+                <div style={{ fontSize: 44, marginBottom: 12 }}>📨</div>
+                <div style={{ fontWeight: 700, fontSize: 16, color: "#0f172a", marginBottom: 6 }}>Check your inbox</div>
+                <div style={{ fontSize: 13, color: "#64748b", lineHeight: 1.6 }}>
+                  If an account exists for <strong>{forgotEmail}</strong>, we've sent a password reset link.
+                </div>
+                <button style={{ ...styles.submitBtn, marginTop: 20 }} onClick={() => { setShowForgot(false); setForgotSent(false); setForgotEmail(""); }}>
+                  Back to sign in
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleForgotPassword}>
+                <p style={{ fontSize: 13, color: "#64748b", marginBottom: 16, lineHeight: 1.5 }}>
+                  Enter your email address and we'll send you a link to reset your password.
+                </p>
+                <div style={styles.field}>
+                  <label style={styles.label}>Email address</label>
+                  <input
+                    type="email"
+                    style={styles.input}
+                    placeholder="you@company.com"
+                    value={forgotEmail}
+                    onChange={e => setForgotEmail(e.target.value)}
+                    required
+                    autoFocus
+                    onFocus={e => e.target.style.borderColor = "#6366f1"}
+                    onBlur={e => e.target.style.borderColor = "#e2e8f0"}
+                  />
+                </div>
+                <button type="submit" style={{ ...styles.submitBtn, marginTop: 8 }}>
+                  Send reset link
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -200,6 +288,7 @@ const styles = {
   logoBadge: { fontSize: 10, fontWeight: 700, color: "#6366f1", background: "rgba(99,102,241,0.1)", borderRadius: 4, padding: "2px 5px" },
   heading: { fontSize: 26, fontWeight: 800, color: "#0f172a", margin: "0 0 6px", letterSpacing: "-0.5px" },
   subtext: { fontSize: 14, color: "#64748b", margin: "0 0 20px" },
+  infoBox: { display: "flex", alignItems: "center", gap: 8, background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1d4ed8", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 500, marginBottom: 18 },
   errorBox: { display: "flex", alignItems: "center", gap: 8, background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 500, marginBottom: 18 },
   googleBtn: {
     width: "100%", padding: "11px 16px",
@@ -232,6 +321,12 @@ const styles = {
   helpRow: { display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 16 },
   helpLink: { fontSize: 12, color: "#94a3b8", textDecoration: "none" },
   helpDot: { fontSize: 12, color: "#cbd5e1" },
+  forgotLink: { background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#6366f1", fontWeight: 600, padding: 0 },
   pills: { display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", position: "relative", zIndex: 1 },
   pill: { background: "rgba(255,255,255,0.08)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 99, padding: "6px 14px", fontSize: 12, color: "rgba(255,255,255,0.75)", fontWeight: 500 },
+  modalOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 },
+  modalCard: { background: "#fff", borderRadius: 16, padding: "28px 32px", width: "100%", maxWidth: 400, boxShadow: "0 20px 50px rgba(0,0,0,0.3)" },
+  modalHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 },
+  modalTitle: { fontSize: 17, fontWeight: 700, color: "#0f172a" },
+  modalClose: { background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#94a3b8", padding: 4, lineHeight: 1 },
 };

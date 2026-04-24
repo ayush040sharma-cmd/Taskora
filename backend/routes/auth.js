@@ -200,6 +200,12 @@ router.put("/onboarding", auth, async (req, res) => {
   }
 });
 
+// GET /api/auth/google/status — check if Google OAuth is configured
+router.get("/google/status", (req, res) => {
+  const configured = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+  res.json({ configured });
+});
+
 // POST /api/auth/demo — instant demo login (creates/resets demo account)
 router.post("/demo", authLimiter, async (req, res) => {
   const DEMO_EMAIL = "demo@taskora.app";

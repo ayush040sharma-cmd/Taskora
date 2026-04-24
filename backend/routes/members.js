@@ -135,12 +135,22 @@ router.post("/", auth, async (req, res) => {
       return res.status(409).json({ message: `${target.name} is already a member` });
     }
 
-    // Insert member record
-    const result = await pool.query(
-      `INSERT INTO workspace_members (workspace_id, user_id, role, invited_by)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [workspace_id, target.id, role, req.user.id]
-    );
+    // Insert member record (try with invited_by first, fall back if column absent)
+    let result;
+    try {
+      result = await pool.query(
+        `INSERT INTO workspace_members (workspace_id, user_id, role, invited_by)
+         VALUES ($1, $2, $3, $4) RETURNING *`,
+        [workspace_id, target.id, role, req.user.id]
+      );
+    } catch (colErr) {
+      // Fall back without invited_by for older schemas
+      result = await pool.query(
+        `INSERT INTO workspace_members (workspace_id, user_id, role)
+         VALUES ($1, $2, $3) RETURNING *`,
+        [workspace_id, target.id, role]
+      );
+    }
 
     // Optionally seed user_capacity row
     await pool.query(

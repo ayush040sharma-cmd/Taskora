@@ -59,22 +59,25 @@ export default function About() {
             <div style={S.storyText}>
               <h2 style={S.h2}>The moment it clicked</h2>
               <p style={S.para}>
-                It was a Thursday afternoon in 2023. Ayush Sharma — a software engineer
-                managing his first real product team — was staring at a Jira board full
-                of green tickets while three clients were about to be told their delivery
-                was slipping. Again.
+                It was a Thursday afternoon in 2026. Ayush Sharma — coming from a non-technical background but now trying to build his first real product — was staring at a Kanban board filled with neatly organized green tasks. On the surface, everything looked on track. But in reality, three clients were about to be told their deliveries would slip. Again.
               </p>
               <p style={S.para}>
-                "Everything looked fine on the board," Ayush recalls. "But underneath,
-                we had three people overloaded, one task sitting unassigned for six days,
-                and a dependency no one had mapped. The board showed green. Reality was red."
+                He hadn't started as a developer. There was no formal training, no engineering degree — just a growing frustration with how work was being managed. Tasks looked simple on boards, timelines looked achievable on paper, and yet execution kept falling apart. Deadlines slipped, workloads were misjudged, and no tool seemed to reflect what was actually happening behind the scenes.
               </p>
               <p style={S.para}>
-                That evening, he opened a notebook and wrote one question at the top:
-                <em style={S.em}> "What if your task manager could tell you what's about to break — before it does?"</em>
+                Instead of waiting for a better solution, he decided to build one himself.
               </p>
               <p style={S.para}>
-                That question became Taskora.
+                What started as curiosity slowly turned into late nights of learning, experimenting, and breaking things. Every mistake taught him something — not just about technology, but about how teams actually work. He wasn't trying to build just another task manager. He wanted something that could think ahead, balance workload realistically, and prevent the chaos he had experienced firsthand.
+              </p>
+              <p style={S.para}>
+                That Thursday wasn't just another stressful day — it was the moment things became clear. The problem wasn't the team. It wasn't even the effort.
+              </p>
+              <p style={S.para}>
+                The problem was the system.
+              </p>
+              <p style={S.para}>
+                And that's where the idea truly began.
               </p>
             </div>
             <div style={S.storyVisual}>
@@ -151,27 +154,27 @@ export default function About() {
           <div style={S.timeline}>
             {[
               {
-                year: "Late 2023",
+                year: "Late 2025",
                 title: "The frustration phase",
                 desc: "Ayush starts building a personal Kanban tool after a rough sprint at work. It's just a simple board — no AI, no analytics. But it syncs in real time and that already feels different.",
               },
               {
-                year: "Early 2024",
+                year: "Early 2026",
                 title: "The AI hypothesis",
                 desc: "After adding workload tracking for a second team member, a pattern emerges: certain combinations of task count + person load reliably predict delay. The AI engine concept is born.",
               },
               {
-                year: "Mid 2024",
+                year: "Mid 2026",
                 title: "What-if simulation",
                 desc: "The simulation feature gets built after a manager friend says 'I wish I could see what happens before I assign.' 8 days of building later, the impact simulator is live.",
               },
               {
-                year: "Late 2024",
+                year: "Mid 2026",
                 title: "First real teams",
                 desc: "Three teams start using Taskora seriously. One catches a delivery risk 4 days early and saves a client contract. That's the moment everything clicks.",
               },
               {
-                year: "2025",
+                year: "2026",
                 title: "Taskora goes public",
                 desc: "After months of private beta, Taskora opens to the world. The full platform — Kanban, AI predictions, workload intelligence, sprint planning, and collaboration — ships publicly.",
               },

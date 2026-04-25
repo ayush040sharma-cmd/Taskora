@@ -3,6 +3,7 @@ const router = express.Router();
 const axios = require("axios");
 const jwt = require("jsonwebtoken");
 const pool = require("../db");
+const { setAuthCookie } = require("../utils/cookies");
 
 const GOOGLE_CLIENT_ID     = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
@@ -119,7 +120,8 @@ router.get("/google/callback", async (req, res) => {
       { expiresIn: "7d" }
     );
 
-    // 5. Redirect to frontend with token
+    // 5. Set httpOnly cookie and redirect to frontend
+    setAuthCookie(res, token);
     return res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify({
       id:    user.id,
       name:  user.name,

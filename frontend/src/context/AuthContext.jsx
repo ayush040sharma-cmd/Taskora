@@ -26,7 +26,8 @@ export function AuthProvider({ children }) {
   // Auto-logout for demo sessions after 5 minutes
   const startDemoTimer = () => {
     clearDemoTimer();
-    demoTimerRef.current = setTimeout(() => {
+    demoTimerRef.current = setTimeout(async () => {
+      try { await api.post("/auth/logout"); } catch {}
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       localStorage.removeItem("demo_session");
@@ -96,8 +97,10 @@ export function AuthProvider({ children }) {
     setUser(updatedUser);
   };
 
-  const logout = () => {
+  const logout = async () => {
     clearDemoTimer();
+    // Tell backend to clear the httpOnly cookie
+    try { await api.post("/auth/logout"); } catch {}
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     localStorage.removeItem("demo_session");

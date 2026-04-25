@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const pool = require("../db");
 const auth = require("../middleware/auth");
+const { validate, schemas } = require("../utils/validate");
 
 // GET /api/workspaces
 router.get("/", auth, async (req, res) => {
@@ -18,7 +19,7 @@ router.get("/", auth, async (req, res) => {
 });
 
 // POST /api/workspaces
-router.post("/", auth, async (req, res) => {
+router.post("/", auth, validate(schemas.createWorkspace), async (req, res) => {
   const { name } = req.body;
   if (!name) return res.status(400).json({ message: "Workspace name is required" });
 

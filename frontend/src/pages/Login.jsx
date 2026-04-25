@@ -65,12 +65,20 @@ export default function Login() {
     window.location.href = `${BACKEND_URL}/api/auth/google`;
   };
 
+  const [forgotLoading, setForgotLoading] = useState(false);
+
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     if (!forgotEmail.trim()) return;
-    // Simulate sending (real impl would POST to /auth/forgot-password)
-    await new Promise(r => setTimeout(r, 800));
-    setForgotSent(true);
+    setForgotLoading(true);
+    try {
+      await api.post("/auth/forgot-password", { email: forgotEmail.trim() });
+    } catch {
+      // Always show success to prevent email enumeration
+    } finally {
+      setForgotLoading(false);
+      setForgotSent(true);
+    }
   };
 
   return (
@@ -254,8 +262,8 @@ export default function Login() {
                     onBlur={e => e.target.style.borderColor = "#e2e8f0"}
                   />
                 </div>
-                <button type="submit" style={{ ...styles.submitBtn, marginTop: 8 }}>
-                  Send reset link
+                <button type="submit" style={{ ...styles.submitBtn, marginTop: 8, opacity: forgotLoading ? 0.7 : 1 }} disabled={forgotLoading}>
+                  {forgotLoading ? "Sending…" : "Send reset link"}
                 </button>
               </form>
             )}

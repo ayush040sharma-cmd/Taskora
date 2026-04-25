@@ -11,6 +11,7 @@ const express = require("express");
 const router  = express.Router();
 const pool    = require("../db");
 const auth    = require("../middleware/auth");
+const { validate, schemas } = require("../utils/validate");
 
 // Valid roles (simple, no hierarchy complexity)
 const VALID_ROLES = ["manager", "member", "viewer"];
@@ -93,7 +94,7 @@ router.get("/", auth, async (req, res) => {
 
 // ── POST /api/members ─────────────────────────────────────────────────────────
 // Add a member to a workspace by email
-router.post("/", auth, async (req, res) => {
+router.post("/", auth, validate(schemas.addMember), async (req, res) => {
   const { workspace_id, email, role = "member" } = req.body;
 
   if (!workspace_id || !email) {
@@ -171,7 +172,7 @@ router.post("/", auth, async (req, res) => {
 
 // ── PUT /api/members/:userId ──────────────────────────────────────────────────
 // Change a member's role  (userId = the member's user_id; workspace_id in body)
-router.put("/:userId", auth, async (req, res) => {
+router.put("/:userId", auth, validate(schemas.updateMemberRole), async (req, res) => {
   const { role, workspace_id } = req.body;
   const { userId } = req.params;
 

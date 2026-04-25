@@ -4,6 +4,7 @@ const pool = require("../db");
 const auth = require("../middleware/auth");
 const { refreshUserWorkloadLog } = require("../services/workloadLogger");
 const { audit } = require("../services/auditService");
+const { validate, schemas } = require("../utils/validate");
 
 // GET /api/tasks/workspace/:workspaceId
 router.get("/workspace/:workspaceId", auth, async (req, res) => {
@@ -68,7 +69,7 @@ router.get("/:id", auth, async (req, res) => {
 });
 
 // POST /api/tasks
-router.post("/", auth, async (req, res) => {
+router.post("/", auth, validate(schemas.createTask), async (req, res) => {
   const {
     title, description, status, priority, due_date, start_date,
     workspace_id, type, estimated_days, progress, assigned_user_id, sprint_id,
@@ -140,7 +141,7 @@ router.post("/", auth, async (req, res) => {
 });
 
 // PUT /api/tasks/:id
-router.put("/:id", auth, async (req, res) => {
+router.put("/:id", auth, validate(schemas.updateTask), async (req, res) => {
   const {
     title, description, status, priority, due_date, start_date,
     position, progress, type, estimated_days, assigned_user_id, sprint_id,

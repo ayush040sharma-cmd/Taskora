@@ -11,6 +11,7 @@ import Contact from "./pages/Contact";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import AuthCallback from "./pages/AuthCallback";
+import ResetPassword from "./pages/ResetPassword";
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth();
@@ -31,7 +32,8 @@ function AppRoutes() {
       <Route path="/register"      element={<PublicRoute><Register /></PublicRoute>} />
 
       {/* OAuth callback — accessible without auth (processes token from URL) */}
-      <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/auth/callback"     element={<AuthCallback />} />
+      <Route path="/reset-password"    element={<ResetPassword />} />
 
       {/* Static pages — always accessible */}
       <Route path="/about"         element={<About />} />

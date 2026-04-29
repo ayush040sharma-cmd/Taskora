@@ -26,6 +26,7 @@ const STATUS_OPTIONS = [
   { value: "",           label: "All statuses" },
   { value: "todo",       label: "To Do" },
   { value: "inprogress", label: "In Progress" },
+  { value: "review",     label: "In Review" },
   { value: "done",       label: "Done" },
 ];
 

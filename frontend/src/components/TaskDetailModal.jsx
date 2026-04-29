@@ -19,9 +19,10 @@ const TYPE_META = {
 
 const PRIORITIES = ["low", "medium", "high"];
 const STATUSES   = [
-  { value: "todo",       label: "To Do"      },
-  { value: "inprogress", label: "In Progress" },
-  { value: "done",       label: "Done"        },
+  { value: "todo",       label: "To Do"       },
+  { value: "inprogress", label: "In Progress"  },
+  { value: "review",     label: "In Review"    },
+  { value: "done",       label: "Done"         },
 ];
 
 function timeAgo(dateStr) {

@@ -13,7 +13,7 @@ const SUGGESTIONS = [
   "Show unassigned tasks",
 ];
 
-const STATUS_COLOR = { todo: "#94a3b8", inprogress: "#6366f1", done: "#10b981" };
+const STATUS_COLOR = { todo: "#94a3b8", inprogress: "#6366f1", in_progress: "#6366f1", done: "#10b981", review: "#f59e0b" };
 const PRIORITY_DOT = { critical: "🔴", high: "🟠", medium: "🟡", low: "🟢" };
 
 function TaskResult({ task }) {

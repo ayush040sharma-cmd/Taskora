@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import api from "../api/api";
 
-const STATUS_COLOR  = { todo: "#94a3b8", inprogress: "#6366f1", done: "#10b981" };
+const STATUS_COLOR  = { todo: "#94a3b8", inprogress: "#6366f1", in_progress: "#6366f1", done: "#10b981", review: "#f59e0b" };
 const RISK_COLOR    = (score) => score >= 75 ? "#dc2626" : score >= 50 ? "#ef4444" : score >= 25 ? "#f59e0b" : "#10b981";
 const PRIORITY_ICON = { critical: "🔴", high: "🟠", medium: "🟡", low: "🟢" };
 

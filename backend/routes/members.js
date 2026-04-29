@@ -197,6 +197,7 @@ router.put("/:userId", auth, validate(schemas.updateMemberRole), async (req, res
       "UPDATE workspace_members SET role=$1 WHERE workspace_id=$2 AND user_id=$3 RETURNING *",
       [role, workspace_id, userId]
     );
+    if (!result.rows.length) return res.status(404).json({ message: "Member not found in this workspace" });
     res.json(result.rows[0]);
   } catch (err) {
     console.error("Update member role error:", err);

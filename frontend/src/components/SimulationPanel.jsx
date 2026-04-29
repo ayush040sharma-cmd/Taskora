@@ -24,7 +24,19 @@ function LoadBar({ pct, label }) {
 }
 
 function PredictionChart({ prediction }) {
-  if (!prediction?.days?.length) return null;
+  if (!prediction) return null;
+  if (!prediction.days?.length) {
+    return (
+      <div className="sim-chart">
+        <div className="sim-chart-title">14-Day Load Forecast</div>
+        <div style={{ padding: "20px 0", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>
+          {prediction.risk === "on_leave"
+            ? "🏖️ Member is on leave — no forecast available"
+            : "No forecast data available"}
+        </div>
+      </div>
+    );
+  }
   const maxLoad = Math.max(100, ...prediction.days.map(d => d.load_percent));
 
   const formatDate = (dateStr) => {

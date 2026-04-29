@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import api from "../api/api";
 
-const STATUS_COLOR  = { todo: "#94a3b8", inprogress: "#6366f1", done: "#10b981" };
+const STATUS_COLOR  = { todo: "#94a3b8", inprogress: "#6366f1", in_progress: "#6366f1", done: "#10b981", review: "#f59e0b" };
 const PRIORITY_COLOR = { critical: "#dc2626", high: "#ef4444", medium: "#f59e0b", low: "#10b981" };
 const ROW_H   = 36;
 const LABEL_W = 220;

@@ -219,7 +219,10 @@ export default function SummaryDashboard({ workspaceId }) {
 
   // normalise status rows
   const statusMap = { todo: 0, inprogress: 0, done: 0 };
-  status_breakdown.forEach(r => { statusMap[r.status] = parseInt(r.count); });
+  status_breakdown.forEach(r => {
+    const key = r.status === "in_progress" ? "inprogress" : r.status;
+    statusMap[key] = (statusMap[key] || 0) + parseInt(r.count);
+  });
   const statusRows = Object.entries(statusMap).map(([status, count]) => ({ status, count }));
   const totalTasks = parseInt(stats.total_tasks);
 

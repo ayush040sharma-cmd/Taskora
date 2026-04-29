@@ -57,8 +57,8 @@ function isDueSoon(d) {
 }
 
 function isStuck(task) {
-  if (task.status !== "inprogress") return false;
-  const ref = task.updated_at || task.created_at;
+  if (task.status !== "inprogress" && task.status !== "in_progress") return false;
+  const ref = task.created_at;
   if (!ref) return false;
   const days = (Date.now() - new Date(ref)) / (1000 * 60 * 60 * 24);
   return days >= 5;

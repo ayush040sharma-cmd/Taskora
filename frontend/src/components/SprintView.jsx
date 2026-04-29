@@ -12,7 +12,10 @@ const COLS = [
 
 function tasksToColumns(tasks) {
   const c = { todo: [], inprogress: [], done: [] };
-  tasks.forEach(t => { if (c[t.status]) c[t.status].push(t); });
+  tasks.forEach(t => {
+    const key = t.status === "in_progress" ? "inprogress" : t.status;
+    if (c[key]) c[key].push(t);
+  });
   return c;
 }
 

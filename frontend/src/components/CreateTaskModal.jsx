@@ -172,6 +172,7 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
                 <select className="modal-select" value={form.status} onChange={e => set("status", e.target.value)}>
                   <option value="todo">To Do</option>
                   <option value="inprogress">In Progress</option>
+                  <option value="review">In Review</option>
                   <option value="done">Done</option>
                 </select>
               </div>

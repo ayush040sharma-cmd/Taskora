@@ -136,7 +136,10 @@ function WorkloadChart({ team }) {
 // ─── StatusChart ──────────────────────────────────────────────────────────────
 function StatusChart({ tasks }) {
   const counts = { todo: 0, inprogress: 0, done: 0 };
-  tasks.forEach(t => { if (counts[t.status] !== undefined) counts[t.status]++; });
+  tasks.forEach(t => {
+    const s = t.status === "in_progress" ? "inprogress" : t.status;
+    if (counts[s] !== undefined) counts[s]++;
+  });
   const data = [
     { name: "To Do",       value: counts.todo,       color: C.muted },
     { name: "In Progress", value: counts.inprogress,  color: C.blue },
@@ -230,8 +233,8 @@ function ProgressChart({ tasks }) {
     const short = d.toLocaleDateString("en-US", { weekday: "short" });
     d.setHours(23, 59, 59, 999);
     const completed = tasks.filter(t =>
-      t.status === "done" && t.updated_at &&
-      Math.abs(new Date(t.updated_at) - d) < 86400000
+      t.status === "done" && t.completed_at &&
+      Math.abs(new Date(t.completed_at) - d) < 86400000
     ).length;
     return { label: short, completed, full: label };
   });
@@ -456,7 +459,11 @@ function AtRiskTasks({ tasks }) {
 // ─── TaskList ─────────────────────────────────────────────────────────────────
 function TaskList({ tasks }) {
   const [open, setOpen] = useState(false);
-  const recent = [...tasks].sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at)).slice(0, 12);
+  const recent = [...tasks].sort((a, b) => {
+    const aDate = a.completed_at || a.created_at || 0;
+    const bDate = b.completed_at || b.created_at || 0;
+    return new Date(bDate) - new Date(aDate);
+  }).slice(0, 12);
 
   const STATUS_PILL = {
     todo:       { bg: "#f1f5f9", color: "#475569", label: "To Do" },
@@ -504,7 +511,7 @@ function TaskList({ tasks }) {
             textTransform: "uppercase", letterSpacing: "0.05em",
             marginBottom: 6,
           }}>
-            <span>Task</span><span>Assignee</span><span>Status</span><span>Priority</span><span>Updated</span>
+            <span>Task</span><span>Assignee</span><span>Status</span><span>Priority</span><span>Date</span>
           </div>
 
           {recent.map(t => {
@@ -562,7 +569,7 @@ function TaskList({ tasks }) {
                     </span>
                   )}
                 </div>
-                <div style={{ fontSize: 12, color: C.muted }}>{timeAgo(t.updated_at)}</div>
+                <div style={{ fontSize: 12, color: C.muted }}>{timeAgo(t.completed_at || t.created_at)}</div>
               </div>
             );
           })}

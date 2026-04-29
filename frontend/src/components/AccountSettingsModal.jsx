@@ -33,8 +33,8 @@ export default function AccountSettingsModal({ onClose }) {
       setError("New passwords do not match");
       return;
     }
-    if (form.new_password.length < 6) {
-      setError("New password must be at least 6 characters");
+    if (form.new_password.length < 8) {
+      setError("New password must be at least 8 characters");
       return;
     }
     setSaving(true);

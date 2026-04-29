@@ -86,9 +86,9 @@ export default function WorkloadDashboard({ workspaceId }) {
 
           /* Slot message colour */
           const slotColor =
-            member.days_until_free === 0 ? "var(--color-success, #00875a)"
-            : member.days_until_free <= 3 ? "var(--color-warn, #ff8b00)"
-            : "var(--color-danger, #de350b)";
+            member.days_until_free === 0 ? "#10b981"
+            : member.days_until_free <= 3 ? "#f59e0b"
+            : "#ef4444";
 
           return (
             <div key={member.user_id} className={`wl-card wl-card--${member.status}`}>
@@ -126,10 +126,10 @@ export default function WorkloadDashboard({ workspaceId }) {
                   <span className="wl-hours-label">Committed</span>
                   <span className="wl-hours-value" style={{
                     color: isOverloaded
-                      ? "var(--color-danger, #de350b)"
+                      ? "#ef4444"
                       : member.status === "moderate"
-                      ? "var(--color-warn, #ff8b00)"
-                      : "var(--color-success, #00875a)",
+                      ? "#f59e0b"
+                      : "#10b981",
                   }}>
                     {member.allocated_hours}h
                   </span>
@@ -143,10 +143,10 @@ export default function WorkloadDashboard({ workspaceId }) {
                   <span className="wl-hours-value" style={{
                     fontWeight: 700,
                     color: isOverloaded
-                      ? "var(--color-danger, #de350b)"
+                      ? "#ef4444"
                       : member.status === "moderate"
-                      ? "var(--color-warn, #ff8b00)"
-                      : "var(--color-success, #00875a)",
+                      ? "#f59e0b"
+                      : "#10b981",
                   }}>
                     {member.load_percent}%
                   </span>

@@ -130,7 +130,7 @@ export default function CollaborationScore({ workspaceId }) {
           <div className="spinner" style={{ width: 20, height: 20 }} />
           <span>Loading…</span>
         </div>
-      ) : !data || data.members.length === 0 ? (
+      ) : !data || !data.members || data.members.length === 0 ? (
         <div className="collab-empty">
           No team members with assigned tasks yet. Assign tasks to team members to see collaboration scores.
         </div>

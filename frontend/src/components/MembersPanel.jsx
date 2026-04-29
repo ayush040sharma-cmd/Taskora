@@ -207,10 +207,11 @@ export default function MembersPanel({ workspaceId }) {
 
   if (loading) return <div className="wl-loading"><div className="spinner" />Loading members…</div>;
 
-  // Merge capacity info into member records
+  // Merge capacity info into member records (keep workspace role, not global user role)
   const enrichedMembers = members.map(m => ({
     ...m,
     ...(capacities[m.user_id] || {}),
+    role: m.role,
   }));
 
   // Filter

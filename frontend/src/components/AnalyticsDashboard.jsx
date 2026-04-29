@@ -145,16 +145,16 @@ export default function AnalyticsDashboard({ workspaceId }) {
       // ── KPI cards ───────────────────────────────────────────────────
       const total       = tasks.length;
       const done        = tasks.filter(t => t.status === "done").length;
-      const inProgress  = tasks.filter(t => t.status === "inprogress").length;
+      const inProgress  = tasks.filter(t => t.status === "inprogress" || t.status === "in_progress").length;
       const overdue     = tasks.filter(t => t.due_date && new Date(t.due_date) < new Date() && t.status !== "done").length;
       const unassigned  = tasks.filter(t => !t.assigned_user_id && t.status !== "done").length;
       const completionRate = total > 0 ? Math.round((done / total) * 100) : 0;
 
       // ── Average completion time (done tasks with start + updated) ───
-      const doneTasks  = tasks.filter(t => t.status === "done" && t.created_at && t.updated_at);
+      const doneTasks  = tasks.filter(t => t.status === "done" && t.created_at && t.completed_at);
       const avgDays    = doneTasks.length > 0
         ? Math.round(doneTasks.reduce((s, t) => {
-            const diff = (new Date(t.updated_at) - new Date(t.created_at)) / (1000 * 60 * 60 * 24);
+            const diff = (new Date(t.completed_at) - new Date(t.created_at)) / (1000 * 60 * 60 * 24);
             return s + diff;
           }, 0) / doneTasks.length)
         : null;
@@ -170,9 +170,9 @@ export default function AnalyticsDashboard({ workspaceId }) {
         weekEnd.setHours(23, 59, 59, 999);
 
         const count = tasks.filter(t =>
-          t.status === "done" && t.updated_at &&
-          new Date(t.updated_at) >= weekStart &&
-          new Date(t.updated_at) <= weekEnd
+          t.status === "done" && t.completed_at &&
+          new Date(t.completed_at) >= weekStart &&
+          new Date(t.completed_at) <= weekEnd
         ).length;
 
         throughput.push({

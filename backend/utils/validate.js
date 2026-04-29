@@ -9,7 +9,7 @@ function validate(schema) {
   return (req, res, next) => {
     const result = schema.safeParse(req.body);
     if (!result.success) {
-      const errors = result.error.errors.map(e => ({
+      const errors = (result.error.issues ?? result.error.errors ?? []).map(e => ({
         field:   e.path.join("."),
         message: e.message,
       }));
@@ -57,9 +57,9 @@ const changePasswordSchema = z.object({
 });
 
 // ── Task schemas ──────────────────────────────────────────────────────────────
-const TASK_STATUSES   = ["todo", "in_progress", "review", "done"];
+const TASK_STATUSES   = ["todo", "inprogress", "in_progress", "review", "done", "pending_approval"];
 const TASK_PRIORITIES = ["low", "medium", "high"];
-const TASK_TYPES      = ["task", "bug", "story", "upgrade", "rfp", "proposal"];
+const TASK_TYPES      = ["task", "bug", "story", "upgrade", "rfp", "proposal", "presentation", "poc", "normal"];
 
 const createTaskSchema = z.object({
   title:          z.string().min(1, "Title is required").max(255).trim(),
@@ -69,7 +69,7 @@ const createTaskSchema = z.object({
   type:           z.enum(TASK_TYPES).optional().default("task"),
   description:    z.string().max(5000).optional(),
   estimated_hours:z.number().min(0).max(9999).optional(),
-  due_date:       z.string().datetime({ offset: true }).optional().nullable(),
+  due_date:       z.string().optional().nullable(),
   assigned_user_id: z.number().int().positive().optional().nullable(),
   sprint_id:      z.number().int().positive().optional().nullable(),
   position:       z.number().int().min(0).optional(),

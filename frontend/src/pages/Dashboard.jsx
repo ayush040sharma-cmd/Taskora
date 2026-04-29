@@ -221,22 +221,27 @@ export default function Dashboard() {
     if (!destination) return;
     if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
-    const src = Array.from(columns[source.droppableId]);
-    const dst = source.droppableId === destination.droppableId ? src : Array.from(columns[destination.droppableId]);
-    const [moved] = src.splice(source.index, 1);
-    const updated = { ...moved, status: destination.droppableId };
-    dst.splice(destination.index, 0, updated);
+    const taskId    = parseInt(draggableId);
+    const newStatus = destination.droppableId;
+    const moved     = allTasks.find(t => t.id === taskId);
+    if (!moved) return;
 
-    setColumns(p => ({ ...p, [source.droppableId]: src, [destination.droppableId]: dst }));
+    // Optimistically update allTasks — filteredColumns derives from this,
+    // so the board updates instantly without waiting for the API round-trip.
+    setAllTasks(prev => prev.map(t =>
+      t.id === taskId
+        ? { ...t, status: newStatus, progress: newStatus === "done" ? 100 : t.progress }
+        : t
+    ));
 
     try {
       await api.put(`/tasks/${draggableId}`, {
-        status: destination.droppableId,
+        status:   newStatus,
         position: destination.index,
-        progress: destination.droppableId === "done" ? 100 : moved.progress,
+        progress: newStatus === "done" ? 100 : moved.progress,
       });
-      loadTasks(currentWorkspace.id);
     } catch {
+      // Revert on failure
       loadTasks(currentWorkspace.id);
       showToast("Failed to move task", "error");
     }

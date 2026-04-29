@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import api from "../api/api";
+import { useAuth } from "../context/AuthContext";
 
 // ── Donut Chart (pure SVG) ────────────────────────────────────────────────────
 function DonutChart({ data, total }) {
@@ -96,9 +97,6 @@ function timeAgo(ts) {
 
 const PRIORITY_COLORS = { high: "#ef4444", medium: "#f59e0b", low: "#10b981" };
 
-// ── Auto-Classification Config ────────────────────────────────────────────────
-// Add / edit type strings here — matching is case-insensitive.
-// Any type not found falls into "Other".
 const CATEGORY_MAP = {
   "New Work":    ["feature", "story", "rfp", "enhancement", "epic", "new", "request"],
   "Fixes":       ["bug", "incident", "hotfix", "defect", "fix", "patch"],
@@ -116,7 +114,6 @@ const CATEGORY_COLORS = {
   "Other":       "#94a3b8",
 };
 
-// Classify a raw type string → category name
 function classifyType(rawType = "") {
   const t = rawType.toLowerCase().trim();
   for (const [category, keywords] of Object.entries(CATEGORY_MAP)) {
@@ -125,34 +122,92 @@ function classifyType(rawType = "") {
   return "Other";
 }
 
-// Aggregate type_breakdown rows into category counts
 function buildCategoryBreakdown(typeBreakdown) {
   const counts = {};
   typeBreakdown.forEach(({ type, count }) => {
     const cat = classifyType(type);
     counts[cat] = (counts[cat] || 0) + parseInt(count);
   });
-  // Return in defined order, only non-zero + Other
   const ordered = [...Object.keys(CATEGORY_MAP), "Other"];
   return ordered
     .filter(cat => counts[cat] > 0)
     .map(cat => ({ category: cat, count: counts[cat] }));
 }
 
+// ── Team Workload Chart (manager only) ───────────────────────────────────────
+function TeamWorkloadSection({ workspaceId }) {
+  const [workload, setWorkload] = useState([]);
+  const [loading, setLoading]  = useState(true);
+
+  useEffect(() => {
+    if (!workspaceId) return;
+    api.get(`/workload?workspace_id=${workspaceId}`)
+      .then(r => setWorkload(r.data || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [workspaceId]);
+
+  if (loading) return <div className="sum-empty-note">Loading team workload…</div>;
+
+  return (
+    <div className="sum-card">
+      <div className="sum-card-title">Team workload</div>
+      <p className="sum-wl-sub">Monitor the capacity of your team</p>
+      {workload.length === 0 ? (
+        <div className="sum-empty-note">No assigned tasks yet — assign tasks to team members to see workload.</div>
+      ) : (
+        <div className="sum-wl-table">
+          <div className="sum-wl-header">
+            <span>Assignee</span>
+            <span>Work distribution</span>
+          </div>
+          {workload.map(member => {
+            const pct      = Math.min(100, Math.round(member.load_percent || 0));
+            const color    = pct >= 90 ? "#ef4444" : pct >= 70 ? "#f59e0b" : "#10b981";
+            const initials = member.name?.slice(0, 2).toUpperCase() || "??";
+            return (
+              <div key={member.user_id} className="sum-wl-row">
+                <div className="sum-wl-assignee">
+                  <div className="sum-wl-avatar" style={{ background: color }}>{initials}</div>
+                  <div>
+                    <div className="sum-wl-name">{member.name}</div>
+                    <div className="sum-wl-task-count">{member.task_count} task{member.task_count !== 1 ? "s" : ""}</div>
+                  </div>
+                </div>
+                <div className="sum-wl-bar-wrap">
+                  <div className="sum-wl-bar-track">
+                    <div className="sum-wl-bar-fill" style={{ width: `${pct}%`, background: color }} />
+                    <span className="sum-wl-bar-label">{pct}%</span>
+                  </div>
+                  <span className={`sum-wl-status sum-wl-status--${member.status}`}>
+                    {member.status === "on_leave" ? "On Leave"
+                      : member.status === "overloaded" ? "Overloaded"
+                      : member.status === "moderate" ? "Moderate"
+                      : "Available"}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function SummaryDashboard({ workspaceId }) {
-  const [data, setData]         = useState(null);
-  const [workload, setWorkload] = useState([]);
-  const [loading, setLoading]   = useState(true);
+  const { user } = useAuth();
+  const isManager = user?.role === "manager";
+
+  const [data,    setData]    = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!workspaceId) { setLoading(false); return; }
     setLoading(true);
-    Promise.all([
-      api.get(`/workspaces/${workspaceId}/summary`),
-      api.get(`/workload?workspace_id=${workspaceId}`),
-    ])
-      .then(([sumRes, wlRes]) => { setData(sumRes.data); setWorkload(wlRes.data || []); })
+    api.get(`/workspaces/${workspaceId}/summary`)
+      .then(r => setData(r.data))
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [workspaceId]);
@@ -162,7 +217,7 @@ export default function SummaryDashboard({ workspaceId }) {
 
   const { stats, status_breakdown, priority_breakdown, type_breakdown, recent_activity } = data;
 
-  // normalise status rows into a fixed ordered array
+  // normalise status rows
   const statusMap = { todo: 0, inprogress: 0, done: 0 };
   status_breakdown.forEach(r => { statusMap[r.status] = parseInt(r.count); });
   const statusRows = Object.entries(statusMap).map(([status, count]) => ({ status, count }));
@@ -174,6 +229,11 @@ export default function SummaryDashboard({ workspaceId }) {
 
   const categoryBreakdown = buildCategoryBreakdown(type_breakdown);
 
+  // For non-managers, filter activity to current user only
+  const myActivity = isManager
+    ? recent_activity
+    : recent_activity.filter(a => !a.user_name || a.user_name === user?.name || a.actor_name === user?.name);
+
   const statCards = [
     { label: "Completed this week", value: stats.completed_this_week, icon: "✅", color: "#10b981", bg: "#f0fdf4" },
     { label: "Created this week",   value: stats.created_this_week,   icon: "➕", color: "#6366f1", bg: "#f5f3ff" },
@@ -183,6 +243,28 @@ export default function SummaryDashboard({ workspaceId }) {
 
   return (
     <div className="sum-root">
+      {/* User banner for analysts */}
+      {!isManager && user && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10,
+          background: "#f0f4ff", borderRadius: 10, padding: "10px 16px",
+          marginBottom: 16, border: "1px solid #c7d2fe",
+        }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: "50%",
+            background: "#6366f1", color: "#fff",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontWeight: 700, fontSize: 13, flexShrink: 0,
+          }}>
+            {user.name?.slice(0, 2).toUpperCase()}
+          </div>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 13, color: "#3730a3" }}>My Summary — {user.name}</div>
+            <div style={{ fontSize: 12, color: "#6366f1" }}>Showing workspace-wide stats for your context</div>
+          </div>
+        </div>
+      )}
+
       {/* ── Stat cards ── */}
       <div className="sum-stat-row">
         {statCards.map(c => (
@@ -222,12 +304,14 @@ export default function SummaryDashboard({ workspaceId }) {
 
         {/* ── Recent activity ── */}
         <div className="sum-card sum-card--wide">
-          <div className="sum-card-title">Recent activity</div>
-          {recent_activity.length === 0 ? (
+          <div className="sum-card-title">
+            {isManager ? "Recent activity" : "My recent activity"}
+          </div>
+          {myActivity.length === 0 ? (
             <div className="sum-empty-note">No activity yet — create some tasks!</div>
           ) : (
             <div className="sum-activity-list">
-              {recent_activity.map((a, i) => (
+              {myActivity.map((a, i) => (
                 <div key={i} className="sum-activity-row">
                   <div
                     className="sum-activity-dot"
@@ -281,45 +365,8 @@ export default function SummaryDashboard({ workspaceId }) {
           </div>
         </div>
 
-        {/* ── Team Workload ── */}
-        <div className="sum-card">
-        <div className="sum-card-title">Team workload</div>
-        <p className="sum-wl-sub">Monitor the capacity of your team</p>
-
-        {workload.length === 0 ? (
-          <div className="sum-empty-note">No assigned tasks yet — assign tasks to team members to see workload.</div>
-        ) : (
-          <div className="sum-wl-table">
-            <div className="sum-wl-header">
-              <span>Assignee</span>
-              <span>Work distribution</span>
-            </div>
-            {workload.map(member => {
-              const pct     = Math.min(100, Math.round(member.load_percent || 0));
-              const color   = pct >= 90 ? "#ef4444" : pct >= 70 ? "#f59e0b" : "#10b981";
-              const initials = member.name?.slice(0, 2).toUpperCase() || "??";
-              return (
-                <div key={member.user_id} className="sum-wl-row">
-                  <div className="sum-wl-assignee">
-                    <div className="sum-wl-avatar" style={{ background: color }}>{initials}</div>
-                    <div>
-                      <div className="sum-wl-name">{member.name}</div>
-                      <div className="sum-wl-task-count">{member.task_count} task{member.task_count !== 1 ? "s" : ""}</div>
-                    </div>
-                  </div>
-                  <div className="sum-wl-bar-wrap">
-                    <div className="sum-wl-bar-track">
-                      <div className="sum-wl-bar-fill" style={{ width: `${pct}%`, background: color }} />
-                      <span className="sum-wl-bar-label">{pct}%</span>
-                    </div>
-                    <span className={`sum-wl-status sum-wl-status--${member.status}`}>{member.status}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-        </div>
+        {/* ── Team Workload — managers only ── */}
+        {isManager && <TeamWorkloadSection workspaceId={workspaceId} />}
       </div>
     </div>
   );

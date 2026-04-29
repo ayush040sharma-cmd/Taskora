@@ -18,11 +18,16 @@ export default function Login() {
   const [showForgot, setShowForgot] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
+  const [googleConfigured, setGoogleConfigured] = useState(null); // null = loading
 
   useEffect(() => {
     if (searchParams.get("demo_expired") === "1") {
       setInfo("Your demo session has expired (5-minute limit). Sign in to continue.");
     }
+    // Check if Google OAuth is configured on mount
+    api.get("/auth/google/status")
+      .then(({ data }) => setGoogleConfigured(data.configured === true))
+      .catch(() => setGoogleConfigured(false));
   }, [searchParams]);
 
   const handleSubmit = async (e) => {
@@ -53,15 +58,7 @@ export default function Login() {
     }
   };
 
-  const handleGoogle = async () => {
-    try {
-      // Check if Google OAuth is configured before redirecting
-      const { data } = await api.get("/auth/google/status").catch(() => ({ data: { configured: true } }));
-      if (data.configured === false) {
-        setError("Google login is not configured on this server. Please use email/password or the demo account.");
-        return;
-      }
-    } catch {}
+  const handleGoogle = () => {
     window.location.href = `${BACKEND_URL}/api/auth/google`;
   };
 
@@ -121,27 +118,31 @@ export default function Login() {
           </div>
         )}
 
-        {/* Google SSO */}
-        <button style={styles.googleBtn} onClick={handleGoogle}>
-          <svg width="18" height="18" viewBox="0 0 24 24">
-            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-          </svg>
-          Continue with Google
-        </button>
+        {/* Google SSO — only shown when configured */}
+        {googleConfigured && (
+          <button style={styles.googleBtn} onClick={handleGoogle}>
+            <svg width="18" height="18" viewBox="0 0 24 24">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            Continue with Google
+          </button>
+        )}
 
         {/* Demo button */}
         <button style={styles.demoBtn} onClick={handleDemo} disabled={demoLoading}>
           {demoLoading ? "Loading demo…" : "🚀 Try demo (5-min session)"}
         </button>
 
-        <div style={styles.orDivider}>
-          <div style={styles.orLine} />
-          <span style={styles.orText}>or sign in with email</span>
-          <div style={styles.orLine} />
-        </div>
+        {googleConfigured && (
+          <div style={styles.orDivider}>
+            <div style={styles.orLine} />
+            <span style={styles.orText}>or sign in with email</span>
+            <div style={styles.orLine} />
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} style={styles.form}>
           <div style={styles.field}>

@@ -138,14 +138,22 @@ function EventForm({ date, workspaceId, onSave, onClose }) {
 }
 
 // ── Day Popover ───────────────────────────────────────────────
-function DayPopover({ date, events, deadlines, onEventClick, onClose }) {
+function DayPopover({ date, events, deadlines, onEventClick, onClose, onAddEvent }) {
   const label = date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
   return (
     <div className="cal-popover-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="cal-popover">
         <div className="cal-popover-header">
           <span>{label}</span>
-          <button onClick={onClose}>✕</button>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button
+              className="cal-add-btn"
+              style={{ fontSize: 12, padding: "3px 10px" }}
+              onClick={onAddEvent}
+              title="Add event on this day"
+            >+ Event</button>
+            <button onClick={onClose}>✕</button>
+          </div>
         </div>
         {events.length === 0 && deadlines.length === 0 && (
           <div className="cal-popover-empty">Nothing scheduled</div>
@@ -230,12 +238,14 @@ export default function CalendarView({ workspaceId, tasks = [], onTaskClick }) {
       map[key][item.type === "deadline_task" ? "deadlines" : "events"].push(item);
     };
     events.forEach(ev => {
-      const d = new Date(ev.start_date + "T12:00:00");
-      addToDate(ev.start_date, ev, `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`);
+      const dateStr = (ev.start_date || "").split("T")[0];
+      const d = new Date(dateStr + "T12:00:00");
+      addToDate(dateStr, ev, `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`);
     });
     deadlines.forEach(t => {
       if (!t.due_date) return;
-      const d = new Date(t.due_date + "T12:00:00");
+      const dateStr = (t.due_date || "").split("T")[0];
+      const d = new Date(dateStr + "T12:00:00");
       const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
       if (!map[key]) map[key] = { events: [], deadlines: [] };
       map[key].deadlines.push(t);
@@ -255,7 +265,8 @@ export default function CalendarView({ workspaceId, tasks = [], onTaskClick }) {
     cutoff.setDate(cutoff.getDate() + 14);
     return [...events]
       .filter(ev => {
-        const d = new Date(ev.start_date + "T12:00:00");
+        const dateStr = (ev.start_date || "").split("T")[0];
+        const d = new Date(dateStr + "T12:00:00");
         return d >= today && d <= cutoff;
       })
       .sort((a, b) => new Date(a.start_date) - new Date(b.start_date))
@@ -267,8 +278,14 @@ export default function CalendarView({ workspaceId, tasks = [], onTaskClick }) {
     if (dayEvs.length + dayDls.length > 0) {
       setPopoverDate(date);
     } else {
+      // No existing events — open create form directly
       setCreateDate(date);
     }
+  };
+
+  const handleAddEventFromPopover = () => {
+    setCreateDate(popoverDate);
+    setPopoverDate(null);
   };
 
   const handleEventSaved = (newEv) => {
@@ -391,7 +408,7 @@ export default function CalendarView({ workspaceId, tasks = [], onTaskClick }) {
             style={{ borderLeft: `3px solid ${ev.color || TYPE_COLOR[ev.type] || "#6366f1"}` }}
           >
             <div className="cal-sidebar-date">
-              {new Date(ev.start_date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+              {new Date((ev.start_date || "").split("T")[0] + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
             </div>
             <div className="cal-sidebar-name">{ev.title}</div>
             <div className="cal-sidebar-type">{ev.type}</div>
@@ -422,6 +439,7 @@ export default function CalendarView({ workspaceId, tasks = [], onTaskClick }) {
           deadlines={getDay(popoverDate).deadlines}
           onEventClick={ev => { setSelectedEv(ev); setPopoverDate(null); }}
           onClose={() => setPopoverDate(null)}
+          onAddEvent={handleAddEventFromPopover}
         />
       )}
     </div>

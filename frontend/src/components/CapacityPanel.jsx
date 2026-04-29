@@ -1,8 +1,10 @@
 /**
  * Capacity Panel — personal capacity & leave/travel settings
+ * Analysts see an approval confirmation when requesting leave or travel.
  */
 import { useState, useEffect } from "react";
 import api from "../api/api";
+import { useAuth } from "../context/AuthContext";
 
 const DEFAULTS = {
   daily_hours: 8,
@@ -19,26 +21,93 @@ const DEFAULTS = {
   max_upgrades: 2,
 };
 
+// ── Approval Confirmation Modal ───────────────────────────────────────────────
+function ApprovalConfirmModal({ type, onConfirm, onCancel }) {
+  const typeLabel = type === "leave" ? "Leave" : "Travel Mode";
+  const typeIcon  = type === "leave" ? "🏖️" : "✈️";
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(15,23,42,0.5)",
+      zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center",
+      padding: 20,
+    }}>
+      <div style={{
+        background: "#fff", borderRadius: 16, padding: 32, maxWidth: 440, width: "100%",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+      }}>
+        <div style={{ fontSize: 40, textAlign: "center", marginBottom: 16 }}>{typeIcon}</div>
+        <h3 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", textAlign: "center", margin: "0 0 12px" }}>
+          {typeLabel} Request
+        </h3>
+        <p style={{ fontSize: 14, color: "#64748b", textAlign: "center", lineHeight: 1.6, margin: "0 0 8px" }}>
+          This request will go to your <strong>manager for approval</strong>.
+        </p>
+        <p style={{ fontSize: 13, color: "#94a3b8", textAlign: "center", margin: "0 0 24px" }}>
+          Your manager will be notified and can approve or reject this request.
+        </p>
+        <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+          <button
+            onClick={onCancel}
+            style={{
+              padding: "10px 24px", borderRadius: 8, border: "1.5px solid #e2e8f0",
+              background: "#fff", color: "#374151", fontWeight: 600, cursor: "pointer", fontSize: 14,
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            style={{
+              padding: "10px 24px", borderRadius: 8, border: "none",
+              background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+              color: "#fff", fontWeight: 600, cursor: "pointer", fontSize: 14,
+            }}
+          >
+            Send Request →
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CapacityPanel() {
+  const { user } = useAuth();
+  const isAnalyst = user?.role !== "manager";
+
   const [form,    setForm]    = useState(DEFAULTS);
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
   const [saved,   setSaved]   = useState("");
   const [error,   setError]   = useState("");
 
+  // Approval flow state
+  const [pendingSection, setPendingSection] = useState(null); // "leave" | "travel"
+
   useEffect(() => {
     api.get("/capacity/me")
       .then(r => setForm({ ...DEFAULTS, ...r.data }))
-      .catch(() => {
-        // API failed (table might not exist yet) — still show UI with defaults
-        setForm(DEFAULTS);
-      })
+      .catch(() => setForm(DEFAULTS))
       .finally(() => setLoading(false));
   }, []);
 
   const set = (k) => (e) => {
     const v = e.target.type === "checkbox" ? e.target.checked : e.target.value;
     setForm(f => ({ ...f, [k]: v }));
+  };
+
+  // For analysts toggling leave/travel — show confirmation first
+  const handleSectionSave = (section) => {
+    if (isAnalyst && (section === "leave" || section === "travel")) {
+      // Only show approval flow when turning it ON
+      const isActivating = section === "leave" ? form.on_leave : form.travel_mode;
+      if (isActivating) {
+        setPendingSection(section);
+        return;
+      }
+    }
+    save(section);
   };
 
   const save = async (section) => {
@@ -67,7 +136,6 @@ export default function CapacityPanel() {
         });
       }
       setSaved(section);
-      // Refresh from server
       const updated = await api.get("/capacity/me").catch(() => null);
       if (updated) setForm({ ...DEFAULTS, ...updated.data });
       setTimeout(() => setSaved(""), 2500);
@@ -76,6 +144,18 @@ export default function CapacityPanel() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleApprovalConfirm = () => {
+    setPendingSection(null);
+    save(pendingSection);
+  };
+
+  const handleApprovalCancel = () => {
+    // Revert toggle
+    if (pendingSection === "leave") setForm(f => ({ ...f, on_leave: false }));
+    if (pendingSection === "travel") setForm(f => ({ ...f, travel_mode: false }));
+    setPendingSection(null);
   };
 
   if (loading) return (
@@ -87,6 +167,14 @@ export default function CapacityPanel() {
 
   return (
     <div className="cap-root">
+      {/* Approval confirmation modal */}
+      {pendingSection && (
+        <ApprovalConfirmModal
+          type={pendingSection}
+          onConfirm={handleApprovalConfirm}
+          onCancel={handleApprovalCancel}
+        />
+      )}
 
       {/* ── Page header ── */}
       <div className="cap-header">
@@ -192,7 +280,10 @@ export default function CapacityPanel() {
           <span className="cap-card-icon">✈️</span>
           <div>
             <div className="cap-card-title">Travel Mode</div>
-            <div className="cap-card-desc">Reduces your daily capacity while you're on the road</div>
+            <div className="cap-card-desc">
+              Reduces your daily capacity while you're on the road
+              {isAnalyst && <span style={{ color: "#6366f1", marginLeft: 6, fontSize: 12 }}>· requires manager approval</span>}
+            </div>
           </div>
           <label className="cap-toggle">
             <input type="checkbox" checked={!!form.travel_mode} onChange={set("travel_mode")} />
@@ -218,9 +309,9 @@ export default function CapacityPanel() {
           </div>
         )}
 
-        <button className="cap-save-btn" onClick={() => save("travel")} disabled={saving}
+        <button className="cap-save-btn" onClick={() => handleSectionSave("travel")} disabled={saving}
           style={{ marginTop: form.travel_mode ? 12 : 16 }}>
-          {saving && saved === "" ? "Saving…" : saved === "travel" ? "✓ Saved!" : "Save travel settings"}
+          {saving && saved === "" ? "Saving…" : saved === "travel" ? "✓ Saved!" : isAnalyst ? "Request travel mode" : "Save travel settings"}
         </button>
       </div>
 
@@ -230,7 +321,10 @@ export default function CapacityPanel() {
           <span className="cap-card-icon">🏖️</span>
           <div>
             <div className="cap-card-title">Leave Management</div>
-            <div className="cap-card-desc">When on leave, your capacity shows as 0 and no tasks can be assigned</div>
+            <div className="cap-card-desc">
+              When on leave, your capacity shows as 0 and no tasks can be assigned
+              {isAnalyst && <span style={{ color: "#6366f1", marginLeft: 6, fontSize: 12 }}>· requires manager approval</span>}
+            </div>
           </div>
           <label className="cap-toggle">
             <input type="checkbox" checked={!!form.on_leave} onChange={set("on_leave")} />
@@ -258,9 +352,9 @@ export default function CapacityPanel() {
           </div>
         )}
 
-        <button className="cap-save-btn" onClick={() => save("leave")} disabled={saving}
+        <button className="cap-save-btn" onClick={() => handleSectionSave("leave")} disabled={saving}
           style={{ marginTop: form.on_leave ? 12 : 16 }}>
-          {saving && saved === "" ? "Saving…" : saved === "leave" ? "✓ Saved!" : "Save leave settings"}
+          {saving && saved === "" ? "Saving…" : saved === "leave" ? "✓ Saved!" : isAnalyst ? "Apply for leave" : "Save leave settings"}
         </button>
       </div>
 

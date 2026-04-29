@@ -358,9 +358,8 @@ router.get("/workspace/:workspaceId/collaboration", auth, async (req, res) => {
        LEFT JOIN user_capacity uc ON uc.user_id = u.id
        WHERE u.id IN (
          SELECT DISTINCT assigned_user_id FROM tasks WHERE workspace_id = $1 AND assigned_user_id IS NOT NULL
-         UNION
-         SELECT user_id FROM workspaces WHERE id = $1
        )
+         AND u.role != 'manager'
        GROUP BY u.id, u.name, uc.daily_hours, uc.on_leave, uc.travel_mode`,
       [req.params.workspaceId]
     );

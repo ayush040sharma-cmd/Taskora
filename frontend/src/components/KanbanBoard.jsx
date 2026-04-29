@@ -59,6 +59,7 @@ export default function KanbanBoard({ columns, onDragEnd, onAddTask, onDeleteTas
                         key={task.id}
                         task={task}
                         index={index}
+                        columnId={col.id}
                         onDelete={onDeleteTask}
                         onUpdate={onUpdateTask}
                         onOpenDetail={onOpenDetail}

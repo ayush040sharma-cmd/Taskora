@@ -417,7 +417,6 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
               </h2>
             )}
           </div>
-          <button className="modal-close" onClick={onClose}><IconX /></button>
         </div>
 
         {/* ── Tabs ── */}
@@ -431,7 +430,6 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
               {t.label}
             </button>
           ))}
-          {saving && <span className="td-saving">Saving…</span>}
         </div>
 
         {/* ── Details tab ── */}
@@ -704,6 +702,18 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
             </div>
           </div>
         )}
+
+        {/* ── Footer ── */}
+        <div className="td-footer">
+          {saving && <span style={{ fontSize: 12, color: "#94a3b8", marginRight: "auto" }}>Saving…</span>}
+          <button className="btn-modal-cancel" onClick={onClose}>Close</button>
+          <button
+            className="btn-modal-save-primary"
+            onClick={() => { onUpdate && onUpdate(task); onClose(); }}
+          >
+            Save
+          </button>
+        </div>
 
         {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
       </div>

@@ -11,6 +11,7 @@ import MembersPanel from "./MembersPanel";
 import AnalyticsDashboard from "./AnalyticsDashboard";
 import CollaborationScore from "./CollaborationScore";
 import ChannelView from "./ChannelView";
+import ManagerOverview from "./ManagerOverview";
 
 const STATUS_COLOR = {
   available:  "#10b981",
@@ -528,7 +529,7 @@ export default function ManagerDashboard({ workspaceId, workspaceName, onNavigat
   const [predictions, setPredictions] = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [editMember,  setEditMember]  = useState(null);
-  const [activeTab,   setActiveTab]   = useState("workload"); // workload | team | predictions | approvals | audit
+  const [activeTab,   setActiveTab]   = useState("dashboard");
 
   const canManage = !!user;
 
@@ -569,16 +570,13 @@ export default function ManagerDashboard({ workspaceId, workspaceName, onNavigat
     ? Math.round(team.filter(m => !m.on_leave).reduce((s, m) => s + (m.load_percent || 0), 0) / Math.max(1, team.filter(m => !m.on_leave).length))
     : 0;
 
-  const TABS = ["dashboard", "workload", "analytics", "members", "team", "predictions", "approvals", "audit", "collab", "channel"];
+  const TABS = ["dashboard", "workload", "members", "predictions", "approvals", "collab", "channel"];
   const TAB_LABELS = {
-    dashboard:   "🗂️ Dashboard",
-    workload:    "👥 Workload",
-    analytics:   "📈 Analytics",
+    dashboard:   "🗂️ Overview",
+    workload:    "👥 Workload & Capacity",
     members:     "👤 Members",
-    team:        "⚙️ Capacity",
     predictions: "🤖 AI Predictions",
     approvals:   "✅ Approvals",
-    audit:       "📋 Audit Log",
     collab:      "🤝 Collaboration",
     channel:     "💬 Channel",
   };
@@ -615,36 +613,39 @@ export default function ManagerDashboard({ workspaceId, workspaceName, onNavigat
         ))}
       </div>
 
-      {/* Dashboard Overview */}
+      {/* Overview — new redesigned dashboard */}
       {activeTab === "dashboard" && (
-        <ManagerDashView workspaceId={workspaceId} />
+        <ManagerOverview
+          workspaceId={workspaceId}
+          team={team}
+          onNavigateToSimulate={() => {
+            // navigate to the Simulate view in the sidebar
+            if (onNavigate) onNavigate("simulate");
+          }}
+        />
       )}
 
-      {/* Workload */}
+      {/* Workload & Capacity (merged) */}
       {activeTab === "workload" && (
-        <WorkloadDashboard workspaceId={workspaceId} />
-      )}
-
-      {/* Analytics */}
-      {activeTab === "analytics" && (
-        <AnalyticsDashboard workspaceId={workspaceId} />
+        <div>
+          <WorkloadDashboard workspaceId={workspaceId} />
+          <div style={{ marginTop: 24 }}>
+            <div className="mgr-panel-title" style={{ marginBottom: 12, paddingLeft: 4 }}>⚙️ Team Capacity</div>
+            <div className="mgr-team-grid">
+              {team.map(m => (
+                <MemberCard key={m.user_id} m={m} onEdit={setEditMember} />
+              ))}
+              {team.length === 0 && (
+                <div className="mgr-empty-note">No team members found. Invite people to your workspace.</div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Members */}
       {activeTab === "members" && (
         <MembersPanel workspaceId={workspaceId} />
-      )}
-
-      {/* Capacity / member cards */}
-      {activeTab === "team" && (
-        <div className="mgr-team-grid">
-          {team.map(m => (
-            <MemberCard key={m.user_id} m={m} onEdit={setEditMember} />
-          ))}
-          {team.length === 0 && (
-            <div className="mgr-empty-note">No team members found. Invite people to your workspace.</div>
-          )}
-        </div>
       )}
 
       {/* AI Predictions */}
@@ -657,14 +658,6 @@ export default function ManagerDashboard({ workspaceId, workspaceName, onNavigat
         <div className="mgr-panel">
           <div className="mgr-panel-title">Pending Approvals</div>
           <ApprovalsPanel workspaceId={workspaceId} onRefresh={loadTeam} />
-        </div>
-      )}
-
-      {/* Audit Log */}
-      {activeTab === "audit" && (
-        <div className="mgr-panel">
-          <div className="mgr-panel-title">Audit Log</div>
-          <AuditLog workspaceId={workspaceId} />
         </div>
       )}
 

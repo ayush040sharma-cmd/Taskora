@@ -1856,21 +1856,30 @@ input, textarea, select { font-family: inherit; outline: none; }
   flex: 1;
 }
 
-.task-card-delete {
+.task-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.task-card:hover .task-card-actions { opacity: 1; }
+
+.task-card-edit, .task-card-delete {
   background: none;
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  padding: 2px;
+  padding: 3px 4px;
   border-radius: 4px;
   display: flex;
   align-items: center;
-  opacity: 0;
-  transition: opacity 0.15s, color 0.15s;
+  transition: color 0.15s, background 0.15s;
   flex-shrink: 0;
 }
-.task-card:hover .task-card-delete { opacity: 1; }
-.task-card-delete:hover { color: var(--high); }
+.task-card-edit:hover { color: #6366f1; background: #eef2ff; }
+.task-card-delete:hover { color: var(--high); background: #fef2f2; }
 
 .task-card-meta {
   display: flex;
@@ -3050,6 +3059,31 @@ input, textarea, select { font-family: inherit; outline: none; }
 .td-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
 .td-tab:hover:not(.active) { color: var(--text-primary); }
 .td-saving { font-size: 11px; color: var(--text-muted); margin-left: auto; }
+
+/* Modal footer */
+.td-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 24px;
+  border-top: 1px solid var(--border);
+  background: var(--card-bg);
+  border-radius: 0 0 16px 16px;
+  flex-shrink: 0;
+}
+.btn-modal-save-primary {
+  padding: 8px 22px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn-modal-save-primary:hover { opacity: 0.88; }
 
 /* Body */
 .td-body { flex: 1; overflow-y: auto; padding: 20px; }
@@ -5809,11 +5843,11 @@ input, textarea, select { font-family: inherit; outline: none; }
 }
 
 .ai-bubble-fab {
-  display: flex; align-items: center; gap: 8px;
-  padding: 12px 18px;
+  display: flex; align-items: center; justify-content: center;
+  width: 48px; height: 48px; padding: 0;
   background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: #fff; border: none; border-radius: 40px;
-  font-size: 14px; font-weight: 600;
+  color: #fff; border: none; border-radius: 50%;
+  font-size: 22px; line-height: 1;
   cursor: pointer;
   box-shadow: 0 4px 20px rgba(99,102,241,0.5);
   transition: transform 0.2s, box-shadow 0.2s;

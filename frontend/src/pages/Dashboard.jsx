@@ -566,7 +566,7 @@ export default function Dashboard() {
           {view === "manager" && (
             <>
               <div className="board-header">
-                <div className="board-title-area"><h1>Manager</h1><p>Team workload, capacity, predictions, approvals & audit log</p></div>
+                <div className="board-title-area"><h1>Manager</h1><p>Team workload, capacity, analytics, approvals & predictions</p></div>
               </div>
               <ManagerDashboard workspaceId={currentWorkspace?.id} workspaceName={currentWorkspace?.name} onNavigate={setView} />
             </>

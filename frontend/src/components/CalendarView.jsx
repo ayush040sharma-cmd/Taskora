@@ -43,6 +43,8 @@ function EventForm({ date, workspaceId, onSave, onClose }) {
     type:       "event",
     start_date: date ? date.toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
     end_date:   "",
+    start_time: "",
+    end_time:   "",
     description:"",
   });
   const [saving, setSaving] = useState(false);
@@ -55,7 +57,9 @@ function EventForm({ date, workspaceId, onSave, onClose }) {
       const r = await api.post("/calendar", {
         ...form,
         workspace_id: workspaceId,
-        end_date: form.end_date || null,
+        end_date:   form.end_date   || null,
+        start_time: form.start_time || undefined,
+        end_time:   form.end_time   || undefined,
         color: TYPE_COLOR[form.type] || "#6366f1",
       });
       onSave(r.data);
@@ -85,7 +89,7 @@ function EventForm({ date, workspaceId, onSave, onClose }) {
 
         <div className="cal-form-row">
           <div className="cal-form-group">
-            <label className="cal-form-label">Type</label>
+            <label className="cal-form-label">TYPE</label>
             <select
               className="modal-input"
               value={form.type}
@@ -97,7 +101,7 @@ function EventForm({ date, workspaceId, onSave, onClose }) {
             </select>
           </div>
           <div className="cal-form-group">
-            <label className="cal-form-label">Start date</label>
+            <label className="cal-form-label">START DATE</label>
             <input
               className="modal-input"
               type="date"
@@ -106,13 +110,34 @@ function EventForm({ date, workspaceId, onSave, onClose }) {
             />
           </div>
           <div className="cal-form-group">
-            <label className="cal-form-label">End date</label>
+            <label className="cal-form-label">END DATE</label>
             <input
               className="modal-input"
               type="date"
               value={form.end_date}
               min={form.start_date}
               onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))}
+            />
+          </div>
+        </div>
+
+        <div className="cal-form-row">
+          <div className="cal-form-group">
+            <label className="cal-form-label">START TIME</label>
+            <input
+              className="modal-input"
+              type="time"
+              value={form.start_time}
+              onChange={e => setForm(f => ({ ...f, start_time: e.target.value }))}
+            />
+          </div>
+          <div className="cal-form-group">
+            <label className="cal-form-label">END TIME</label>
+            <input
+              className="modal-input"
+              type="time"
+              value={form.end_time}
+              onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))}
             />
           </div>
         </div>

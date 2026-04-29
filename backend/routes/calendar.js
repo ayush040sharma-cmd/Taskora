@@ -16,7 +16,8 @@ const auth    = require("../middleware/auth");
 // Events visible if: workspace match OR personal (user_id match)
 const EVENT_COLS = `
   ce.id, ce.workspace_id, ce.user_id, ce.title, ce.description,
-  ce.start_date, ce.end_date, ce.type, ce.color, ce.task_id, ce.all_day,
+  ce.start_date, ce.end_date, ce.start_time, ce.end_time,
+  ce.type, ce.color, ce.task_id, ce.all_day,
   ce.created_at, u.name AS created_by_name,
   t.title AS task_title, t.status AS task_status
 `;
@@ -98,7 +99,8 @@ router.get("/range", auth, async (req, res) => {
 router.post("/", auth, async (req, res) => {
   const {
     workspace_id, title, description,
-    start_date, end_date, type, color, task_id, all_day,
+    start_date, end_date, start_time, end_time,
+    type, color, task_id, all_day,
   } = req.body;
 
   if (!workspace_id || !title?.trim() || !start_date) {
@@ -119,12 +121,14 @@ router.post("/", auth, async (req, res) => {
   try {
     const { rows } = await pool.query(
       `INSERT INTO calendar_events
-         (workspace_id, user_id, title, description, start_date, end_date, type, color, task_id, all_day)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         (workspace_id, user_id, title, description, start_date, end_date, start_time, end_time, type, color, task_id, all_day)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        RETURNING *`,
       [
         workspace_id, req.user.id, title.trim(), description || null,
-        start_date, end_date || null, type || "event", resolvedColor,
+        start_date, end_date || null,
+        start_time || null, end_time || null,
+        type || "event", resolvedColor,
         task_id || null, all_day !== false,
       ]
     );
@@ -137,9 +141,9 @@ router.post("/", auth, async (req, res) => {
 
 // ── PUT /api/calendar/:id ────────────────────────────────────
 router.put("/:id", auth, async (req, res) => {
-  const { title, description, start_date, end_date, type, color, task_id, all_day } = req.body;
+  const { title, description, start_date, end_date, start_time, end_time, type, color, task_id, all_day } = req.body;
   try {
-    const fields  = { title, description, start_date, end_date, type, color, task_id, all_day };
+    const fields  = { title, description, start_date, end_date, start_time, end_time, type, color, task_id, all_day };
     const sets    = [];
     const vals    = [];
     Object.entries(fields).forEach(([col, val]) => {

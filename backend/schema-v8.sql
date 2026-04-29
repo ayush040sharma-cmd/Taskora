@@ -17,3 +17,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT UNIQUE;
 
 -- 4. Add last_login_at column if not present
 ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ;
+
+-- 5. Add start_time and end_time to calendar_events
+ALTER TABLE calendar_events ADD COLUMN IF NOT EXISTS start_time TIME;
+ALTER TABLE calendar_events ADD COLUMN IF NOT EXISTS end_time   TIME;

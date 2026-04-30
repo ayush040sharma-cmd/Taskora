@@ -151,6 +151,8 @@ app.use("/api/ai",            require("./routes/ai"));
 app.use("/api/integrations",  require("./routes/integrations"));
 app.use("/api/nlquery",       require("./routes/nlquery"));
 app.use("/api/channels",      require("./routes/channels"));
+app.use("/api/personal",      require("./routes/personal"));
+app.use("/api/jarvis",        require("./routes/jarvis"));
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get("/health", async (req, res) => {

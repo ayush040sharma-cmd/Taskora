@@ -28,6 +28,8 @@ import AIBubble from "../components/AIBubble";
 import api from "../api/api";
 import { useSocket } from "../hooks/useSocket";
 import AIInsightsPanel from "../components/AIInsightsPanel";
+import ErrorBoundary from "../components/ErrorBoundary";
+import JarvisVoiceAssistant from "../components/JarvisVoiceAssistant";
 
 const EMPTY_COLS = { todo: [], inprogress: [], done: [] };
 
@@ -502,10 +504,11 @@ export default function Dashboard() {
                   <p>Overview of {currentWorkspace?.name || "your workspace"}</p>
                 </div>
               </div>
-              <SummaryDashboard workspaceId={currentWorkspace?.id} />
+              <ErrorBoundary inline viewName="Summary">
+                <SummaryDashboard workspaceId={currentWorkspace?.id} />
+              </ErrorBoundary>
             </>
           )}
-
 
           {/* ── Calendar ── */}
           {view === "calendar" && (
@@ -514,7 +517,9 @@ export default function Dashboard() {
                 <div className="board-title-area"><h1>Calendar</h1><p>Tasks scheduled by due date</p></div>
                 <button className="btn-secondary" onClick={() => openCreateTask("todo")}>+ Add task</button>
               </div>
-              <CalendarView tasks={allTasks} workspaceId={currentWorkspace?.id} onTaskClick={setDetailTask} />
+              <ErrorBoundary inline viewName="Calendar">
+                <CalendarView tasks={allTasks} workspaceId={currentWorkspace?.id} onTaskClick={setDetailTask} />
+              </ErrorBoundary>
             </>
           )}
 
@@ -682,6 +687,9 @@ export default function Dashboard() {
 
       {/* ── Floating AI bubble ────────────────────────────────────── */}
       <AIBubble workspaceId={currentWorkspace?.id} />
+
+      {/* ── Jarvis voice assistant ────────────────────────────────── */}
+      <JarvisVoiceAssistant workspaceId={currentWorkspace?.id} />
 
       {/* ── Undo toast ───────────────────────────────────────────── */}
       {undoPending && (

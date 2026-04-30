@@ -4,9 +4,21 @@ import api from "../api/api";
 const SUGGESTIONS = [
   "What tasks are overdue?",
   "Who has the most tasks?",
-  "What's blocked this sprint?",
-  "Summarize today's work",
+  "What's high priority?",
+  "Summarize the workspace",
 ];
+
+// Render **bold** markers from the nlquery answer text
+function AnswerText({ text }) {
+  const parts = text.split(/\*\*(.+?)\*\*/g);
+  return (
+    <span>
+      {parts.map((part, i) =>
+        i % 2 === 1 ? <strong key={i}>{part}</strong> : part
+      )}
+    </span>
+  );
+}
 
 export default function AIBubble({ workspaceId }) {
   const [open, setOpen]       = useState(false);
@@ -29,15 +41,41 @@ export default function AIBubble({ workspaceId }) {
   const send = async (text) => {
     const q = (text || input).trim();
     if (!q || loading) return;
+
+    if (!workspaceId) {
+      setMsgs(m => [...m,
+        { role: "user", text: q },
+        { role: "assistant", text: "Please open a workspace first, then I can answer questions about your tasks." },
+      ]);
+      setInput("");
+      return;
+    }
+
     setInput("");
     setMsgs(m => [...m, { role: "user", text: q }]);
     setLoading(true);
     try {
-      const { data } = await api.post("/chat/query", { query: q, workspace_id: workspaceId });
+      const { data } = await api.post(`/nlquery/${workspaceId}`, { query: q });
       const answer = data.answer || data.response || data.message || "I couldn't find an answer to that.";
-      setMsgs(m => [...m, { role: "assistant", text: answer }]);
-    } catch {
-      setMsgs(m => [...m, { role: "assistant", text: "Couldn't connect right now. Try again in a moment." }]);
+
+      // Build reply: text answer + up to 5 task titles if returned
+      let replyText = answer;
+      if (data.tasks?.length && data.type !== "summary" && data.type !== "members") {
+        const titles = data.tasks.slice(0, 5).map(t => `• ${t.title}`).join("\n");
+        replyText = answer + "\n" + titles;
+        if (data.tasks.length > 5) replyText += `\n…and ${data.tasks.length - 5} more`;
+      }
+      if (data.type === "members" && data.tasks?.length) {
+        const members = data.tasks.slice(0, 5).map(m => `• ${m.name}: ${m.load_pct ?? "?"}%`).join("\n");
+        replyText = answer + "\n" + members;
+      }
+
+      setMsgs(m => [...m, { role: "assistant", text: replyText }]);
+    } catch (err) {
+      const msg = err.response?.status === 403
+        ? "You don't have access to this workspace."
+        : "Couldn't connect right now. Try again in a moment.";
+      setMsgs(m => [...m, { role: "assistant", text: msg }]);
     } finally {
       setLoading(false);
     }
@@ -75,7 +113,9 @@ export default function AIBubble({ workspaceId }) {
                 {m.role === "assistant" && (
                   <span className="ai-bubble-msg-avatar">✨</span>
                 )}
-                <span className="ai-bubble-msg-text">{m.text}</span>
+                <span className="ai-bubble-msg-text" style={{ whiteSpace: "pre-wrap" }}>
+                  <AnswerText text={m.text} />
+                </span>
               </div>
             ))}
             {loading && (

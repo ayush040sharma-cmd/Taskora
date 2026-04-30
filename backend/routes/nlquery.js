@@ -110,9 +110,9 @@ router.post("/:workspaceId", auth, async (req, res) => {
                    WHERE td.task_id=t.id AND dep.status!='done')::int AS blocking_dep_count
            FROM tasks t LEFT JOIN users u ON u.id=t.assigned_user_id
            WHERE t.workspace_id=$1 AND t.status != 'done'
-           HAVING (SELECT COUNT(*) FROM task_dependencies td
-                   JOIN tasks dep ON td.depends_on_task_id=dep.id
-                   WHERE td.task_id=t.id AND dep.status!='done') > 0`,
+             AND (SELECT COUNT(*) FROM task_dependencies td
+                  JOIN tasks dep ON td.depends_on_task_id=dep.id
+                  WHERE td.task_id=t.id AND dep.status!='done') > 0`,
           [workspaceId]
         );
         tasks = r.rows;

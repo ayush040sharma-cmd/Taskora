@@ -17,6 +17,27 @@ export default class ErrorBoundary extends React.Component {
   render() {
     if (!this.state.hasError) return this.props.children;
 
+    // Per-view inline fallback (when `inline` prop is set)
+    if (this.props.inline) {
+      return (
+        <div style={{ padding: "40px 24px", textAlign: "center", color: "#64748b" }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
+          <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a", marginBottom: 6 }}>
+            {this.props.viewName || "This view"} failed to load
+          </div>
+          <div style={{ fontSize: 13, marginBottom: 16, color: "#94a3b8" }}>
+            {this.state.error?.message || "An unexpected error occurred"}
+          </div>
+          <button
+            onClick={() => this.setState({ hasError: false, error: null })}
+            style={{ padding: "8px 18px", borderRadius: 8, background: "#6366f1", color: "#fff", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600 }}
+          >
+            Try again
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div style={S.root}>
         <div style={S.blob1} />

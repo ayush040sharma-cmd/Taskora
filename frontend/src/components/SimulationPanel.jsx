@@ -154,7 +154,7 @@ export default function SimulationPanel({ workspaceId }) {
     try {
       const res = await api.get(`/simulate/suggest/${workspaceId}/${selectedTask}`);
       setSuggestions(res.data);
-    } catch {}
+    } catch (e) { console.error(e); }
     finally { setSugLoading(false); }
   };
 

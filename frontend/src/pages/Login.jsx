@@ -18,16 +18,27 @@ export default function Login() {
   const [showForgot, setShowForgot] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
-  const [googleConfigured, setGoogleConfigured] = useState(null); // null = loading
+  // If VITE_GOOGLE_ENABLED=true is set at build time (Vercel env vars), show immediately.
+  // Otherwise ask the backend — falls back to false if backend unreachable (e.g. local dev, no config).
+  const [googleConfigured, setGoogleConfigured] = useState(
+    import.meta.env.VITE_GOOGLE_ENABLED === "true" ? true : null
+  );
 
   useEffect(() => {
     if (searchParams.get("demo_expired") === "1") {
       setInfo("Your demo session has expired (5-minute limit). Sign in to continue.");
     }
-    // Check if Google OAuth is configured on mount
-    api.get("/auth/google/status")
-      .then(({ data }) => setGoogleConfigured(data.configured === true))
-      .catch(() => setGoogleConfigured(false));
+    // Show error sent back from failed OAuth redirect
+    const oauthError = searchParams.get("error");
+    if (oauthError) {
+      setError(decodeURIComponent(oauthError));
+    }
+    // Only do the runtime check when not already decided by build-time env
+    if (import.meta.env.VITE_GOOGLE_ENABLED !== "true") {
+      api.get("/auth/google/status")
+        .then(({ data }) => setGoogleConfigured(data.configured === true))
+        .catch(() => setGoogleConfigured(false));
+    }
   }, [searchParams]);
 
   const handleSubmit = async (e) => {

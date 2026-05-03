@@ -7,7 +7,10 @@ const helmet      = require("helmet");
 const rateLimit   = require("express-rate-limit");
 const jwt         = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
-const logger      = require("./utils/logger");
+const logger       = require("./utils/logger");
+const firewall     = require("./middleware/firewall");
+const alertService = require("./services/alertService");
+const planEnforce  = require("./middleware/planEnforce");
 
 const app        = express();
 const httpServer = createServer(app);
@@ -16,6 +19,7 @@ const PORT       = process.env.PORT || 3001;
 // ── Allowed origins ───────────────────────────────────────────────────────────
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
+  "http://localhost:5174",
   "http://localhost:3000",
   ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
 ];
@@ -86,6 +90,12 @@ const globalLimiter = rateLimit({
 });
 app.use("/api", globalLimiter);
 
+// ── Firewall — threat detection on every API request ─────────────────────────
+app.use("/api", firewall);
+
+// ── Plan enforcement — gate pro/enterprise routes ─────────────────────────────
+app.use("/api", planEnforce);
+
 // ── Socket.io setup ───────────────────────────────────────────────────────────
 const io = new Server(httpServer, {
   cors: {
@@ -111,6 +121,7 @@ io.use((socket, next) => {
 });
 
 app.set("io", io);
+alertService.setIO(io); // give alert service access to push real-time events
 
 io.on("connection", (socket) => {
   logger.info(`Socket connected: user=${socket.user?.id}`);
@@ -153,6 +164,9 @@ app.use("/api/nlquery",       require("./routes/nlquery"));
 app.use("/api/channels",      require("./routes/channels"));
 app.use("/api/personal",      require("./routes/personal"));
 app.use("/api/jarvis",        require("./routes/jarvis"));
+app.use("/api/firewall",      require("./routes/firewall"));
+app.use("/api/admin",         require("./routes/admin"));
+app.use("/api/payments",      require("./routes/payments"));
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get("/health", async (req, res) => {

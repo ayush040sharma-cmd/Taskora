@@ -30,6 +30,8 @@ import { useSocket } from "../hooks/useSocket";
 import AIInsightsPanel from "../components/AIInsightsPanel";
 import ErrorBoundary from "../components/ErrorBoundary";
 import JarvisVoiceAssistant from "../components/JarvisVoiceAssistant";
+import SecurityDashboard from "../components/SecurityDashboard";
+import OnboardingChecklist from "../components/onboarding/OnboardingChecklist";
 
 const EMPTY_COLS = { todo: [], inprogress: [], done: [] };
 
@@ -78,6 +80,86 @@ const SHORTCUTS = [
   { key: "D",            desc: "Move to Done" },
   { key: "Esc",          desc: "Close modal / deselect" },
 ];
+
+// ── Security Alert Toast ───────────────────────────────────────────
+const SEV_STYLE = {
+  critical: { bg: "#7f1d1d", border: "#dc2626", dot: "#fca5a5", label: "CRITICAL" },
+  high:     { bg: "#7c2d12", border: "#ea580c", dot: "#fdba74", label: "HIGH" },
+  medium:   { bg: "#713f12", border: "#ca8a04", dot: "#fde68a", label: "MEDIUM" },
+  low:      { bg: "#14532d", border: "#16a34a", dot: "#86efac", label: "LOW" },
+};
+const THREAT_LABEL = {
+  sql_injection: "SQL Injection", xss: "XSS", path_traversal: "Path Traversal",
+  command_injection: "Command Injection", prototype_pollution: "Prototype Pollution",
+  malicious_scanner: "Scanner Bot", brute_force: "Brute Force",
+  brute_force_blocked: "BF Blocked", blocked_ip: "Blocked IP",
+  oversized_headers: "Large Headers", rate_limit: "Rate Limit",
+};
+
+function SecurityAlertToast({ alerts, onDismiss, onViewSecurity }) {
+  if (!alerts.length) return null;
+  return (
+    <div style={{
+      position: "fixed", top: 16, right: 16, zIndex: 9999,
+      display: "flex", flexDirection: "column", gap: 8, maxWidth: 360,
+    }}>
+      {alerts.map(a => {
+        const s = SEV_STYLE[a.severity] || SEV_STYLE.low;
+        return (
+          <div key={a.id} style={{
+            background: s.bg, border: `1px solid ${s.border}`,
+            borderRadius: 10, padding: "12px 14px",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
+            animation: "slideIn 0.25s ease",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <span style={{
+                background: s.border, color: "#fff",
+                fontSize: 10, fontWeight: 800, padding: "2px 6px",
+                borderRadius: 4, letterSpacing: 0.5,
+              }}>
+                {s.label}
+              </span>
+              <span style={{ color: "#fff", fontWeight: 700, fontSize: 13, flex: 1 }}>
+                {THREAT_LABEL[a.threat_type] || a.threat_type}
+              </span>
+              <button
+                onClick={() => onDismiss(a.id)}
+                style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0 }}
+              >✕</button>
+            </div>
+            <div style={{ color: "#cbd5e1", fontSize: 12, marginBottom: 8 }}>
+              <span style={{ fontFamily: "monospace" }}>{a.ip}</span>
+              {" · "}{a.method} {a.url?.length > 35 ? a.url.slice(0, 35) + "…" : a.url}
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => { onViewSecurity(); onDismiss(a.id); }}
+                style={{
+                  flex: 1, padding: "5px 0", borderRadius: 6,
+                  background: s.border, border: "none", color: "#fff",
+                  fontSize: 12, fontWeight: 700, cursor: "pointer",
+                }}
+              >
+                View Security
+              </button>
+              <button
+                onClick={() => onDismiss(a.id)}
+                style={{
+                  padding: "5px 12px", borderRadius: 6,
+                  background: "rgba(255,255,255,0.1)", border: "none", color: "#cbd5e1",
+                  fontSize: 12, cursor: "pointer",
+                }}
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function ShortcutsModal({ onClose }) {
   return (
@@ -133,6 +215,18 @@ export default function Dashboard() {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   }, []);
+
+  // Security alert toasts (global — fires on any view)
+  const [secAlerts, setSecAlerts] = useState([]);
+  const dismissSecAlert = useCallback((id) => {
+    setSecAlerts(prev => prev.filter(a => a.id !== id));
+  }, []);
+  const addSecAlert = useCallback((event) => {
+    const id = event.id || Date.now();
+    setSecAlerts(prev => [...prev.slice(-2), { ...event, id }]); // keep max 3
+    const ttl = (event.severity === "critical" || event.severity === "high") ? 10000 : 5000;
+    setTimeout(() => dismissSecAlert(id), ttl);
+  }, [dismissSecAlert]);
 
   // ── Load workspaces ──────────────────────────────────────────
   const loadWorkspaces = useCallback(async () => {
@@ -337,6 +431,9 @@ export default function Dashboard() {
 
   // ── Real-time socket events ───────────────────────────────────
   useSocket(currentWorkspace?.id, {
+    "security:threat": (event) => {
+      addSecAlert(event);
+    },
     "task:created": (task) => {
       setAllTasks(prev => {
         if (prev.find(t => t.id === task.id)) return prev;
@@ -645,6 +742,13 @@ export default function Dashboard() {
             </>
           )}
 
+          {/* ── Security Firewall ── */}
+          {view === "security" && (
+            <ErrorBoundary inline viewName="Security">
+              <SecurityDashboard token={localStorage.getItem("token")} />
+            </ErrorBoundary>
+          )}
+
         </div>
       </div>
 
@@ -703,7 +807,17 @@ export default function Dashboard() {
       {/* ── Regular toast ────────────────────────────────────────── */}
       {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
 
+      {/* ── Security alert toasts (fires on any view) ─────────────── */}
+      <SecurityAlertToast
+        alerts={secAlerts}
+        onDismiss={dismissSecAlert}
+        onViewSecurity={() => setView("security")}
+      />
+
       <HelpGuide />
+
+      {/* ── Onboarding checklist (new users) ─────────────────────── */}
+      <OnboardingChecklist onViewChange={setView} />
     </div>
   );
 }

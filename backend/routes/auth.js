@@ -1,13 +1,14 @@
-const express = require("express");
-const router = express.Router();
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const rateLimit = require("express-rate-limit");
-const pool = require("../db");
-const auth = require("../middleware/auth");
+const express     = require("express");
+const router      = express.Router();
+const bcrypt      = require("bcryptjs");
+const jwt         = require("jsonwebtoken");
+const rateLimit   = require("express-rate-limit");
+const pool        = require("../db");
+const auth        = require("../middleware/auth");
+const bruteForce  = require("../middleware/bruteForce");
 const { validate, schemas } = require("../utils/validate");
 const { setAuthCookie, clearAuthCookie } = require("../utils/cookies");
-const logger = require("../utils/logger");
+const logger      = require("../utils/logger");
 
 // Rate limiter: max 10 attempts per IP per 15 minutes on auth endpoints
 const authLimiter = rateLimit({
@@ -35,7 +36,9 @@ router.post("/register", authLimiter, validate(schemas.register), async (req, re
     const password_hash = await bcrypt.hash(password, salt);
 
     const userResult = await pool.query(
-      "INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role",
+      `INSERT INTO users (name, email, password_hash, role)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, name, email, role, onboarding_role, onboarding_complete, plan, team_size`,
       [name, email, password_hash, safeRole]
     );
     const user = userResult.rows[0];
@@ -54,8 +57,17 @@ router.post("/register", authLimiter, validate(schemas.register), async (req, re
 
     setAuthCookie(res, token);
     res.status(201).json({
-      token, // also returned in body so frontend can use as fallback
-      user: { ...user, onboarding_step: "workspace_setup", onboarding_completed: false },
+      token,
+      user: {
+        id:                  user.id,
+        name:                user.name,
+        email:               user.email,
+        role:                user.role,
+        onboarding_role:     user.onboarding_role     || null,
+        onboarding_complete: user.onboarding_complete ?? false,
+        plan:                user.plan                || "free",
+        team_size:           user.team_size           || null,
+      },
     });
   } catch (err) {
     logger.error(`Register error: ${err.message}`);
@@ -64,17 +76,26 @@ router.post("/register", authLimiter, validate(schemas.register), async (req, re
 });
 
 // POST /api/auth/login
-router.post("/login", authLimiter, validate(schemas.login), async (req, res) => {
+router.post("/login", authLimiter, bruteForce.middleware, validate(schemas.login), async (req, res) => {
   const { email, password } = req.body;
+  const ip = req.headers["x-forwarded-for"]?.split(",")[0].trim() || req.ip;
 
   try {
     const result = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
     const user = result.rows[0];
 
-    if (!user) return res.status(401).json({ message: "Invalid email or password" });
+    if (!user) {
+      await bruteForce.recordFailure(ip, req.originalUrl, req.headers["user-agent"]);
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
-    if (!isMatch) return res.status(401).json({ message: "Invalid email or password" });
+    if (!isMatch) {
+      await bruteForce.recordFailure(ip, req.originalUrl, req.headers["user-agent"]);
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    bruteForce.recordSuccess(ip);
 
     const token = jwt.sign(
       { id: user.id, email: user.email, name: user.name, role: user.role },
@@ -82,11 +103,19 @@ router.post("/login", authLimiter, validate(schemas.login), async (req, res) => 
       { expiresIn: "7d" }
     );
 
-    // Update last login timestamp
     await pool.query("UPDATE users SET last_login_at = NOW() WHERE id = $1", [user.id]);
 
     setAuthCookie(res, token);
-    res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+    res.json({ token, user: {
+      id:                  user.id,
+      name:                user.name,
+      email:               user.email,
+      role:                user.role,
+      onboarding_role:     user.onboarding_role     || null,
+      onboarding_complete: user.onboarding_complete ?? false,
+      plan:                user.plan                || "free",
+      team_size:           user.team_size           || null,
+    }});
   } catch (err) {
     logger.error(`Login error: ${err.message}`);
     res.status(500).json({ message: "Server error during login" });
@@ -152,17 +181,47 @@ router.put("/password", auth, validate(schemas.changePassword), async (req, res)
   }
 });
 
-// GET /api/auth/me
+// GET /api/auth/me — returns full user including plan + onboarding fields
 router.get("/me", auth, async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT id, name, email, created_at FROM users WHERE id = $1",
+      `SELECT id, name, email, role, onboarding_role, team_size,
+              onboarding_complete, plan, created_at
+       FROM users WHERE id = $1`,
       [req.user.id]
     );
     const user = result.rows[0];
     if (!user) return res.status(404).json({ message: "User not found" });
-    res.json(user);
+    res.json({ ...user, plan: user.plan || "free" });
   } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// PATCH /api/auth/me — complete onboarding: set role + team_size
+router.patch("/me", auth, async (req, res) => {
+  const { onboarding_role, team_size } = req.body;
+  const VALID_ROLES = ["solo", "member", "manager"];
+
+  if (onboarding_role && !VALID_ROLES.includes(onboarding_role)) {
+    return res.status(400).json({ message: `Invalid role. Must be one of: ${VALID_ROLES.join(", ")}` });
+  }
+
+  try {
+    const { rows } = await pool.query(
+      `UPDATE users
+       SET onboarding_role     = COALESCE($1, onboarding_role),
+           team_size           = COALESCE($2, team_size),
+           onboarding_complete = TRUE
+       WHERE id = $3
+       RETURNING id, name, email, role, onboarding_role, team_size,
+                 onboarding_complete, plan, created_at`,
+      [onboarding_role || null, team_size || null, req.user.id]
+    );
+    const user = rows[0];
+    res.json({ ...user, plan: user.plan || "free" });
+  } catch (err) {
+    logger.error(`PATCH /me error: ${err.message}`);
     res.status(500).json({ message: "Server error" });
   }
 });

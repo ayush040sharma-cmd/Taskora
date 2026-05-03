@@ -7,11 +7,13 @@ let socketInstance = null;
 function getSocket() {
   if (!socketInstance) {
     const url = import.meta.env.VITE_API_URL || "http://localhost:3001";
+    const token = localStorage.getItem("token");
     socketInstance = io(url, {
       autoConnect: false,
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 2000,
+      auth: token ? { token } : {},
     });
   }
   return socketInstance;

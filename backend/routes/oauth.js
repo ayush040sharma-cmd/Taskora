@@ -17,9 +17,7 @@ function failRedirect(res, msg) {
 // GET /api/auth/google  — kick off OAuth flow
 router.get("/google", (req, res) => {
   if (!GOOGLE_CLIENT_ID) {
-    return res.status(501).json({
-      message: "Google OAuth is not configured on this server. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your .env file.",
-    });
+    return failRedirect(res, "Google sign-in is not enabled on this server.");
   }
 
   const callbackURL = `${process.env.BACKEND_URL || "http://localhost:3001"}/api/auth/google/callback`;
@@ -71,7 +69,8 @@ router.get("/google/callback", async (req, res) => {
     let user = null;
 
     const existing = await pool.query(
-      "SELECT id, name, email, role FROM users WHERE email = $1",
+      `SELECT id, name, email, role, onboarding_role, onboarding_complete, plan, team_size
+       FROM users WHERE email = $1`,
       [email]
     );
 
@@ -92,14 +91,13 @@ router.get("/google/callback", async (req, res) => {
       const newUser = await pool.query(
         `INSERT INTO users (name, email, password_hash, role, google_id)
          VALUES ($1, $2, $3, $4, $5)
-         RETURNING id, name, email, role`,
+         RETURNING id, name, email, role, onboarding_role, onboarding_complete, plan, team_size`,
         [name || email.split("@")[0], email, hash, "manager", googleId]
       ).catch(async () => {
-        // google_id column may not exist — try without it
         return pool.query(
           `INSERT INTO users (name, email, password_hash, role)
            VALUES ($1, $2, $3, $4)
-           RETURNING id, name, email, role`,
+           RETURNING id, name, email, role, onboarding_role, onboarding_complete, plan, team_size`,
           [name || email.split("@")[0], email, hash, "manager"]
         );
       });
@@ -123,10 +121,14 @@ router.get("/google/callback", async (req, res) => {
     // 5. Set httpOnly cookie and redirect to frontend
     setAuthCookie(res, token);
     return res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify({
-      id:    user.id,
-      name:  user.name,
-      email: user.email,
-      role:  user.role,
+      id:                  user.id,
+      name:                user.name,
+      email:               user.email,
+      role:                user.role,
+      onboarding_role:     user.onboarding_role     || null,
+      onboarding_complete: user.onboarding_complete ?? false,
+      plan:                user.plan                || "free",
+      team_size:           user.team_size           || null,
     }))}`);
 
   } catch (err) {

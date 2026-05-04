@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import api from "../api/api";
+import { resetSocket } from "../hooks/useSocket";
 
 const AuthContext = createContext(null);
 const DEMO_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
@@ -66,6 +67,7 @@ export function AuthProvider({ children }) {
     const { data } = await api.post("/auth/login", { email, password });
     localStorage.setItem("token", data.token);
     localStorage.setItem("user", JSON.stringify(data.user));
+    resetSocket(); // force new socket with fresh token
     setUser(data.user);
     return data.user;
   };
@@ -82,6 +84,7 @@ export function AuthProvider({ children }) {
   const loginWithToken = (token, userData, isDemo = false) => {
     localStorage.setItem("token", token);
     localStorage.setItem("user", JSON.stringify(userData));
+    resetSocket(); // force new socket with fresh token
     if (isDemo) {
       localStorage.setItem("demo_session", String(Date.now()));
       startDemoTimer();
@@ -99,7 +102,7 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     clearDemoTimer();
-    // Tell backend to clear the httpOnly cookie
+    resetSocket(); // disconnect before clearing token
     try { await api.post("/auth/logout"); } catch {}
     localStorage.removeItem("token");
     localStorage.removeItem("user");

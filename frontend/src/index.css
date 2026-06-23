@@ -8251,3 +8251,237 @@ input, textarea, select { font-family: inherit; outline: none; }
   .help-guide-fab { right: 12px; bottom: 24px; }
 }
 
+/* ════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE LAYOUT  (≤ 768px)
+════════════════════════════════════════════════════════════ */
+
+/* Sidebar overlay backdrop */
+.sidebar-overlay {
+  display: none;
+}
+
+/* Close button inside sidebar — hidden on desktop */
+.sidebar-close-btn {
+  display: none;
+}
+
+/* Hamburger in navbar — hidden on desktop */
+.navbar-hamburger {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* ── Sidebar as slide-in drawer ── */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: -260px;
+    height: 100vh;
+    z-index: 300;
+    transition: left 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: none;
+  }
+
+  .sidebar.sidebar--open {
+    left: 0;
+    box-shadow: 4px 0 32px rgba(0,0,0,0.5);
+  }
+
+  /* Backdrop overlay */
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 299;
+    backdrop-filter: blur(2px);
+  }
+
+  /* Show close X inside sidebar header */
+  .sidebar-close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--sidebar-text);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    transition: color 0.15s, background 0.15s;
+    order: -1;
+  }
+  .sidebar-close-btn:hover {
+    color: #fff;
+    background: rgba(255,255,255,0.08);
+  }
+
+  /* Main area takes full width */
+  .main-area {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* ── Hamburger button ── */
+  .navbar-hamburger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    margin-right: 4px;
+    transition: background 0.15s, color 0.15s;
+  }
+  .navbar-hamburger:hover {
+    background: var(--main-bg);
+    color: var(--text-primary);
+  }
+
+  /* ── Navbar adjustments ── */
+  .navbar {
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  /* Shrink/hide breadcrumb text on very small screens */
+  .navbar-breadcrumb span:first-child,
+  .navbar-breadcrumb span:nth-child(2) {
+    display: none;
+  }
+  .navbar-breadcrumb-current {
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+  }
+
+  /* Hide search bar on mobile — use command palette instead */
+  .navbar-search {
+    display: none;
+  }
+
+  /* Compact navbar actions */
+  .navbar-actions {
+    margin-left: auto;
+    gap: 6px;
+  }
+
+  .btn-create {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  /* Hide status pills on mobile */
+  .navbar-status-pill {
+    display: none;
+  }
+
+  /* ── Board content ── */
+  .board-content {
+    padding: 14px 12px;
+  }
+
+  .board-header {
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .board-title-area h1 {
+    font-size: 17px;
+  }
+
+  .board-title-area p {
+    font-size: 12px;
+  }
+
+  /* ── Kanban: each column scrolls on mobile ── */
+  .cb-board,
+  .kanban-board {
+    flex-direction: column;
+    min-width: unset;
+    gap: 12px;
+  }
+
+  .cb-column,
+  .kanban-column {
+    width: 100%;
+    min-width: unset;
+    max-height: 360px;
+  }
+
+  /* ── Filter bar wraps ── */
+  .filter-bar {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* ── Modals — full screen on mobile ── */
+  .modal-content,
+  .task-detail-modal,
+  .create-task-modal,
+  .workspace-modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    border-radius: 16px 16px 0 0 !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    max-height: 92vh !important;
+    overflow-y: auto !important;
+  }
+
+  /* ── AI bubble & Jarvis offset from bottom nav ── */
+  .ai-bubble-root { right: 12px; bottom: 80px; }
+  .jarvis-float   { right: 12px; bottom: 136px; }
+  .help-guide-fab { right: 12px; bottom: 24px; }
+
+  /* ── Summary & analytics panels: stack vertically ── */
+  .summary-grid,
+  .analytics-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Command palette: full width on mobile ── */
+  .cmd-palette {
+    width: calc(100vw - 24px) !important;
+    max-width: calc(100vw - 24px) !important;
+    top: 60px !important;
+  }
+
+  /* ── Sprint selector: horizontal scroll ── */
+  .sprint-selector {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+
+  /* ── Gantt: allow horizontal scroll ── */
+  .gantt-scroll-area {
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .navbar-breadcrumb-current {
+    max-width: 90px;
+  }
+
+  .board-content {
+    padding: 10px 8px;
+  }
+
+  .btn-create span,
+  .btn-create { font-size: 11px; padding: 5px 8px; }
+}
+

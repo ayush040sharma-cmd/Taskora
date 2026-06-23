@@ -185,6 +185,7 @@ function ShortcutsModal({ onClose }) {
 export default function Dashboard() {
   const { user } = useAuth();
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [workspaces, setWorkspaces]             = useState([]);
   const [currentWorkspace, setCurrentWorkspace] = useState(null);
   const [allTasks, setAllTasks]                 = useState([]);
@@ -526,20 +527,28 @@ export default function Dashboard() {
 
   return (
     <div className="app-layout">
+      {/* Mobile overlay — closes sidebar when tapped */}
+      {sidebarOpen && (
+        <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
+      )}
+
       <Sidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
         workspaces={workspaces}
         currentWorkspace={currentWorkspace}
-        onWorkspaceChange={ws => { setCurrentWorkspace(ws); setActiveSprint(null); }}
-        onNewWorkspace={() => setShowWorkspaceModal(true)}
+        onWorkspaceChange={ws => { setCurrentWorkspace(ws); setActiveSprint(null); setSidebarOpen(false); }}
+        onNewWorkspace={() => { setShowWorkspaceModal(true); setSidebarOpen(false); }}
         activeView={view}
-        onViewChange={setView}
-        onOpenPalette={() => setCmdOpen(true)}
+        onViewChange={(v) => { setView(v); setSidebarOpen(false); }}
+        onOpenPalette={() => { setCmdOpen(true); setSidebarOpen(false); }}
       />
 
       <div className="main-area">
         <Navbar
           workspaceName={currentWorkspace?.name}
           onCreateTask={() => openCreateTask("todo")}
+          onMenuToggle={() => setSidebarOpen(v => !v)}
           user={user}
         />
 

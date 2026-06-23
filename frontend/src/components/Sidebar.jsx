@@ -54,6 +54,8 @@ function PlanLock({ plan }) {
 }
 
 export default function Sidebar({
+  open = false,
+  onClose,
   workspaces = [],
   currentWorkspace,
   onWorkspaceChange,
@@ -87,9 +89,15 @@ export default function Sidebar({
   }
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${open ? " sidebar--open" : ""}`}>
       {/* Logo */}
       <div className="sidebar-logo">
+        {/* Close button — only visible on mobile */}
+        <button className="sidebar-close-btn" onClick={onClose} aria-label="Close menu">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
         <div className="sidebar-logo-mark">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
             <rect x="2" y="10" width="4" height="12" rx="1.5" fill="#fff"/>

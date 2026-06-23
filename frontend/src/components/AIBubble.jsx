@@ -2,8 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import api from "../api/api";
 
 const SUGGESTIONS = [
+  "Create a task for FiberCops Demo for next week",
   "What tasks are overdue?",
-  "Who has the most tasks?",
   "What's high priority?",
   "Summarize the workspace",
 ];
@@ -38,6 +38,9 @@ export default function AIBubble({ workspaceId }) {
     }
   }, [messages, open, minimized]);
 
+  // Detect action commands that should go to Jarvis instead of nlquery
+  const ACTION_RE = /\b(create|add|make|new|mark|move|set|assign|delete|remove|complete|finish)\b.{0,40}\b(task|bug|story|ticket|issue|feature|item)\b|\b(task|bug|story|ticket|issue)\b.{0,40}\b(done|complete|finished|in.?progress|todo)\b/i;
+
   const send = async (text) => {
     const q = (text || input).trim();
     if (!q || loading) return;
@@ -45,7 +48,7 @@ export default function AIBubble({ workspaceId }) {
     if (!workspaceId) {
       setMsgs(m => [...m,
         { role: "user", text: q },
-        { role: "assistant", text: "Please open a workspace first, then I can answer questions about your tasks." },
+        { role: "assistant", text: "Please open a workspace first, then I can help you." },
       ]);
       setInput("");
       return;
@@ -55,22 +58,30 @@ export default function AIBubble({ workspaceId }) {
     setMsgs(m => [...m, { role: "user", text: q }]);
     setLoading(true);
     try {
-      const { data } = await api.post(`/nlquery/${workspaceId}`, { query: q });
-      const answer = data.answer || data.response || data.message || "I couldn't find an answer to that.";
+      const isCommand = ACTION_RE.test(q);
 
-      // Build reply: text answer + up to 5 task titles if returned
-      let replyText = answer;
-      if (data.tasks?.length && data.type !== "summary" && data.type !== "members") {
-        const titles = data.tasks.slice(0, 5).map(t => `• ${t.title}`).join("\n");
-        replyText = answer + "\n" + titles;
-        if (data.tasks.length > 5) replyText += `\n…and ${data.tasks.length - 5} more`;
-      }
-      if (data.type === "members" && data.tasks?.length) {
-        const members = data.tasks.slice(0, 5).map(m => `• ${m.name}: ${m.load_pct ?? "?"}%`).join("\n");
-        replyText = answer + "\n" + members;
-      }
+      if (isCommand) {
+        // Route task creation/modification commands to Jarvis
+        const { data } = await api.post("/jarvis/command", { message: q, workspace_id: workspaceId });
+        const replyText = data.reply || "Done!";
+        setMsgs(m => [...m, { role: "assistant", text: replyText }]);
+      } else {
+        // Route queries to nlquery
+        const { data } = await api.post(`/nlquery/${workspaceId}`, { query: q });
+        const answer = data.answer || data.response || data.message || "I couldn't find an answer to that.";
 
-      setMsgs(m => [...m, { role: "assistant", text: replyText }]);
+        let replyText = answer;
+        if (data.tasks?.length && data.type !== "summary" && data.type !== "members") {
+          const titles = data.tasks.slice(0, 5).map(t => `• ${t.title}`).join("\n");
+          replyText = answer + "\n" + titles;
+          if (data.tasks.length > 5) replyText += `\n…and ${data.tasks.length - 5} more`;
+        }
+        if (data.type === "members" && data.tasks?.length) {
+          const members = data.tasks.slice(0, 5).map(m => `• ${m.name}: ${m.load_pct ?? "?"}%`).join("\n");
+          replyText = answer + "\n" + members;
+        }
+        setMsgs(m => [...m, { role: "assistant", text: replyText }]);
+      }
     } catch (err) {
       const msg = err.response?.status === 403
         ? "You don't have access to this workspace."

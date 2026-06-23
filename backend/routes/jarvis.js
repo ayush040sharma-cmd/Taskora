@@ -91,13 +91,19 @@ function extractCreateTitle(msg) {
   const named = /\b(?:called|named|titled)\s+(.+?)(?:\s+(?:with|due|by|for|assign|high|medium|low|critical|urgent|and|,)\b|$)/i.exec(msg);
   if (named) return named[1].trim();
 
+  // "for <title>" — but NOT "for next/this/today/tomorrow/<weekday>" (those are dates)
+  const forTitle = /\bfor\s+(?!(?:next|this|today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b)(.+?)(?:\s+(?:with|due|by|assign|high|medium|low|critical|urgent|and|,)\b|\s+for\s+(?:next|this)\b|\s+(?:next|this)\s+(?:week|month)\b|$)/i.exec(msg);
+  if (forTitle) return forTitle[1].trim();
+
   // Strip the create verb + object word, keep the rest as the title
   const stripped = msg
     .replace(/\b(?:create|add|make|new)\b\s*/gi, "")
     .replace(/\b(?:a|an|the)\s*/gi, "")
     .replace(/\b(?:task|bug|feature|ticket|story|item|issue)\b\s*/gi, "")
-    .replace(/\b(?:with|due|by|for)\b.*/i, "")
-    .replace(/\b(?:high|medium|low|critical|urgent)\b.*/i, "")
+    .replace(/\s*\b(?:with|due|by)\b.*/i, "")
+    // only strip "for" when it precedes a date expression
+    .replace(/\s*\bfor\s+(?:next|this|today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b.*/i, "")
+    .replace(/\s*\b(?:high|medium|low|critical|urgent)\b.*/i, "")
     .trim();
   return stripped || null;
 }

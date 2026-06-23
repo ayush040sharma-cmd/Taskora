@@ -65,6 +65,12 @@ export default function Pricing() {
   const navigate = useNavigate();
   const [showTable, setShowTable] = useState(false);
 
+  // Admin accounts have full access — redirect away from pricing
+  if (user?.is_admin) {
+    navigate("/dashboard");
+    return null;
+  }
+
   function handleCta(plan) {
     if (!user) {
       navigate("/login");

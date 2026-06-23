@@ -75,12 +75,15 @@ export default function Login() {
 
   const [forgotLoading, setForgotLoading] = useState(false);
 
+  const [devResetLink, setDevResetLink] = useState("");
+
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     if (!forgotEmail.trim()) return;
     setForgotLoading(true);
     try {
-      await api.post("/auth/forgot-password", { email: forgotEmail.trim() });
+      const { data } = await api.post("/auth/forgot-password", { email: forgotEmail.trim() });
+      if (data.dev_reset_link) setDevResetLink(data.dev_reset_link);
     } catch {
       // Always show success to prevent email enumeration
     } finally {
@@ -251,7 +254,13 @@ export default function Login() {
                 <div style={{ fontSize: 13, color: "#64748b", lineHeight: 1.6 }}>
                   If an account exists for <strong>{forgotEmail}</strong>, we've sent a password reset link.
                 </div>
-                <button style={{ ...styles.submitBtn, marginTop: 20 }} onClick={() => { setShowForgot(false); setForgotSent(false); setForgotEmail(""); }}>
+                {devResetLink && (
+                  <div style={{ marginTop: 14, padding: "10px 14px", background: "#fef9c3", border: "1px solid #fde047", borderRadius: 8, fontSize: 12 }}>
+                    <div style={{ fontWeight: 700, color: "#854d0e", marginBottom: 4 }}>Dev mode — no email configured:</div>
+                    <a href={devResetLink} style={{ color: "#1d4ed8", wordBreak: "break-all" }}>{devResetLink}</a>
+                  </div>
+                )}
+                <button style={{ ...styles.submitBtn, marginTop: 20 }} onClick={() => { setShowForgot(false); setForgotSent(false); setForgotEmail(""); setDevResetLink(""); }}>
                   Back to sign in
                 </button>
               </div>

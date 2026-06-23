@@ -68,6 +68,7 @@ export default function Sidebar({
 
   const role = user?.onboarding_role || "member";
   const plan = user?.plan || "free";
+  const isAdmin = user?.is_admin ?? false;
 
   // Filter views by role visibility
   const visibleViews = ALL_VIEWS.filter(v => canViewSidebar(v.id, role));
@@ -77,7 +78,7 @@ export default function Sidebar({
   const activeIsMore = moreViews.some(v => v.id === activeView);
 
   function handleViewClick(view) {
-    const allowed = !view.plan || canAccess(view.id, plan);
+    const allowed = !view.plan || canAccess(view.id, plan, isAdmin);
     if (!allowed) {
       navigate("/pricing");
       return;
@@ -180,8 +181,8 @@ export default function Sidebar({
         )}
       </nav>
 
-      {/* Upgrade CTA for free users */}
-      {plan === "free" && (
+      {/* Upgrade CTA for free users — hidden for admin */}
+      {plan === "free" && !isAdmin && (
         <button
           onClick={() => navigate("/pricing")}
           style={{

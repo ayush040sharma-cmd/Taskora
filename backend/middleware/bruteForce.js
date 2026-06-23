@@ -32,6 +32,7 @@ const bruteForce = {
    */
   middleware: async (req, res, next) => {
     const ip  = req.headers["x-forwarded-for"]?.split(",")[0].trim() || req.ip;
+    if (ip === "::1" || ip === "127.0.0.1" || ip === "localhost") return next();
     const now = Date.now();
     const rec = store.get(ip);
 
@@ -55,6 +56,7 @@ const bruteForce = {
    * Call this when a login FAILS (wrong password / unknown user).
    */
   recordFailure: async (ip, url, userAgent) => {
+    if (ip === "::1" || ip === "127.0.0.1" || ip === "localhost") return;
     const now = Date.now();
     let rec   = store.get(ip) || { count: 0, firstAt: now };
 

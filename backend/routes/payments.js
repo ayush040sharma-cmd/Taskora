@@ -40,6 +40,7 @@ router.get("/plans", (req, res) => {
 
 // POST /api/payments/create-order
 router.post("/create-order", auth, async (req, res) => {
+  if (req.user.is_admin) return res.status(403).json({ message: "Admin accounts do not require a plan purchase." });
   const { plan } = req.body;
   if (!PLAN_PRICES[plan]) {
     return res.status(400).json({ message: "Invalid plan" });

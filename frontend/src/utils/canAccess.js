@@ -6,7 +6,8 @@ import { ROLE_PERMISSIONS } from "../config/permissions";
  * @param {string} feature  — key from FEATURES config
  * @param {string} plan     — user's plan: 'free' | 'pro' | 'enterprise'
  */
-export function canAccess(feature, plan = "free") {
+export function canAccess(feature, plan = "free", isAdmin = false) {
+  if (isAdmin) return true; // admin bypasses all feature gates
   const required = FEATURES[feature];
   if (!required) return true; // unknown feature = no gate
   return PLAN_RANK[plan] >= PLAN_RANK[required];

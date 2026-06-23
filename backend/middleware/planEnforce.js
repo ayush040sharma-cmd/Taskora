@@ -32,9 +32,12 @@ module.exports = async (req, res, next) => {
 
   try {
     const { rows } = await pool.query(
-      "SELECT plan FROM users WHERE id = $1", [req.user.id]
+      "SELECT plan, is_admin FROM users WHERE id = $1", [req.user.id]
     );
     const plan = rows[0]?.plan || "free";
+
+    // Admin users bypass all plan restrictions
+    if (rows[0]?.is_admin) return next();
 
     if (PLAN_RANK[plan] < PLAN_RANK[required]) {
       return res.status(403).json({

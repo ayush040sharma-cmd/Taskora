@@ -38,7 +38,7 @@ router.post("/register", authLimiter, validate(schemas.register), async (req, re
     const userResult = await pool.query(
       `INSERT INTO users (name, email, password_hash, role)
        VALUES ($1, $2, $3, $4)
-       RETURNING id, name, email, role, onboarding_role, onboarding_complete, plan, team_size`,
+       RETURNING id, name, email, role, onboarding_role, onboarding_complete, plan, team_size, is_admin`,
       [name, email, password_hash, safeRole]
     );
     const user = userResult.rows[0];
@@ -50,7 +50,7 @@ router.post("/register", authLimiter, validate(schemas.register), async (req, re
     );
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, name: user.name, role: user.role },
+      { id: user.id, email: user.email, name: user.name, role: user.role, is_admin: user.is_admin ?? false },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
@@ -67,6 +67,7 @@ router.post("/register", authLimiter, validate(schemas.register), async (req, re
         onboarding_complete: user.onboarding_complete ?? false,
         plan:                user.plan                || "free",
         team_size:           user.team_size           || null,
+        is_admin:            user.is_admin            ?? false,
       },
     });
   } catch (err) {
@@ -98,7 +99,7 @@ router.post("/login", authLimiter, bruteForce.middleware, validate(schemas.login
     bruteForce.recordSuccess(ip);
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, name: user.name, role: user.role },
+      { id: user.id, email: user.email, name: user.name, role: user.role, is_admin: user.is_admin ?? false },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
@@ -115,6 +116,7 @@ router.post("/login", authLimiter, bruteForce.middleware, validate(schemas.login
       onboarding_complete: user.onboarding_complete ?? false,
       plan:                user.plan                || "free",
       team_size:           user.team_size           || null,
+      is_admin:            user.is_admin            ?? false,
     }});
   } catch (err) {
     logger.error(`Login error: ${err.message}`);
@@ -186,13 +188,13 @@ router.get("/me", auth, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT id, name, email, role, onboarding_role, team_size,
-              onboarding_complete, plan, created_at
+              onboarding_complete, plan, is_admin, created_at
        FROM users WHERE id = $1`,
       [req.user.id]
     );
     const user = result.rows[0];
     if (!user) return res.status(404).json({ message: "User not found" });
-    res.json({ ...user, plan: user.plan || "free" });
+    res.json({ ...user, plan: user.plan || "free", is_admin: user.is_admin ?? false });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
@@ -314,6 +316,19 @@ router.post("/forgot-password", authLimiter, validate(schemas.forgotPassword), a
     }
   } catch (err) {
     logger.error(`Forgot password error: ${err.message}`);
+  }
+  // In development (no email service), return the reset link directly so it's usable
+  if (!process.env.RESEND_API_KEY) {
+    try {
+      const r = await pool.query("SELECT reset_token FROM users WHERE email = $1", [req.body.email]);
+      if (r.rows[0]?.reset_token) {
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+        return res.json({
+          message: "If that email exists, a reset link has been sent.",
+          dev_reset_link: `${frontendUrl}/reset-password?token=${r.rows[0].reset_token}`,
+        });
+      }
+    } catch {}
   }
   res.json({ message: "If that email exists, a reset link has been sent." });
 });

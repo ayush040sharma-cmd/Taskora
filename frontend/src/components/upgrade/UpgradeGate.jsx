@@ -14,7 +14,7 @@ export default function UpgradeGate({ feature, children, style = {} }) {
   const plan = user?.plan || "free";
   const [showModal, setShowModal] = useState(false);
 
-  const allowed = canAccess(feature, plan);
+  const allowed = canAccess(feature, plan, user?.is_admin);
   const needed = requiredPlan(feature);
 
   if (allowed) return <>{children}</>;

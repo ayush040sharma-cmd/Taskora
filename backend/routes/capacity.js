@@ -151,16 +151,19 @@ router.put("/leave", auth, async (req, res) => {
 router.get("/team/:wsId", auth, requireMinRole("manager"), async (req, res) => {
   const { wsId } = req.params;
   try {
-    // All members of this workspace
+    // All members + owner of this workspace (UNION so owner is never excluded)
     const members = await pool.query(
-      `SELECT u.id, u.name, u.email, u.role,
+      `SELECT DISTINCT u.id, u.name, u.email, u.role,
               uc.daily_hours, uc.customer_facing_hours, uc.internal_hours,
               uc.travel_mode, uc.travel_hours, uc.on_leave, uc.leave_start, uc.leave_end,
               uc.max_rfp, uc.max_proposals, uc.max_presentations, uc.max_upgrades
-       FROM workspace_members wm
-       JOIN users u ON u.id = wm.user_id
+       FROM (
+         SELECT wm.user_id FROM workspace_members wm WHERE wm.workspace_id = $1
+         UNION
+         SELECT w.user_id FROM workspaces w WHERE w.id = $1
+       ) AS combined
+       JOIN users u ON u.id = combined.user_id
        LEFT JOIN user_capacity uc ON uc.user_id = u.id
-       WHERE wm.workspace_id = $1
        ORDER BY u.name`,
       [wsId]
     );
@@ -244,11 +247,14 @@ router.get("/predict/:wsId", auth, requireMinRole("manager"), async (req, res) =
   const days     = parseInt(req.query.days) || 14;
   try {
     const members = await pool.query(
-      `SELECT u.id, u.name, u.role, uc.*
-       FROM workspace_members wm
-       JOIN users u ON u.id = wm.user_id
-       LEFT JOIN user_capacity uc ON uc.user_id = u.id
-       WHERE wm.workspace_id = $1`,
+      `SELECT DISTINCT u.id, u.name, u.role, uc.*
+       FROM (
+         SELECT wm.user_id FROM workspace_members wm WHERE wm.workspace_id = $1
+         UNION
+         SELECT w.user_id FROM workspaces w WHERE w.id = $1
+       ) AS combined
+       JOIN users u ON u.id = combined.user_id
+       LEFT JOIN user_capacity uc ON uc.user_id = u.id`,
       [wsId]
     );
     const activeTasks = await pool.query(

@@ -177,8 +177,14 @@ function CapacityEditModal({ member, workspaceId, onClose, onSaved }) {
 }
 
 // ── AI Prediction Panel ───────────────────────────────────────────────────────
-function PredictionPanel({ predictions }) {
-  if (!predictions || !predictions.length) return null;
+function PredictionPanel({ predictions, loading, error }) {
+  if (loading) return <div className="mgr-empty-note">Loading AI predictions…</div>;
+  if (error)   return <div className="mgr-empty-note" style={{ color: "#ef4444" }}>Could not load predictions. {error}</div>;
+  if (!predictions || !predictions.length) return (
+    <div className="mgr-empty-note">
+      No team members found to predict. Add members to this workspace first, then predictions will appear here.
+    </div>
+  );
   const at_risk = predictions.filter(p => p.prediction.risk === "high" || p.prediction.burnout_risk);
 
   return (
@@ -571,29 +577,39 @@ function ManagerDashView({ workspaceId, workspaceName }) {
 // ── Main Component ─────────────────────────────────────────────────────────────
 export default function ManagerDashboard({ workspaceId, workspaceName, onNavigate }) {
   const { user } = useAuth();
-  const [team,        setTeam]        = useState([]);
-  const [predictions, setPredictions] = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [editMember,  setEditMember]  = useState(null);
-  const [activeTab,   setActiveTab]   = useState("dashboard");
+  const [team,          setTeam]          = useState([]);
+  const [predictions,   setPredictions]   = useState([]);
+  const [predLoading,   setPredLoading]   = useState(true);
+  const [predError,     setPredError]     = useState("");
+  const [loading,       setLoading]       = useState(true);
+  const [editMember,    setEditMember]    = useState(null);
+  const [activeTab,     setActiveTab]     = useState("dashboard");
 
   const canManage = user?.role === "manager" || user?.role === "super_boss";
 
   const loadTeam = useCallback(async () => {
     if (!workspaceId || !canManage) return;
     setLoading(true);
-    try {
-      const [teamR, predR] = await Promise.all([
-        api.get(`/capacity/team/${workspaceId}`),
-        api.get(`/capacity/predict/${workspaceId}?days=14`),
-      ]);
-      setTeam(teamR.data);
-      setPredictions(predR.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    // Load team and predictions independently so one failure can't blank both
+    const teamPromise = api.get(`/capacity/team/${workspaceId}`)
+      .then(r => setTeam(r.data))
+      .catch(err => console.error("team load:", err));
+
+    const predPromise = (async () => {
+      setPredLoading(true);
+      setPredError("");
+      try {
+        const r = await api.get(`/capacity/predict/${workspaceId}?days=14`);
+        setPredictions(r.data);
+      } catch (err) {
+        setPredError(err.response?.data?.message || "Failed to load predictions.");
+      } finally {
+        setPredLoading(false);
+      }
+    })();
+
+    await Promise.allSettled([teamPromise, predPromise]);
+    setLoading(false);
   }, [workspaceId, canManage]);
 
   useEffect(() => { loadTeam(); }, [loadTeam]);
@@ -696,7 +712,7 @@ export default function ManagerDashboard({ workspaceId, workspaceName, onNavigat
 
       {/* AI Predictions */}
       {activeTab === "predictions" && (
-        <PredictionPanel predictions={predictions} />
+        <PredictionPanel predictions={predictions} loading={predLoading} error={predError} />
       )}
 
       {/* Approvals */}

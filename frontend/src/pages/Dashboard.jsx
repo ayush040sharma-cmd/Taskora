@@ -36,13 +36,6 @@ import JarvisVoiceAssistant from "../components/JarvisVoiceAssistant";
 import SecurityDashboard from "../components/SecurityDashboard";
 import OnboardingChecklist from "../components/onboarding/OnboardingChecklist";
 
-const EMPTY_COLS = { todo: [], inprogress: [], done: [] };
-
-function tasksToColumns(tasks) {
-  const c = { todo: [], inprogress: [], done: [] };
-  tasks.forEach(t => { if (c[t.status]) c[t.status].push(t); });
-  return c;
-}
 
 // ── Undo Toast ────────────────────────────────────────────────────
 function UndoToast({ item, onUndo, onDismiss }) {
@@ -193,7 +186,6 @@ export default function Dashboard() {
   const [workspaces, setWorkspaces]             = useState([]);
   const [currentWorkspace, setCurrentWorkspace] = useState(null);
   const [allTasks, setAllTasks]                 = useState([]);
-  const [columns, setColumns]                   = useState(EMPTY_COLS);
   const [sprints, setSprints]                   = useState([]);
   const [activeSprint, setActiveSprint]         = useState(null);
   const [loading, setLoading]                   = useState(true);
@@ -262,11 +254,10 @@ export default function Dashboard() {
 
   // ── Load tasks ───────────────────────────────────────────────
   const loadTasks = useCallback(async (wsId) => {
-    if (!wsId) { setAllTasks([]); setColumns(EMPTY_COLS); return; }
+    if (!wsId) { setAllTasks([]); return; }
     try {
       const { data } = await api.get(`/tasks/workspace/${wsId}`);
       setAllTasks(data);
-      setColumns(tasksToColumns(data));
     } catch (err) { console.error(err); }
   }, []);
 
@@ -345,8 +336,7 @@ export default function Dashboard() {
     const moved     = allTasks.find(t => t.id === taskId);
     if (!moved) return;
 
-    // Optimistically update allTasks — filteredColumns derives from this,
-    // so the board updates instantly without waiting for the API round-trip.
+    // Optimistic update — filteredColumns derives from allTasks automatically
     setAllTasks(prev => prev.map(t =>
       t.id === taskId
         ? { ...t, status: newStatus, progress: newStatus === "done" ? 100 : t.progress }
@@ -370,8 +360,8 @@ export default function Dashboard() {
   const handleCreateTask = async (formData) => {
     if (!currentWorkspace) throw new Error("No workspace selected");
     const { data } = await api.post("/tasks", { ...formData, workspace_id: currentWorkspace.id });
-    setAllTasks(p => [...p, data]);
-    setColumns(tasksToColumns([...allTasks, data]));
+    // Dedup: socket task:created may arrive before or after this — avoid duplicate
+    setAllTasks(p => p.some(t => t.id === data.id) ? p : [...p, data]);
     showToast("Task created");
   };
 
@@ -380,55 +370,40 @@ export default function Dashboard() {
     const taskToDelete = allTasks.find(t => t.id === taskId);
     if (!taskToDelete) return;
 
-    // Optimistically remove from UI
-    const next = allTasks.filter(t => t.id !== taskId);
-    setAllTasks(next);
-    setColumns(tasksToColumns(next));
+    // Optimistically remove using functional updater (avoids stale closure)
+    setAllTasks(p => p.filter(t => t.id !== taskId));
 
-    // Store for potential undo
-    undoDataRef.current = { taskId, task: taskToDelete, wsId: currentWorkspace?.id };
     let deleted = false;
 
-    // Show undo toast
     setUndoPending({
       msg: `"${taskToDelete.title}" deleted`,
-      undo: async () => {
-        deleted = true; // cancel the deletion
-        // Restore task in UI immediately
-        const restored = [...next, taskToDelete];
-        setAllTasks(restored);
-        setColumns(tasksToColumns(restored));
+      undo: () => {
+        deleted = true;
+        // Re-insert the saved task object; dedup in case socket also restored it
+        setAllTasks(p => p.some(t => t.id === taskToDelete.id) ? p : [...p, taskToDelete]);
         setUndoPending(null);
         showToast("Task restored");
       },
     });
 
-    // After 5 seconds, actually delete if not undone
     setTimeout(async () => {
       if (!deleted) {
         try {
           await api.delete(`/tasks/${taskId}`);
         } catch {
-          // If delete fails, restore
           loadTasks(currentWorkspace?.id);
           showToast("Failed to delete task", "error");
         }
         setUndoPending(null);
       }
-    }, 5500); // slight buffer after toast dismisses
+    }, 5500);
   };
 
   // ── Update task ───────────────────────────────────────────────
   const handleTaskUpdated = (updatedTask) => {
     if (!updatedTask) { loadTasks(currentWorkspace?.id); return; }
+    // Single source of truth: allTasks → filteredColumns derives from it automatically
     setAllTasks(p => p.map(t => t.id === updatedTask.id ? { ...t, ...updatedTask } : t));
-    setColumns(p => {
-      const next = { ...p };
-      Object.keys(next).forEach(col => {
-        next[col] = next[col].map(t => t.id === updatedTask.id ? { ...t, ...updatedTask } : t);
-      });
-      return next;
-    });
   };
 
   // ── Create workspace ──────────────────────────────────────────
@@ -458,33 +433,14 @@ export default function Dashboard() {
       addSecAlert(event);
     },
     "task:created": (task) => {
-      setAllTasks(prev => {
-        if (prev.find(t => t.id === task.id)) return prev;
-        return [...prev, task];
-      });
-      setColumns(prev => {
-        const col = task.status in prev ? task.status : "todo";
-        if (prev[col]?.find(t => t.id === task.id)) return prev;
-        return { ...prev, [col]: [...(prev[col] || []), task] };
-      });
+      // Dedup: handleCreateTask may have already added this via API response
+      setAllTasks(prev => prev.some(t => t.id === task.id) ? prev : [...prev, task]);
     },
     "task:updated": (task) => {
       setAllTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...task } : t));
-      setColumns(prev => {
-        const next = { todo: [], inprogress: [], done: [] };
-        [...prev.todo, ...prev.inprogress, ...prev.done]
-          .map(t => t.id === task.id ? { ...t, ...task } : t)
-          .forEach(t => { if (next[t.status]) next[t.status].push(t); });
-        return next;
-      });
     },
     "task:deleted": ({ id }) => {
       setAllTasks(prev => prev.filter(t => t.id !== id));
-      setColumns(prev => ({
-        todo:       prev.todo.filter(t => t.id !== id),
-        inprogress: prev.inprogress.filter(t => t.id !== id),
-        done:       prev.done.filter(t => t.id !== id),
-      }));
     },
   });
 

@@ -5,10 +5,15 @@ const auth = require("../middleware/auth");
 const { validate, schemas } = require("../utils/validate");
 
 // GET /api/workspaces
+// Returns workspaces the user owns OR is a member of
 router.get("/", auth, async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT * FROM workspaces WHERE user_id = $1 ORDER BY created_at ASC",
+      `SELECT DISTINCT w.*
+       FROM workspaces w
+       LEFT JOIN workspace_members wm ON wm.workspace_id = w.id AND wm.user_id = $1
+       WHERE w.user_id = $1 OR wm.user_id = $1
+       ORDER BY w.created_at ASC`,
       [req.user.id]
     );
     res.json(result.rows);

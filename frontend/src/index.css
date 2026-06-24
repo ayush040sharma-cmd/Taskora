@@ -8485,3 +8485,324 @@ input, textarea, select { font-family: inherit; outline: none; }
   .btn-create { font-size: 11px; padding: 5px 8px; }
 }
 
+/* ════════════════════════════════════════════════════════════
+   MOBILE LAYOUT  —  DashboardMobile.jsx
+   Bottom-tab-bar app shell, used when screen ≤ 768 px
+════════════════════════════════════════════════════════════ */
+
+/* Root shell */
+.mob-root {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;           /* dynamic viewport height — avoids iOS chrome gap */
+  background: var(--main-bg);
+  overflow: hidden;
+}
+
+/* ── Top header ── */
+.mob-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 52px;
+  padding: 0 14px;
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 10px;
+}
+
+.mob-ws-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 8px;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  transition: background 0.15s;
+}
+.mob-ws-btn:hover { background: var(--main-bg); }
+
+.mob-ws-avatar-sm {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.mob-ws-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.mob-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.mob-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.mob-icon-btn:hover {
+  background: var(--main-bg);
+  color: var(--text-primary);
+}
+
+.mob-avatar-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ── Scrollable content area ── */
+.mob-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 14px 12px;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Bottom tab bar ── */
+.mob-tabbar {
+  display: flex;
+  align-items: stretch;
+  height: 58px;
+  background: #fff;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  padding-bottom: env(safe-area-inset-bottom); /* iPhone home bar */
+}
+
+.mob-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 2px 2px;
+  color: var(--text-muted);
+  transition: color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.mob-tab--active {
+  color: #6366f1;
+}
+.mob-tab-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+.mob-tab-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* ── Bottom sheets ── */
+.mob-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 500;
+  display: flex;
+  align-items: flex-end;
+}
+
+.mob-sheet {
+  background: #fff;
+  border-radius: 20px 20px 0 0;
+  width: 100%;
+  padding: 12px 0 calc(20px + env(safe-area-inset-bottom));
+  max-height: 80vh;
+  overflow-y: auto;
+  animation: mob-sheet-up 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes mob-sheet-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+.mob-sheet-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: #e2e8f0;
+  margin: 0 auto 14px;
+}
+
+.mob-sheet-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  padding: 0 18px 10px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 6px;
+}
+
+.mob-sheet-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 18px;
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+.mob-sheet-item:hover { background: var(--main-bg); }
+.mob-sheet-item--active { color: #6366f1; font-weight: 600; }
+.mob-sheet-item--add { color: var(--text-secondary); }
+.mob-sheet-item--danger { color: #ef4444; }
+
+.mob-sheet-check {
+  margin-left: auto;
+  color: #6366f1;
+  font-weight: 700;
+}
+
+.mob-ws-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+}
+.mob-ws-avatar--add {
+  background: none;
+  border: 1.5px dashed var(--border);
+  color: var(--text-muted);
+  font-size: 18px;
+}
+
+/* "More" grid */
+.mob-more-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border);
+  margin: 8px 0;
+}
+.mob-more-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px 8px;
+  background: #fff;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.mob-more-tile:hover { background: var(--main-bg); }
+.mob-more-icon { font-size: 26px; }
+.mob-more-label { font-size: 12px; font-weight: 500; color: var(--text-secondary); }
+
+/* Profile sheet */
+.mob-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 18px 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 6px;
+}
+.mob-profile-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.mob-profile-name  { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+.mob-profile-email { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.mob-profile-plan  {
+  display: inline-block;
+  margin-top: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(99,102,241,0.1);
+  color: #6366f1;
+}
+
+/* Mobile board-header adjustments (inside mob-content) */
+.mob-content .board-header {
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.mob-content .board-title-area h1 { font-size: 17px; }
+.mob-content .board-title-area p  { font-size: 12px; }
+
+/* Kanban columns stack vertically on mobile */
+.mob-content .cb-board,
+.mob-content .kanban-board {
+  flex-direction: column;
+  min-width: unset;
+}
+.mob-content .cb-column,
+.mob-content .kanban-column {
+  width: 100%;
+  min-width: unset;
+  max-height: 400px;
+}
+

@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
+import DashboardMobile from "../layouts/DashboardMobile";
+import DashboardDesktop from "../layouts/DashboardDesktop";
+import { useIsMobile } from "../hooks/useIsMobile";
 import KanbanBoard from "../components/KanbanBoard";
 import CreateTaskModal from "../components/CreateTaskModal";
 import WorkspaceModal from "../components/WorkspaceModal";
@@ -184,6 +187,7 @@ function ShortcutsModal({ onClose }) {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [workspaces, setWorkspaces]             = useState([]);
@@ -193,6 +197,7 @@ export default function Dashboard() {
   const [sprints, setSprints]                   = useState([]);
   const [activeSprint, setActiveSprint]         = useState(null);
   const [loading, setLoading]                   = useState(true);
+  const [loadError, setLoadError]               = useState(false);
   const [view, setView]                         = useState("board");
 
   const [showCreateTask, setShowCreateTask]       = useState(false);
@@ -231,11 +236,16 @@ export default function Dashboard() {
 
   // ── Load workspaces ──────────────────────────────────────────
   const loadWorkspaces = useCallback(async () => {
+    setLoadError(false);
     try {
       const { data } = await api.get("/workspaces");
       setWorkspaces(data);
       if (data.length > 0 && !currentWorkspace) setCurrentWorkspace(data[0]);
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+      // Don't show error for 401 (api.js handles that with redirect to login)
+      if (err.response?.status !== 401) setLoadError(true);
+    }
   }, []); // eslint-disable-line
 
   // ── Load tasks ───────────────────────────────────────────────
@@ -496,6 +506,26 @@ export default function Dashboard() {
     ).values()
   );
 
+  // ── Load error screen ─────────────────────────────────────────
+  if (loadError) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: 16, padding: 24 }}>
+        <div style={{ fontSize: 40 }}>⚠️</div>
+        <h2 style={{ color: "#172b4d", fontSize: 18, fontWeight: 700 }}>Couldn't load your workspaces</h2>
+        <p style={{ color: "#5e6c84", fontSize: 14, textAlign: "center", maxWidth: 320 }}>
+          The server may be waking up (Render free tier sleeps after 15 min). Wait a moment and retry.
+        </p>
+        <button
+          className="btn-primary"
+          onClick={() => loadWorkspaces().finally(() => setLoading(false))}
+          style={{ marginTop: 8 }}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   // ── Loading skeleton ──────────────────────────────────────────
   if (loading) {
     return (
@@ -525,35 +555,8 @@ export default function Dashboard() {
 
   const totalTasks = allTasks.length;
 
-  return (
-    <div className="app-layout">
-      {/* Mobile overlay — closes sidebar when tapped */}
-      {sidebarOpen && (
-        <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
-      )}
-
-      <Sidebar
-        open={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        workspaces={workspaces}
-        currentWorkspace={currentWorkspace}
-        onWorkspaceChange={ws => { setCurrentWorkspace(ws); setActiveSprint(null); setSidebarOpen(false); }}
-        onNewWorkspace={() => { setShowWorkspaceModal(true); setSidebarOpen(false); }}
-        activeView={view}
-        onViewChange={(v) => { setView(v); setSidebarOpen(false); }}
-        onOpenPalette={() => { setCmdOpen(true); setSidebarOpen(false); }}
-      />
-
-      <div className="main-area">
-        <Navbar
-          workspaceName={currentWorkspace?.name}
-          onCreateTask={() => openCreateTask("todo")}
-          onMenuToggle={() => setSidebarOpen(v => !v)}
-          user={user}
-        />
-
-        {/* ── Content ────────────────────────────────────────────── */}
-        <div className="board-content">
+  // ── Shared view content (used by both layouts) ────────────────
+  const viewContent = (<>
 
           {/* ── Board view ── */}
           {view === "board" && (
@@ -758,9 +761,10 @@ export default function Dashboard() {
             </ErrorBoundary>
           )}
 
-        </div>
-      </div>
+  </>); // end viewContent
 
+  // ── Shared overlays (modals, toasts, AI) — rendered in both layouts ──
+  const sharedOverlays = (<>
       {/* ── Modals ───────────────────────────────────────────────── */}
       {showCreateTask && (
         <CreateTaskModal
@@ -827,6 +831,48 @@ export default function Dashboard() {
 
       {/* ── Onboarding checklist (new users) ─────────────────────── */}
       <OnboardingChecklist onViewChange={setView} />
+  </>); // end sharedOverlays
+
+  // ── Mobile layout ─────────────────────────────────────────────
+  if (isMobile) {
+    return (
+      <>
+        <DashboardMobile
+          workspaces={workspaces}
+          currentWorkspace={currentWorkspace}
+          onWorkspaceChange={ws => { setCurrentWorkspace(ws); setActiveSprint(null); }}
+          onNewWorkspace={() => setShowWorkspaceModal(true)}
+          activeView={view}
+          onViewChange={setView}
+          onCreateTask={() => openCreateTask("todo")}
+        >
+          {viewContent}
+        </DashboardMobile>
+        {sharedOverlays}
+      </>
+    );
+  }
+
+  // ── Desktop layout ────────────────────────────────────────────
+  return (
+    <div className="app-layout">
+      <DashboardDesktop
+        sidebarOpen={sidebarOpen}
+        onSidebarToggle={() => setSidebarOpen(v => !v)}
+        onSidebarClose={() => setSidebarOpen(false)}
+        workspaces={workspaces}
+        currentWorkspace={currentWorkspace}
+        onWorkspaceChange={ws => { setCurrentWorkspace(ws); setActiveSprint(null); }}
+        onNewWorkspace={() => setShowWorkspaceModal(true)}
+        activeView={view}
+        onViewChange={setView}
+        onOpenPalette={() => setCmdOpen(true)}
+        onCreateTask={() => openCreateTask("todo")}
+        user={user}
+      >
+        {viewContent}
+      </DashboardDesktop>
+      {sharedOverlays}
     </div>
   );
 }

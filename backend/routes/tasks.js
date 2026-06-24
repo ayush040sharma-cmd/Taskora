@@ -142,60 +142,50 @@ router.post("/", auth, validate(schemas.createTask), async (req, res) => {
 
 // PUT /api/tasks/:id
 router.put("/:id", auth, validate(schemas.updateTask), async (req, res) => {
-  const {
-    title, description, status, priority, due_date, start_date,
-    position, progress, type, estimated_days, assigned_user_id, sprint_id,
-    estimated_duration, final_duration,
-  } = req.body;
-
   try {
     const taskCheck = await pool.query(
-      `SELECT t.id, t.status FROM tasks t
+      `SELECT t.id, t.status, t.assigned_user_id, t.title FROM tasks t
        JOIN workspaces w ON t.workspace_id = w.id
        WHERE t.id = $1 AND w.user_id = $2`,
       [req.params.id, req.user.id]
     );
     if (!taskCheck.rows.length) return res.status(404).json({ message: "Task not found" });
 
-    // Set completed_at when moving to done
     const prevStatus = taskCheck.rows[0].status;
-    const completedAt =
-      status === "done" && prevStatus !== "done" ? new Date() :
-      status && status !== "done" ? null :
-      undefined; // undefined = don't change
+    const newStatus  = req.body.status;
 
+    // Build dynamic SET clause — only update fields explicitly present in body.
+    // This allows null to clear nullable fields (due_date, assignee, etc.)
+    const ALLOWED = [
+      "title", "description", "status", "priority", "due_date", "start_date",
+      "position", "progress", "type", "estimated_days", "assigned_user_id",
+      "sprint_id", "estimated_duration", "final_duration", "recurrence",
+    ];
+    const setClauses = [];
+    const params     = [];
+    let   idx        = 1;
+
+    for (const field of ALLOWED) {
+      if (field in req.body) {
+        setClauses.push(`${field} = $${idx}`);
+        params.push(req.body[field] ?? null);
+        idx++;
+      }
+    }
+
+    // Handle completed_at for status transitions
+    if (newStatus === "done" && prevStatus !== "done") {
+      setClauses.push("completed_at = NOW()");
+    } else if (newStatus && newStatus !== "done" && prevStatus === "done") {
+      setClauses.push("completed_at = NULL");
+    }
+
+    if (setClauses.length === 0) return res.status(400).json({ message: "No fields to update" });
+
+    params.push(req.params.id);
     const result = await pool.query(
-      `UPDATE tasks SET
-        title            = COALESCE($1,  title),
-        description      = COALESCE($2,  description),
-        status           = COALESCE($3,  status),
-        priority         = COALESCE($4,  priority),
-        due_date         = COALESCE($5,  due_date),
-        start_date       = COALESCE($6,  start_date),
-        position         = COALESCE($7,  position),
-        progress         = COALESCE($8,  progress),
-        type             = COALESCE($9,  type),
-        estimated_days   = COALESCE($10, estimated_days),
-        assigned_user_id = COALESCE($11, assigned_user_id),
-        sprint_id        = COALESCE($12, sprint_id),
-        estimated_duration = COALESCE($16, estimated_duration),
-        final_duration     = COALESCE($17, final_duration),
-        completed_at     = CASE
-          WHEN $13::boolean IS TRUE  THEN NOW()
-          WHEN $14::boolean IS TRUE  THEN NULL
-          ELSE completed_at
-        END
-       WHERE id = $15 RETURNING *`,
-      [
-        title, description, status, priority, due_date, start_date,
-        position, progress, type, estimated_days, assigned_user_id,
-        sprint_id,
-        status === "done" && prevStatus !== "done",        // $13 set now
-        status && status !== "done" && prevStatus === "done", // $14 clear
-        req.params.id,                                     // $15
-        estimated_duration || null,                        // $16
-        final_duration      || null,                       // $17
-      ]
+      `UPDATE tasks SET ${setClauses.join(", ")} WHERE id = $${idx} RETURNING *`,
+      params
     );
     const updated = result.rows[0];
 
@@ -209,13 +199,13 @@ router.put("/:id", auth, validate(schemas.updateTask), async (req, res) => {
     }
 
     // Audit — only log meaningful changes, skip pure position reorders
-    if (status && status !== prevStatus) {
-      const action = status === "done" ? "task_completed" : "task_moved";
-      audit({ workspace_id: updated.workspace_id, actor_id: req.user.id, action, target_type: "task", target_id: updated.id, meta: { task_title: updated.title, from: prevStatus, to: status } }).catch(() => {});
-    } else if (assigned_user_id && assigned_user_id !== taskCheck.rows[0].assigned_user_id) {
+    if (newStatus && newStatus !== prevStatus) {
+      const action = newStatus === "done" ? "task_completed" : "task_moved";
+      audit({ workspace_id: updated.workspace_id, actor_id: req.user.id, action, target_type: "task", target_id: updated.id, meta: { task_title: updated.title, from: prevStatus, to: newStatus } }).catch(() => {});
+    } else if ("assigned_user_id" in req.body && req.body.assigned_user_id !== taskCheck.rows[0].assigned_user_id) {
       audit({ workspace_id: updated.workspace_id, actor_id: req.user.id, action: "task_assigned", target_type: "task", target_id: updated.id, meta: { task_title: updated.title } }).catch(() => {});
-    } else if (title && title !== taskCheck.rows[0].title) {
-      audit({ workspace_id: updated.workspace_id, actor_id: req.user.id, action: "task_renamed", target_type: "task", target_id: updated.id, meta: { task_title: title } }).catch(() => {});
+    } else if (req.body.title && req.body.title !== taskCheck.rows[0].title) {
+      audit({ workspace_id: updated.workspace_id, actor_id: req.user.id, action: "task_renamed", target_type: "task", target_id: updated.id, meta: { task_title: req.body.title } }).catch(() => {});
     }
 
     res.json(updated);

@@ -7,11 +7,12 @@ import ProgressBar from "./ProgressBar";
 const COLS = [
   { id: "todo",       label: "To Do",      color: "#97a0af" },
   { id: "inprogress", label: "In Progress", color: "#0052cc" },
+  { id: "review",     label: "In Review",   color: "#8b5cf6" },
   { id: "done",       label: "Done",        color: "#00875a" },
 ];
 
 function tasksToColumns(tasks) {
-  const c = { todo: [], inprogress: [], done: [] };
+  const c = { todo: [], inprogress: [], review: [], done: [] };
   tasks.forEach(t => {
     const key = t.status === "in_progress" ? "inprogress" : t.status;
     if (c[key]) c[key].push(t);
@@ -20,7 +21,7 @@ function tasksToColumns(tasks) {
 }
 
 export default function SprintView({ sprint, workspaceId, allTasks, onTaskUpdated, onAddToSprint }) {
-  const [columns, setColumns]       = useState({ todo: [], inprogress: [], done: [] });
+  const [columns, setColumns]       = useState({ todo: [], inprogress: [], review: [], done: [] });
   const [burndown, setBurndown]     = useState(null);
   const [tab, setTab]               = useState("board"); // board | burndown
   const [statusMsg, setStatusMsg]   = useState("");

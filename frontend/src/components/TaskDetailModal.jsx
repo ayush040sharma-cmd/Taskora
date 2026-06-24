@@ -324,8 +324,15 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
     setSaving(true);
     try {
       const res = await api.put(`/tasks/${task.id}`, { [field]: value });
-      setTask(res.data);
-      onUpdate && onUpdate(res.data);
+      // Merge only the saved field + server-computed fields to avoid overwriting
+      // concurrent local edits (e.g. user changing date while another field saves)
+      setTask(prev => ({
+        ...prev,
+        [field]: res.data[field],
+        completed_at: res.data.completed_at,
+        updated_at:   res.data.updated_at,
+      }));
+      onUpdate && onUpdate({ ...task, [field]: value });
       showMsg("Saved");
     } catch { showMsg("Failed to save", "error"); }
     finally  { setSaving(false); }

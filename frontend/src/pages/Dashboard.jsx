@@ -463,6 +463,7 @@ export default function Dashboard() {
   const filteredColumns = {
     todo:       filteredTasks.filter(t => t.status === "todo"),
     inprogress: filteredTasks.filter(t => t.status === "inprogress" || t.status === "in_progress"),
+    review:     filteredTasks.filter(t => t.status === "review"),
     done:       filteredTasks.filter(t => t.status === "done"),
   };
 

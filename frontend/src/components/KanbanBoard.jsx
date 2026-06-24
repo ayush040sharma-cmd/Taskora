@@ -4,6 +4,7 @@ import TaskCard from "./TaskCard";
 const COLUMNS = [
   { id: "todo",       label: "To Do",       color: "#6b7280", accent: "#e5e7eb" },
   { id: "inprogress", label: "In Progress",  color: "#3b82f6", accent: "#dbeafe" },
+  { id: "review",     label: "In Review",    color: "#8b5cf6", accent: "#ede9fe" },
   { id: "done",       label: "Done",         color: "#10b981", accent: "#d1fae5" },
 ];
 

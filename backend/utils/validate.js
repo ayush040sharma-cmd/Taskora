@@ -62,17 +62,23 @@ const TASK_PRIORITIES = ["low", "medium", "high"];
 const TASK_TYPES      = ["task", "bug", "story", "upgrade", "rfp", "proposal", "presentation", "poc", "normal"];
 
 const createTaskSchema = z.object({
-  title:          z.string().min(1, "Title is required").max(255).trim(),
-  workspace_id:   z.number({ required_error: "workspace_id is required" }).int().positive(),
-  status:         z.enum(TASK_STATUSES).optional().default("todo"),
-  priority:       z.enum(TASK_PRIORITIES).optional().default("medium"),
-  type:           z.enum(TASK_TYPES).optional().default("task"),
-  description:    z.string().max(5000).optional(),
-  estimated_hours:z.number().min(0).max(9999).optional(),
-  due_date:       z.string().optional().nullable(),
-  assigned_user_id: z.number().int().positive().optional().nullable(),
-  sprint_id:      z.number().int().positive().optional().nullable(),
-  position:       z.number().int().min(0).optional(),
+  title:              z.string().min(1, "Title is required").max(255).trim(),
+  workspace_id:       z.number({ required_error: "workspace_id is required" }).int().positive(),
+  status:             z.enum(TASK_STATUSES).optional().default("todo"),
+  priority:           z.enum(TASK_PRIORITIES).optional().default("medium"),
+  type:               z.enum(TASK_TYPES).optional().default("task"),
+  description:        z.string().max(5000).optional().nullable(),
+  estimated_hours:    z.number().min(0).max(9999).optional().nullable(),
+  due_date:           z.string().optional().nullable(),
+  start_date:         z.string().optional().nullable(),
+  assigned_user_id:   z.number().int().positive().optional().nullable(),
+  sprint_id:          z.number().int().positive().optional().nullable(),
+  position:           z.number().int().min(0).optional(),
+  progress:           z.number().int().min(0).max(100).optional(),
+  estimated_days:     z.number().int().min(1).max(365).optional(),
+  estimated_duration: z.number().min(0).optional().nullable(),
+  final_duration:     z.number().min(0).optional().nullable(),
+  recurrence:         z.preprocess(v => (v === "" ? null : v), z.enum(["daily", "weekly", "monthly"]).optional().nullable()),
 });
 
 const updateTaskSchema = createTaskSchema.partial().omit({ workspace_id: true });

@@ -110,6 +110,7 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
         sprint_id: form.sprint_id || undefined,
         due_date: form.due_date || undefined,
         start_date: form.start_date || undefined,
+        recurrence: form.recurrence || undefined,
       });
       onClose();
     } catch (err) {

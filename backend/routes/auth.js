@@ -20,6 +20,9 @@ const authLimiter = rateLimit({
 });
 
 // POST /api/auth/register
+// Health / keepalive — no auth, no rate limit
+router.get("/status", (req, res) => res.json({ ok: true, ts: Date.now() }));
+
 router.post("/register", authLimiter, validate(schemas.register), async (req, res) => {
   const { name, email, password, role } = req.body;
 

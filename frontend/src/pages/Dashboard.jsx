@@ -197,7 +197,8 @@ export default function Dashboard() {
   const [sprints, setSprints]                   = useState([]);
   const [activeSprint, setActiveSprint]         = useState(null);
   const [loading, setLoading]                   = useState(true);
-  const [loadError, setLoadError]               = useState(false);
+  const [wakeStatus, setWakeStatus]             = useState(null); // null | "waking" | "error"
+  const [wakeAttempt, setWakeAttempt]           = useState(0);
   const [view, setView]                         = useState("board");
 
   const [showCreateTask, setShowCreateTask]       = useState(false);
@@ -234,17 +235,28 @@ export default function Dashboard() {
     setTimeout(() => dismissSecAlert(id), ttl);
   }, [dismissSecAlert]);
 
-  // ── Load workspaces ──────────────────────────────────────────
-  const loadWorkspaces = useCallback(async () => {
-    setLoadError(false);
+  // ── Load workspaces with auto-retry for sleeping Render backend ──
+  const loadWorkspaces = useCallback(async (attempt = 0) => {
+    setWakeStatus(attempt > 0 ? "waking" : null);
+    setWakeAttempt(attempt);
     try {
       const { data } = await api.get("/workspaces");
+      setWakeStatus(null);
       setWorkspaces(data);
       if (data.length > 0 && !currentWorkspace) setCurrentWorkspace(data[0]);
     } catch (err) {
-      console.error(err);
-      // Don't show error for 401 (api.js handles that with redirect to login)
-      if (err.response?.status !== 401) setLoadError(true);
+      // 401 → api.js already redirects to login
+      if (err.response?.status === 401) return;
+
+      const isServerSleep = !err.response || err.response.status >= 500 || err.response.status === 503;
+      if (isServerSleep && attempt < 6) {
+        // Server is waking up — retry with backoff: 3s, 5s, 7s, 10s, 12s, 15s
+        const delays = [3000, 5000, 7000, 10000, 12000, 15000];
+        setWakeStatus("waking");
+        setTimeout(() => loadWorkspaces(attempt + 1), delays[attempt] || 10000);
+      } else {
+        setWakeStatus("error");
+      }
     }
   }, []); // eslint-disable-line
 
@@ -269,7 +281,7 @@ export default function Dashboard() {
   }, []); // eslint-disable-line
 
   useEffect(() => {
-    loadWorkspaces().finally(() => setLoading(false));
+    loadWorkspaces(0).finally(() => setLoading(false));
   }, [loadWorkspaces]);
 
   useEffect(() => {
@@ -506,21 +518,37 @@ export default function Dashboard() {
     ).values()
   );
 
-  // ── Load error screen ─────────────────────────────────────────
-  if (loadError) {
+  // ── Server waking up / error screen ──────────────────────────
+  if (wakeStatus === "waking" && !workspaces.length) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: 16, padding: 24, background: "#f4f5f7" }}>
+        <div style={{ width: 56, height: 56, borderRadius: "50%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, animation: "spin 2s linear infinite" }}>
+          ⚡
+        </div>
+        <h2 style={{ color: "#172b4d", fontSize: 18, fontWeight: 700, margin: 0 }}>Waking up the server…</h2>
+        <p style={{ color: "#5e6c84", fontSize: 14, textAlign: "center", maxWidth: 340, margin: 0 }}>
+          The backend is starting up — this takes about 30 seconds on the free plan. Hang tight!
+        </p>
+        <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+          {[0,1,2,3,4,5].map(i => (
+            <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: i < wakeAttempt ? "#6366f1" : "#dfe1e6", transition: "background 0.3s" }} />
+          ))}
+        </div>
+        <p style={{ color: "#97a0af", fontSize: 12 }}>Attempt {wakeAttempt + 1} of 6</p>
+      </div>
+    );
+  }
+
+  if (wakeStatus === "error") {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: 16, padding: 24 }}>
-        <div style={{ fontSize: 40 }}>⚠️</div>
-        <h2 style={{ color: "#172b4d", fontSize: 18, fontWeight: 700 }}>Couldn't load your workspaces</h2>
-        <p style={{ color: "#5e6c84", fontSize: 14, textAlign: "center", maxWidth: 320 }}>
-          The server may be waking up (Render free tier sleeps after 15 min). Wait a moment and retry.
+        <div style={{ fontSize: 44 }}>😴</div>
+        <h2 style={{ color: "#172b4d", fontSize: 18, fontWeight: 700 }}>Server didn't wake up in time</h2>
+        <p style={{ color: "#5e6c84", fontSize: 14, textAlign: "center", maxWidth: 340 }}>
+          Render's free tier took too long to respond. Click retry — it usually works on the second attempt.
         </p>
-        <button
-          className="btn-primary"
-          onClick={() => loadWorkspaces().finally(() => setLoading(false))}
-          style={{ marginTop: 8 }}
-        >
-          Retry
+        <button className="btn-primary" onClick={() => { setWakeStatus(null); loadWorkspaces(0); }} style={{ marginTop: 8 }}>
+          Try again
         </button>
       </div>
     );

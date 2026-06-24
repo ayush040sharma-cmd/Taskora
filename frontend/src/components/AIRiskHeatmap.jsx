@@ -193,26 +193,34 @@ export default function AIRiskHeatmap({ workspaceId }) {
   const [predictions, setPredictions] = useState([]);
   const [tasks, setTasks]             = useState([]);
   const [loading, setLoading]         = useState(true);
+  const [loadError, setLoadError]     = useState(false);
   const [running, setRunning]         = useState(false);
-  const [filter, setFilter]           = useState("all"); // all | critical | high | medium | low
+  const [filter, setFilter]           = useState("all");
 
   const load = useCallback(async () => {
     if (!workspaceId) return;
     setLoading(true);
+    setLoadError(false);
     try {
-      const [tasksRes, alertsRes] = await Promise.all([
-        api.get(`/tasks/workspace/${workspaceId}`),
-        api.get(`/ai/alerts/${workspaceId}`),
-      ]);
+      // Load tasks first — never let alerts failure block tasks from showing
+      const tasksRes = await api.get(`/tasks/workspace/${workspaceId}`);
       const taskList = tasksRes.data.filter(t => t.status !== "done");
       setTasks(taskList);
 
-      // Merge AI prediction data
-      const predMap = {};
-      alertsRes.data?.predictions?.forEach(p => { predMap[p.task_id] = p; });
+      // Try to enrich with latest AI predictions (best-effort)
+      let predMap = {};
+      try {
+        const alertsRes = await api.get(`/ai/alerts/${workspaceId}`);
+        // alerts endpoint returns predictions inside the predictions array from analyzeWorkspaceTasks
+        alertsRes.data?.predictions?.forEach(p => { predMap[p.task_id] = p; });
+      } catch { /* alerts unavailable — use risk_score already on each task */ }
+
       setPredictions(taskList.map(t => ({ ...t, ...(predMap[t.id] || {}) })));
-    } catch { /* ignore */ }
-    finally { setLoading(false); }
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
   }, [workspaceId]);
 
   useEffect(() => { load(); }, [load]);
@@ -289,11 +297,22 @@ export default function AIRiskHeatmap({ workspaceId }) {
           <div className="spinner" style={{ width: 24, height: 24 }} />
           <span>Loading AI predictions…</span>
         </div>
+      ) : loadError ? (
+        <div className="ai-hm-empty" style={{ color: "#ef4444" }}>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="1.5" style={{ marginBottom: 8 }}>
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <div>Could not load tasks. Check your connection and try again.</div>
+          <button className="btn-primary" style={{ marginTop: 12, fontSize: 13 }} onClick={load}>Retry</button>
+        </div>
       ) : sorted.length === 0 ? (
         <div className="ai-hm-empty">
-          {filter === "all"
-            ? "No active tasks. Create tasks to see AI risk predictions."
-            : `No ${filter}-risk tasks.`}
+          {filter === "all" ? (
+            <>
+              <div>No active tasks found.</div>
+              <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>Create tasks on the Board, then click <strong>⚡ Analyze all</strong> to generate predictions.</div>
+            </>
+          ) : `No ${filter}-risk tasks.`}
         </div>
       ) : (
         <div className="ai-task-cards-grid">

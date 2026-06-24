@@ -264,7 +264,7 @@ router.get("/alerts/:workspaceId", auth, async (req, res) => {
     const health      = ai.calculateProjectHealth(tasksRow.rows, workloadData);
     const teamStress  = ai.calculateTeamStress(workloadData);
 
-    res.json({ alerts, health, team_stress: teamStress, at_risk_count: health.at_risk_count });
+    res.json({ alerts, health, team_stress: teamStress, at_risk_count: health.at_risk_count, predictions });
   } catch (err) {
     res.status(500).json({ message: "Alerts failed" });
   }

@@ -214,31 +214,50 @@ function PredictionPanel({ predictions }) {
 function ApprovalsPanel({ workspaceId, onRefresh }) {
   const [approvals,     setApprovals]     = useState([]);
   const [loading,       setLoading]       = useState(true);
+  const [loadError,     setLoadError]     = useState(false);
+  const [resolveError,  setResolveError]  = useState("");
   const [rejectId,      setRejectId]      = useState(null);
   const [rejectReason,  setRejectReason]  = useState("");
 
-  useEffect(() => {
+  const fetchApprovals = () => {
+    setLoading(true);
+    setLoadError(false);
     api.get(`/approvals/pending`)
       .then(r => setApprovals(r.data))
-      .catch(console.error)
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { fetchApprovals(); }, []);
 
   const resolve = async (id, action, reason = "") => {
+    setResolveError("");
     try {
       await api.put(`/approvals/${id}/${action}`, { rejection_reason: reason });
       setApprovals(prev => prev.filter(a => a.id !== id));
       onRefresh?.();
     } catch (err) {
-      alert(err.response?.data?.message || "Failed");
+      setResolveError(err.response?.data?.message || "Action failed. Please try again.");
+      setTimeout(() => setResolveError(""), 4000);
     }
   };
 
   if (loading) return <div className="mgr-loading">Loading approvals…</div>;
+  if (loadError) return (
+    <div className="mgr-empty-note" style={{ color: "#ef4444" }}>
+      Could not load approvals.{" "}
+      <button onClick={fetchApprovals} style={{ color: "#6366f1", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>Retry</button>
+    </div>
+  );
   if (!approvals.length) return <div className="mgr-empty-note">No pending approvals</div>;
 
   return (
     <div className="mgr-approvals-list">
+      {resolveError && (
+        <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, padding: "10px 14px", marginBottom: 12, color: "#dc2626", fontSize: 13 }}>
+          {resolveError}
+        </div>
+      )}
       {rejectId && (
         <div className="modal-overlay" onClick={() => { setRejectId(null); setRejectReason(""); }}>
           <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>

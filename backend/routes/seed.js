@@ -54,7 +54,7 @@ router.post("/demo", auth, async (req, res) => {
     await client.query("DELETE FROM tasks WHERE workspace_id=$1", [workspace_id]);
     await client.query("DELETE FROM sprints WHERE workspace_id=$1", [workspace_id]);
     await client.query("DELETE FROM calendar_events WHERE workspace_id=$1", [workspace_id]);
-    await client.query("DELETE FROM audit_log WHERE workspace_id=$1", [workspace_id]);
+    await client.query("DELETE FROM audit_logs WHERE workspace_id=$1", [workspace_id]);
 
     // ── User capacity ────────────────────────────────────────────────────────
     const capacityConfigs = [
@@ -310,39 +310,42 @@ router.post("/demo", auth, async (req, res) => {
     }
 
     // ── Audit Log (Activity Feed) ─────────────────────────────────────────────
-    const auditService = require("../services/auditService");
     const AUDIT = [
-      { action: "task_created",   taskIdx: 0,  minsAgo: 8*60,  actorIdx: 0 },
-      { action: "task_assigned",  taskIdx: 0,  minsAgo: 8*60,  actorIdx: 0 },
-      { action: "task_created",   taskIdx: 5,  minsAgo: 7*24*60, actorIdx: 1 },
-      { action: "task_moved",     taskIdx: 5,  minsAgo: 5*24*60, actorIdx: 2, to: "inprogress" },
+      { action: "task_created",   taskIdx: 0,  minsAgo: 8*60,     actorIdx: 0 },
+      { action: "task_assigned",  taskIdx: 0,  minsAgo: 8*60,     actorIdx: 0 },
+      { action: "task_created",   taskIdx: 5,  minsAgo: 7*24*60,  actorIdx: 1 },
+      { action: "task_moved",     taskIdx: 5,  minsAgo: 5*24*60,  actorIdx: 2, to: "inprogress" },
       { action: "task_created",   taskIdx: 6,  minsAgo: 10*24*60, actorIdx: 0 },
-      { action: "task_moved",     taskIdx: 6,  minsAgo: 8*24*60, actorIdx: 0, to: "inprogress" },
-      { action: "task_completed", taskIdx: 10, minsAgo: 4*24*60, actorIdx: 1 },
-      { action: "task_completed", taskIdx: 11, minsAgo: 5*24*60, actorIdx: 0 },
-      { action: "task_created",   taskIdx: 9,  minsAgo: 2*24*60, actorIdx: 2 },
+      { action: "task_moved",     taskIdx: 6,  minsAgo: 8*24*60,  actorIdx: 0, to: "inprogress" },
+      { action: "task_completed", taskIdx: 10, minsAgo: 4*24*60,  actorIdx: 1 },
+      { action: "task_completed", taskIdx: 11, minsAgo: 5*24*60,  actorIdx: 0 },
+      { action: "task_created",   taskIdx: 9,  minsAgo: 2*24*60,  actorIdx: 2 },
       { action: "leave_started",  taskIdx: null, minsAgo: 3*24*60, actorIdx: 3 % members.length },
       { action: "travel_mode_on", taskIdx: null, minsAgo: 2*24*60, actorIdx: 2 },
-      { action: "task_completed", taskIdx: 12, minsAgo: 6*24*60, actorIdx: 2 },
-      { action: "task_assigned",  taskIdx: 5,  minsAgo: 7*24*60, actorIdx: 1 },
+      { action: "task_completed", taskIdx: 12, minsAgo: 6*24*60,  actorIdx: 2 },
+      { action: "task_assigned",  taskIdx: 5,  minsAgo: 7*24*60,  actorIdx: 1 },
     ];
     for (const a of AUDIT) {
-      const actor = pick(a.actorIdx);
-      const task  = a.taskIdx !== null ? createdTasks[a.taskIdx] : null;
+      const actor   = pick(a.actorIdx);
+      const task    = a.taskIdx !== null ? createdTasks[a.taskIdx] : null;
       const created = new Date(Date.now() - a.minsAgo * 60 * 1000);
-      await client.query(
-        `INSERT INTO audit_log (workspace_id, actor_id, action, target_type, target_id, meta, created_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-        [workspace_id, actor.id, a.action,
-         task ? "task" : "user",
-         task ? task.id : actor.id,
-         JSON.stringify({
-           task_title: task?.title || null,
-           to: a.to || null,
-           actor_name: actor.name,
-         }),
-         created]
-      );
+      const meta    = JSON.stringify({ task_title: task?.title || null, to: a.to || null, actor_name: actor.name });
+      // Try both column-name variants the table might use
+      try {
+        await client.query(
+          `INSERT INTO audit_logs (workspace_id, actor_id, action, target_type, target_id, meta, created_at)
+           VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+          [workspace_id, actor.id, a.action, task ? "task" : "user", task ? task.id : actor.id, meta, created]
+        );
+      } catch {
+        try {
+          await client.query(
+            `INSERT INTO audit_logs (workspace_id, user_id, action, entity_type, entity_id, details, created_at)
+             VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+            [workspace_id, actor.id, a.action, task ? "task" : "user", task ? task.id : actor.id, meta, created]
+          );
+        } catch { /* audit is non-critical — skip */ }
+      }
     }
 
     await client.query("COMMIT");

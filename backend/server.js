@@ -167,6 +167,7 @@ app.use("/api/jarvis",        require("./routes/jarvis"));
 app.use("/api/firewall",      require("./routes/firewall"));
 app.use("/api/admin",         require("./routes/admin"));
 app.use("/api/payments",      require("./routes/payments"));
+app.use("/api/seed",          require("./routes/seed"));
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get("/health", async (req, res) => {

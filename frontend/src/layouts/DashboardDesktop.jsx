@@ -43,6 +43,7 @@ export default function DashboardDesktop({
       <div className="main-area">
         <Navbar
           workspaceName={currentWorkspace?.name}
+          workspaceId={currentWorkspace?.id}
           onCreateTask={onCreateTask}
           onMenuToggle={onSidebarToggle}
           user={user}

@@ -58,6 +58,85 @@
   -webkit-font-smoothing: antialiased;
 }
 
+/* ─── Dark Mode ─── */
+[data-theme="dark"] {
+  --primary:        #818cf8;
+  --primary-hover:  #a5b4fc;
+  --primary-dark:   #6366f1;
+
+  --sidebar-bg:     #0d1117;
+  --sidebar-hover:  #161b22;
+  --sidebar-active: #1f2937;
+  --sidebar-text:   #8b949e;
+  --sidebar-active-text: #f0f6fc;
+
+  --navbar-bg:      #161b22;
+  --main-bg:        #0d1117;
+  --card-bg:        #161b22;
+  --column-bg:      #1c2128;
+
+  --text-primary:   #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted:     #6e7681;
+
+  --border:         #30363d;
+  --border-focus:   #818cf8;
+
+  --todo-accent:    #30363d;
+  --doing-accent:   #818cf8;
+  --done-accent:    #238636;
+
+  --shadow-sm:  0 1px 2px rgba(0,0,0,.4);
+  --shadow-md:  0 4px 8px rgba(0,0,0,.4), 0 0 1px rgba(0,0,0,.5);
+  --shadow-lg:  0 8px 16px rgba(0,0,0,.5), 0 0 1px rgba(0,0,0,.6);
+}
+
+[data-theme="dark"] body { background: var(--main-bg); }
+
+[data-theme="dark"] .task-card {
+  background: var(--card-bg);
+  border-color: var(--border);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .modal-box {
+  background: #1c2128;
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .modal-input,
+[data-theme="dark"] .modal-textarea,
+[data-theme="dark"] .form-input,
+[data-theme="dark"] .form-select {
+  background: #0d1117;
+  border-color: var(--border);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .modal-input::placeholder,
+[data-theme="dark"] .modal-textarea::placeholder { color: var(--text-muted); }
+
+[data-theme="dark"] .kanban-column { background: var(--column-bg); border-color: var(--border); }
+[data-theme="dark"] .board-content { background: var(--main-bg); }
+
+[data-theme="dark"] .navbar {
+  background: var(--navbar-bg);
+  border-bottom-color: var(--border);
+}
+
+[data-theme="dark"] .dropdown-menu,
+[data-theme="dark"] .cmd-palette,
+[data-theme="dark"] .cmd-box { background: #1c2128; border-color: var(--border); }
+
+[data-theme="dark"] .cmd-item:hover,
+[data-theme="dark"] .cmd-item.active { background: #2d333b; }
+
+[data-theme="dark"] .auth-card { background: #161b22; border-color: var(--border); }
+[data-theme="dark"] .auth-page { background: var(--main-bg); }
+
+[data-theme="dark"] select option { background: #1c2128; color: var(--text-primary); }
+
 body { background: var(--main-bg); }
 #root { width: 100%; max-width: 100%; text-align: left; min-height: 100vh; display: flex; flex-direction: column; }
 a { text-decoration: none; color: inherit; }

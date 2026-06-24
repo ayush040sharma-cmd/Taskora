@@ -38,7 +38,7 @@ const IconLogout = () => (
   </svg>
 );
 
-export default function Navbar({ workspaceName, onCreateTask, onMenuToggle, user }) {
+export default function Navbar({ workspaceName, workspaceId, onCreateTask, onMenuToggle, user }) {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -169,7 +169,7 @@ export default function Navbar({ workspaceName, onCreateTask, onMenuToggle, user
     </header>
 
     {showProfile  && <ProfileModal        onClose={() => setShowProfile(false)} />}
-    {showSettings && <AccountSettingsModal onClose={() => setShowSettings(false)} />}
+    {showSettings && <AccountSettingsModal onClose={() => setShowSettings(false)} currentWorkspaceId={workspaceId} />}
   </>
   );
 }

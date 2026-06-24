@@ -130,6 +130,7 @@ function ThroughputChart({ data }) {
 export default function AnalyticsDashboard({ workspaceId }) {
   const [data, setData]     = useState(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
 
   useEffect(() => {
     if (!workspaceId) return;
@@ -220,7 +221,7 @@ export default function AnalyticsDashboard({ workspaceId }) {
         total, done, inProgress, overdue, unassigned, completionRate, avgDays,
         throughput, velocity, priorityCounts, types, trend,
       });
-    }).catch(() => {}).finally(() => setLoading(false));
+    }).catch(() => { setFetchError(true); }).finally(() => setLoading(false));
   }, [workspaceId]);
 
   if (!workspaceId) return null;
@@ -230,6 +231,16 @@ export default function AnalyticsDashboard({ workspaceId }) {
       <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#64748b", padding: "32px 0" }}>
         <div className="spinner" style={{ width: 22, height: 22 }} />
         <span>Building analytics…</span>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div style={{ textAlign: "center", padding: "48px 0", color: "#64748b" }}>
+        <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
+        <div style={{ fontWeight: 600, marginBottom: 6 }}>Could not load analytics</div>
+        <div style={{ fontSize: 13 }}>Check your connection and refresh the page.</div>
       </div>
     );
   }

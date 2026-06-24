@@ -38,6 +38,7 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   // Auto-fill estimated_days + compute due_date when type changes
+  // Only auto-fills due_date if the user hasn't already entered one manually
   const selectType = (t) => {
     const meta = TYPE_META[t];
     const days = meta?.days ?? 1;
@@ -49,7 +50,7 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
         estimated_duration: days,   // system suggested — locked at type selection
         final_duration:     days,   // starts equal; user can edit
       };
-      if (f.start_date) {
+      if (f.start_date && !f.due_date) {
         const due = new Date(f.start_date);
         due.setDate(due.getDate() + days);
         newForm.due_date = due.toISOString().split("T")[0];
@@ -269,11 +270,17 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
               </div>
             )}
 
-            {/* Recurrence — Phase 10 */}
+            {/* Recurrence — coming soon */}
             <div className="modal-form-group">
-              <label className="modal-label">🔁 Recurrence</label>
-              <select className="modal-select" value={form.recurrence}
-                onChange={e => set("recurrence", e.target.value)}>
+              <label className="modal-label" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                🔁 Recurrence
+                <span style={{ fontSize: 10, fontWeight: 700, background: "#ede9fe", color: "#7c3aed", borderRadius: 4, padding: "1px 6px", letterSpacing: "0.3px" }}>
+                  COMING SOON
+                </span>
+              </label>
+              <select className="modal-select" value={form.recurrence} disabled
+                onChange={e => set("recurrence", e.target.value)}
+                style={{ opacity: 0.5, cursor: "not-allowed" }}>
                 <option value="">None (one-time)</option>
                 <option value="daily">Daily</option>
                 <option value="weekly">Weekly</option>

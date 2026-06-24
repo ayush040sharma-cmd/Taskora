@@ -14,6 +14,7 @@ const cron   = require("node-cron");
 const pool   = require("../db");
 const ai     = require("./aiEngine");
 const axios  = require("axios");
+const { refreshUserWorkloadLog } = require("./workloadLogger");
 
 let started = false;
 
@@ -122,7 +123,7 @@ async function runOverdueTagger() {
     const wsRow = await pool.query("SELECT id, user_id FROM workspaces");
     for (const ws of wsRow.rows) {
       try {
-        // Find newly overdue tasks (due yesterday or before, never notified)
+        // Find overdue tasks not yet notified today
         const overdueRow = await pool.query(
           `SELECT t.id, t.title, t.due_date, u.name AS assignee_name, t.assigned_user_id
            FROM tasks t
@@ -130,7 +131,12 @@ async function runOverdueTagger() {
            WHERE t.workspace_id=$1
              AND t.due_date < NOW()
              AND t.status != 'done'
-             AND (t.ai_last_analyzed_at IS NULL OR t.due_date::date != (t.ai_last_analyzed_at - INTERVAL '1 day')::date)
+             AND NOT EXISTS (
+               SELECT 1 FROM notifications n
+               WHERE (n.data->>'task_id')::text = t.id::text
+                 AND n.type = 'overdue'
+                 AND n.created_at::date = CURRENT_DATE
+             )
            LIMIT 10`,
           [ws.id]
         );
@@ -183,7 +189,6 @@ async function runWorkloadSync() {
 
     for (const { user_id, workspace_id } of usersRow.rows) {
       try {
-        const { refreshUserWorkloadLog } = require("./workloadLogger");
         await refreshUserWorkloadLog(user_id, workspace_id);
       } catch { /* ignore */ }
     }

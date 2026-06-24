@@ -264,23 +264,21 @@ export default function CalendarView({ workspaceId, tasks = [], onTaskClick }) {
     };
     events.forEach(ev => {
       const dateStr = (ev.start_date || "").split("T")[0];
-      const d = new Date(dateStr + "T12:00:00");
-      addToDate(dateStr, ev, `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`);
+      if (!dateStr) return;
+      addToDate(dateStr, ev, dateStr);
     });
     deadlines.forEach(t => {
       if (!t.due_date) return;
       const dateStr = (t.due_date || "").split("T")[0];
-      const d = new Date(dateStr + "T12:00:00");
-      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-      if (!map[key]) map[key] = { events: [], deadlines: [] };
-      map[key].deadlines.push(t);
+      if (!map[dateStr]) map[dateStr] = { events: [], deadlines: [] };
+      map[dateStr].deadlines.push(t);
     });
     return map;
   }, [events, deadlines]);
 
   const getDay = (date) => {
     if (!date) return { events: [], deadlines: [] };
-    const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
     return evsByDate[key] || { events: [], deadlines: [] };
   };
 

@@ -154,8 +154,8 @@ export default function Register() {
                 <input type="text" style={S.input} placeholder="Alex Johnson"
                   value={form.name} onChange={e => setForm({...form, name: e.target.value})}
                   required autoFocus
-                  onFocus={e => e.target.style.borderColor="#6366f1"}
-                  onBlur={e => e.target.style.borderColor="#e2e8f0"} />
+                  onFocus={e => { e.target.style.borderColor="#6366f1"; e.target.style.boxShadow="0 0 0 3px rgba(99,102,241,0.12)"; }}
+                  onBlur={e => { e.target.style.borderColor="#e2e8f0"; e.target.style.boxShadow="none"; }} />
               </div>
 
               <div style={S.field}>
@@ -163,8 +163,8 @@ export default function Register() {
                 <input type="email" style={S.input} placeholder="you@company.com"
                   value={form.email} onChange={e => setForm({...form, email: e.target.value})}
                   required
-                  onFocus={e => e.target.style.borderColor="#6366f1"}
-                  onBlur={e => e.target.style.borderColor="#e2e8f0"} />
+                  onFocus={e => { e.target.style.borderColor="#6366f1"; e.target.style.boxShadow="0 0 0 3px rgba(99,102,241,0.12)"; }}
+                  onBlur={e => { e.target.style.borderColor="#e2e8f0"; e.target.style.boxShadow="none"; }} />
               </div>
 
               <div style={S.field}>
@@ -174,8 +174,8 @@ export default function Register() {
                     placeholder="Min. 8 characters"
                     value={form.password} onChange={e => setForm({...form, password: e.target.value})}
                     required
-                    onFocus={e => e.target.style.borderColor="#6366f1"}
-                    onBlur={e => e.target.style.borderColor="#e2e8f0"} />
+                    onFocus={e => { e.target.style.borderColor="#6366f1"; e.target.style.boxShadow="0 0 0 3px rgba(99,102,241,0.12)"; }}
+                    onBlur={e => { e.target.style.borderColor="#e2e8f0"; e.target.style.boxShadow="none"; }} />
                   <button type="button" style={S.eyeBtn} onClick={() => setShowPass(v => !v)}>
                     {showPass
                       ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
@@ -199,8 +199,8 @@ export default function Register() {
                   placeholder="Repeat password"
                   value={form.confirm} onChange={e => setForm({...form, confirm: e.target.value})}
                   required
-                  onFocus={e => e.target.style.borderColor="#6366f1"}
-                  onBlur={e => e.target.style.borderColor="#e2e8f0"} />
+                  onFocus={e => { e.target.style.borderColor="#6366f1"; e.target.style.boxShadow="0 0 0 3px rgba(99,102,241,0.12)"; }}
+                  onBlur={e => { e.target.style.borderColor="#e2e8f0"; e.target.style.boxShadow="none"; }} />
               </div>
 
               <button type="submit" style={S.submitBtn}>Continue →</button>
@@ -330,7 +330,7 @@ const S = {
     background:"none", border:"1.5px solid #e2e8f0", borderRadius:10,
     fontSize:14, fontWeight:600, color:"#64748b", cursor:"pointer",
     transition:"all 0.15s" },
-  divider: { textAlign:"center", margin:"22px 0 16px", fontSize:13, color:"#94a3b8" },
+  divider: { textAlign:"center", margin:"22px 0 16px", fontSize:13, color:"#64748b" },
   switchLink: { display:"block", textAlign:"center", padding:"11px",
     border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:14,
     fontWeight:600, color:"#6366f1", textDecoration:"none" },
@@ -367,8 +367,8 @@ const S = {
   },
   orDivider: { display:"flex", alignItems:"center", gap:10, margin:"14px 0" },
   orLine: { flex:1, height:1, background:"#f1f5f9" },
-  orText: { fontSize:12, color:"#94a3b8", fontWeight:500, flexShrink:0 },
+  orText: { fontSize:12, color:"#64748b", fontWeight:500, flexShrink:0 },
   helpRow: { display:"flex", alignItems:"center", justifyContent:"center", gap:6, marginTop:14 },
-  helpLink: { fontSize:12, color:"#94a3b8", textDecoration:"none" },
-  helpDot: { fontSize:12, color:"#cbd5e1" },
+  helpLink: { fontSize:12, color:"#64748b", textDecoration:"none" },
+  helpDot: { fontSize:12, color:"#94a3b8" },
 };

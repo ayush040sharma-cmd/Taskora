@@ -46,12 +46,13 @@ export default function KanbanBoard({ columns, onDragEnd, onAddTask, onDeleteTas
                   >
                     {tasks.length === 0 && !snapshot.isDraggingOver && (
                       <div className="cb-empty">
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5">
                           <rect x="3" y="3" width="18" height="18" rx="3"/>
                           <line x1="8" y1="12" x2="16" y2="12"/>
                           <line x1="12" y1="8" x2="12" y2="16"/>
                         </svg>
-                        <span>No tasks</span>
+                        <span>No tasks here</span>
+                        <button className="cb-empty-add" onClick={() => onAddTask(col.id)}>+ Add one</button>
                       </div>
                     )}
 

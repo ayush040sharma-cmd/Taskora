@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import api from "../api/api";
 
 // ── Action config ────────────────────────────────────────────────────────────
@@ -6,15 +6,14 @@ const ACTION_MAP = {
   task_created:    { icon: "✚", label: (m) => `created "${m.task_title}"`,                        color: "#10b981", bg: "#f0fdf4" },
   task_completed:  { icon: "✓", label: (m) => `completed "${m.task_title}"`,                       color: "#10b981", bg: "#f0fdf4" },
   task_moved:      { icon: "→", label: (m) => `moved "${m.task_title}" to ${STATUS_LABEL[m.to] || m.to}`, color: "#6366f1", bg: "#eef2ff" },
-  task_assigned:   { icon: "👤", label: (m) => `assigned "${m.task_title}"`,                       color: "#6366f1", bg: "#eef2ff" },
-  task_renamed:    { icon: "✏", label: (m) => `renamed task to "${m.task_title}"`,                 color: "#6366f1", bg: "#eef2ff" },
-  task_deleted:    { icon: "✕", label: (m) => `deleted "${m.task_title}"`,                         color: "#ef4444", bg: "#fef2f2" },
-  leave_started:   { icon: "🏖", label: ()  => "started leave",                                    color: "#f59e0b", bg: "#fffbeb" },
-  leave_ended:     { icon: "👋", label: ()  => "returned from leave",                              color: "#10b981", bg: "#f0fdf4" },
-  travel_mode_on:  { icon: "✈️", label: ()  => "turned on travel mode",                            color: "#38bdf8", bg: "#f0f9ff" },
-  travel_mode_off: { icon: "🏠", label: ()  => "turned off travel mode",                           color: "#64748b", bg: "#f8fafc" },
-  capacity_changed:{ icon: "⚙", label: ()  => "updated capacity settings",                        color: "#8b5cf6", bg: "#f5f3ff" },
-  task_assigned:   { icon: "🔀", label: (m) => `assigned "${m.task_title}"`,                       color: "#6366f1", bg: "#eef2ff" },
+  task_assigned:    { icon: "👤", label: (m) => `assigned "${m.task_title}"`,                        color: "#6366f1", bg: "#eef2ff" },
+  task_renamed:     { icon: "✏", label: (m) => `renamed task to "${m.task_title}"`,                  color: "#6366f1", bg: "#eef2ff" },
+  task_deleted:     { icon: "✕", label: (m) => `deleted "${m.task_title}"`,                          color: "#ef4444", bg: "#fef2f2" },
+  leave_started:    { icon: "🏖", label: ()  => "started leave",                                     color: "#f59e0b", bg: "#fffbeb" },
+  leave_ended:      { icon: "👋", label: ()  => "returned from leave",                               color: "#10b981", bg: "#f0fdf4" },
+  travel_mode_on:   { icon: "✈️", label: ()  => "turned on travel mode",                             color: "#38bdf8", bg: "#f0f9ff" },
+  travel_mode_off:  { icon: "🏠", label: ()  => "turned off travel mode",                            color: "#64748b", bg: "#f8fafc" },
+  capacity_changed: { icon: "⚙", label: ()  => "updated capacity settings",                         color: "#8b5cf6", bg: "#f5f3ff" },
   approval_approved:{ icon: "✅", label: (m) => `approved assignment for "${m.task_title || "task"}"`, color: "#10b981", bg: "#f0fdf4" },
   approval_rejected:{ icon: "❌", label: (m) => `rejected assignment for "${m.task_title || "task"}"`, color: "#ef4444", bg: "#fef2f2" },
 };
@@ -101,6 +100,7 @@ function FeedItem({ entry }) {
 export default function ActivityFeed({ workspaceId }) {
   const [entries, setEntries]   = useState([]);
   const [loading, setLoading]   = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [filter, setFilter]     = useState("all");
   const [page, setPage]         = useState(0);
   const [hasMore, setHasMore]   = useState(false);
@@ -110,6 +110,7 @@ export default function ActivityFeed({ workspaceId }) {
     if (!workspaceId) return;
     const off = reset ? 0 : page * PAGE;
     setLoading(true);
+    if (reset) setLoadError(false);
     try {
       const { data } = await api.get(`/audit?workspace_id=${workspaceId}&limit=${PAGE + 1}&offset=${off}`);
       const rows = data.slice(0, PAGE);
@@ -117,7 +118,7 @@ export default function ActivityFeed({ workspaceId }) {
       setEntries(prev => reset ? rows : [...prev, ...rows]);
       if (!reset) setPage(p => p + 1);
     } catch {
-      /* silent */
+      if (reset) setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -125,11 +126,13 @@ export default function ActivityFeed({ workspaceId }) {
 
   useEffect(() => { load(true); }, [workspaceId]); // eslint-disable-line
 
-  // Auto-refresh every 30 s
+  // Auto-refresh every 30 s — ref so interval always calls the latest load
+  const loadRef = useRef(load);
+  useEffect(() => { loadRef.current = load; }, [load]);
   useEffect(() => {
-    const id = setInterval(() => load(true), 30_000);
+    const id = setInterval(() => loadRef.current(true), 30_000);
     return () => clearInterval(id);
-  }, [workspaceId]); // eslint-disable-line
+  }, [workspaceId]);
 
   // ── Filter ────────────────────────────────────────────────────────────────
   const visible = entries.filter(e => {
@@ -175,7 +178,17 @@ export default function ActivityFeed({ workspaceId }) {
 
       {/* Feed */}
       <div className="af-list">
-        {loading && entries.length === 0 ? (
+        {loadError ? (
+          <div className="af-empty">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="1.5">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span>Could not load activity</span>
+            <p>Check your connection and <button className="af-retry-link" onClick={() => load(true)}>try again</button>.</p>
+          </div>
+        ) : loading && entries.length === 0 ? (
           <div className="af-empty">
             <div className="af-spinner" />
             <span>Loading activity…</span>

@@ -110,9 +110,11 @@ router.post("/predict/:taskId", auth, async (req, res) => {
 router.post("/analyze/:workspaceId", auth, async (req, res) => {
   const start = Date.now();
   try {
-    // Verify access
+    // Verify access (owner or workspace member)
     const ws = await pool.query(
-      "SELECT id FROM workspaces WHERE id = $1 AND user_id = $2",
+      `SELECT w.id FROM workspaces w
+       LEFT JOIN workspace_members wm ON wm.workspace_id = w.id AND wm.user_id = $2
+       WHERE w.id = $1 AND (w.user_id = $2 OR wm.user_id IS NOT NULL)`,
       [req.params.workspaceId, req.user.id]
     );
     if (!ws.rows.length) return res.status(403).json({ message: "Access denied" });
@@ -191,7 +193,9 @@ router.post("/analyze/:workspaceId", auth, async (req, res) => {
 router.get("/health/:workspaceId", auth, async (req, res) => {
   try {
     const ws = await pool.query(
-      "SELECT id FROM workspaces WHERE id = $1 AND user_id = $2",
+      `SELECT w.id FROM workspaces w
+       LEFT JOIN workspace_members wm ON wm.workspace_id = w.id AND wm.user_id = $2
+       WHERE w.id = $1 AND (w.user_id = $2 OR wm.user_id IS NOT NULL)`,
       [req.params.workspaceId, req.user.id]
     );
     if (!ws.rows.length) return res.status(403).json({ message: "Access denied" });
@@ -216,7 +220,9 @@ router.get("/health/:workspaceId", auth, async (req, res) => {
 router.get("/alerts/:workspaceId", auth, async (req, res) => {
   try {
     const ws = await pool.query(
-      "SELECT id FROM workspaces WHERE id = $1 AND user_id = $2",
+      `SELECT w.id FROM workspaces w
+       LEFT JOIN workspace_members wm ON wm.workspace_id = w.id AND wm.user_id = $2
+       WHERE w.id = $1 AND (w.user_id = $2 OR wm.user_id IS NOT NULL)`,
       [req.params.workspaceId, req.user.id]
     );
     if (!ws.rows.length) return res.status(403).json({ message: "Access denied" });

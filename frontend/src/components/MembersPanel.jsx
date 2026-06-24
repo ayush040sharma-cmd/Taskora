@@ -136,6 +136,7 @@ export default function MembersPanel({ workspaceId }) {
   const [members, setMembers]         = useState([]);
   const [capacities, setCapacities]   = useState({});
   const [loading, setLoading]         = useState(true);
+  const [loadError, setLoadError]     = useState("");
   const [showAdd, setShowAdd]         = useState(false);
   const [toast, setToast]             = useState(null);
   const [changingRole, setChangingRole] = useState(null);
@@ -150,6 +151,7 @@ export default function MembersPanel({ workspaceId }) {
   const load = async () => {
     if (!workspaceId) return;
     setLoading(true);
+    setLoadError("");
     try {
       const [membersRes, teamCapRes] = await Promise.allSettled([
         api.get(`/members?workspace_id=${workspaceId}`),
@@ -159,6 +161,10 @@ export default function MembersPanel({ workspaceId }) {
       const memberList = membersRes.status === "fulfilled" ? membersRes.value.data : [];
       setMembers(memberList);
 
+      if (membersRes.status === "rejected") {
+        setLoadError("Failed to load members. Please try again.");
+      }
+
       // Build capacity map by user_id for quick lookup
       if (teamCapRes.status === "fulfilled") {
         const capMap = {};
@@ -167,6 +173,7 @@ export default function MembersPanel({ workspaceId }) {
       }
     } catch (e) {
       console.error(e);
+      setLoadError("Failed to load members. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -288,6 +295,13 @@ export default function MembersPanel({ workspaceId }) {
           <option value="travel">✈️ Travelling</option>
         </select>
       </div>
+
+      {/* ── Load error ── */}
+      {loadError && (
+        <div style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 12 }}>
+          {loadError}
+        </div>
+      )}
 
       {/* ── Member list ── */}
       {filtered.length === 0 ? (

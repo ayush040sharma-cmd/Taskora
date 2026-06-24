@@ -52,7 +52,7 @@ export default class ErrorBoundary extends React.Component {
           </div>
           <h1 style={S.heading}>Something went wrong</h1>
           <p style={S.sub}>
-            An unexpected error occurred in Taskora. Our team has been notified.
+            An unexpected error occurred in Taskora. Please reload or contact support if the issue persists.
           </p>
 
           <div style={S.errorDetail}>
@@ -83,7 +83,7 @@ export default class ErrorBoundary extends React.Component {
                 Contact support@taskora.app
               </a>
             </p>
-            <p style={S.supportText} style={{ marginTop: 4 }}>
+            <p style={{ ...S.supportText, marginTop: 4 }}>
               Or report it on{" "}
               <a
                 href="https://github.com/ayushsharma/taskora/issues"

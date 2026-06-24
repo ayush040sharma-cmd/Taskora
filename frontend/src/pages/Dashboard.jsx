@@ -34,6 +34,8 @@ import AIInsightsPanel from "../components/AIInsightsPanel";
 import ErrorBoundary from "../components/ErrorBoundary";
 import JarvisVoiceAssistant from "../components/JarvisVoiceAssistant";
 import SecurityDashboard from "../components/SecurityDashboard";
+import DependencyGraph from "../components/DependencyGraph";
+import CollaborationScore from "../components/CollaborationScore";
 import OnboardingChecklist from "../components/onboarding/OnboardingChecklist";
 
 
@@ -258,8 +260,11 @@ export default function Dashboard() {
     try {
       const { data } = await api.get(`/tasks/workspace/${wsId}`);
       setAllTasks(data);
-    } catch (err) { console.error(err); }
-  }, []);
+    } catch (err) {
+      console.error(err);
+      if (err.response?.status !== 401) showToast("Failed to load tasks — check your connection", "error");
+    }
+  }, [showToast]); // eslint-disable-line
 
   // ── Load sprints ─────────────────────────────────────────────
   const loadSprints = useCallback(async (wsId) => {
@@ -268,8 +273,10 @@ export default function Dashboard() {
       const { data } = await api.get(`/sprints?workspace_id=${wsId}`);
       setSprints(data);
       if (!activeSprint && data.length > 0) setActiveSprint(data[0]);
-    } catch {}
-  }, []); // eslint-disable-line
+    } catch (err) {
+      if (err.response?.status !== 401) showToast("Failed to load sprints", "error");
+    }
+  }, [showToast]); // eslint-disable-line
 
   useEffect(() => {
     loadWorkspaces(0).finally(() => setLoading(false));
@@ -760,6 +767,78 @@ export default function Dashboard() {
             <ErrorBoundary inline viewName="Security">
               <SecurityDashboard token={localStorage.getItem("token")} />
             </ErrorBoundary>
+          )}
+
+          {/* ── Team Workload ── */}
+          {view === "workload" && (
+            <>
+              <div className="board-header">
+                <div className="board-title-area"><h1>Team Workload</h1><p>Capacity, tasks in flight, and leave across the team</p></div>
+              </div>
+              <ErrorBoundary inline viewName="Workload">
+                <WorkloadDashboard workspaceId={currentWorkspace?.id} />
+              </ErrorBoundary>
+            </>
+          )}
+
+          {/* ── Members ── */}
+          {view === "members" && (
+            <>
+              <div className="board-header">
+                <div className="board-title-area"><h1>Members</h1><p>Manage workspace members and roles</p></div>
+              </div>
+              <ErrorBoundary inline viewName="Members">
+                <MembersPanel workspaceId={currentWorkspace?.id} />
+              </ErrorBoundary>
+            </>
+          )}
+
+          {/* ── Analytics ── */}
+          {view === "analytics" && (
+            <>
+              <div className="board-header">
+                <div className="board-title-area"><h1>Analytics</h1><p>Task throughput, velocity, and team performance</p></div>
+              </div>
+              <ErrorBoundary inline viewName="Analytics">
+                <AnalyticsDashboard workspaceId={currentWorkspace?.id} />
+              </ErrorBoundary>
+            </>
+          )}
+
+          {/* ── My Capacity ── */}
+          {view === "capacity" && (
+            <>
+              <div className="board-header">
+                <div className="board-title-area"><h1>My Capacity</h1><p>Set your availability, leave, and travel mode</p></div>
+              </div>
+              <ErrorBoundary inline viewName="Capacity">
+                <CapacityPanel />
+              </ErrorBoundary>
+            </>
+          )}
+
+          {/* ── Collaboration Score ── */}
+          {view === "collaboration" && (
+            <>
+              <div className="board-header">
+                <div className="board-title-area"><h1>Collaboration</h1><p>Team collaboration health and cross-member activity</p></div>
+              </div>
+              <ErrorBoundary inline viewName="Collaboration">
+                <CollaborationScore workspaceId={currentWorkspace?.id} />
+              </ErrorBoundary>
+            </>
+          )}
+
+          {/* ── Dependency Graph ── */}
+          {view === "graph" && (
+            <>
+              <div className="board-header">
+                <div className="board-title-area"><h1>Dependency Graph</h1><p>Visual map of task dependencies and blockers</p></div>
+              </div>
+              <ErrorBoundary inline viewName="Dependency Graph">
+                <DependencyGraph workspaceId={currentWorkspace?.id} />
+              </ErrorBoundary>
+            </>
           )}
 
   </>); // end viewContent

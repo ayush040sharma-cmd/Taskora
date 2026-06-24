@@ -89,7 +89,7 @@ export default function Navbar({ workspaceName, onCreateTask, onMenuToggle, user
 
       <div className="navbar-search">
         <div className="navbar-search-icon"><IconSearch /></div>
-        <input type="text" placeholder="Search tasks…" />
+        <input type="text" placeholder="Search tasks… (⌘K)" readOnly style={{ cursor: "pointer" }} />
       </div>
 
       <div className="navbar-actions">

@@ -10,6 +10,7 @@ const api = axios.create({
   baseURL,
   headers: { "Content-Type": "application/json" },
   withCredentials: true, // send httpOnly cookie on every request
+  timeout: 15000,
 });
 
 // Also attach Bearer token from localStorage as a fallback

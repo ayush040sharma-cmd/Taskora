@@ -212,8 +212,10 @@ function PredictionPanel({ predictions }) {
 
 // ── Approvals Panel ───────────────────────────────────────────────────────────
 function ApprovalsPanel({ workspaceId, onRefresh }) {
-  const [approvals, setApprovals] = useState([]);
-  const [loading,   setLoading]   = useState(true);
+  const [approvals,     setApprovals]     = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [rejectId,      setRejectId]      = useState(null);
+  const [rejectReason,  setRejectReason]  = useState("");
 
   useEffect(() => {
     api.get(`/approvals/pending`)
@@ -237,6 +239,34 @@ function ApprovalsPanel({ workspaceId, onRefresh }) {
 
   return (
     <div className="mgr-approvals-list">
+      {rejectId && (
+        <div className="modal-overlay" onClick={() => { setRejectId(null); setRejectReason(""); }}>
+          <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
+            <div className="modal-header">
+              <h2 className="modal-title">Reject assignment</h2>
+              <button className="modal-close" onClick={() => { setRejectId(null); setRejectReason(""); }}>✕</button>
+            </div>
+            <div style={{ padding: "0 0 16px" }}>
+              <label className="modal-label">Reason (optional)</label>
+              <input
+                className="modal-input"
+                value={rejectReason}
+                onChange={e => setRejectReason(e.target.value)}
+                placeholder="Why are you rejecting this?"
+                autoFocus
+              />
+            </div>
+            <div className="modal-actions">
+              <button className="btn-modal-cancel" onClick={() => { setRejectId(null); setRejectReason(""); }}>Cancel</button>
+              <button className="btn-modal-save" style={{ background: "#ef4444" }} onClick={() => {
+                resolve(rejectId, "reject", rejectReason);
+                setRejectId(null);
+                setRejectReason("");
+              }}>Reject</button>
+            </div>
+          </div>
+        </div>
+      )}
       {approvals.map(a => (
         <div key={a.id} className="mgr-approval-card">
           <div className="mgr-approval-info">
@@ -248,10 +278,7 @@ function ApprovalsPanel({ workspaceId, onRefresh }) {
           </div>
           <div className="mgr-approval-actions">
             <button className="mgr-btn-approve" onClick={() => resolve(a.id, "approve")}>✓ Approve</button>
-            <button className="mgr-btn-reject" onClick={() => {
-              const reason = window.prompt("Rejection reason:");
-              if (reason !== null) resolve(a.id, "reject", reason);
-            }}>✗ Reject</button>
+            <button className="mgr-btn-reject" onClick={() => setRejectId(a.id)}>✗ Reject</button>
           </div>
         </div>
       ))}
@@ -531,7 +558,7 @@ export default function ManagerDashboard({ workspaceId, workspaceName, onNavigat
   const [editMember,  setEditMember]  = useState(null);
   const [activeTab,   setActiveTab]   = useState("dashboard");
 
-  const canManage = !!user;
+  const canManage = user?.role === "manager" || user?.role === "super_boss";
 
   const loadTeam = useCallback(async () => {
     if (!workspaceId || !canManage) return;

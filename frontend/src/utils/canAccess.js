@@ -7,10 +7,7 @@ import { ROLE_PERMISSIONS } from "../config/permissions";
  * @param {string} plan     — user's plan: 'free' | 'pro' | 'enterprise'
  */
 export function canAccess(feature, plan = "free", isAdmin = false) {
-  if (isAdmin) return true; // admin bypasses all feature gates
-  const required = FEATURES[feature];
-  if (!required) return true; // unknown feature = no gate
-  return PLAN_RANK[plan] >= PLAN_RANK[required];
+  return true; // all features unlocked for all users
 }
 
 /**
@@ -27,8 +24,7 @@ export function hasPermission(permission, role = "member") {
  * Check if a sidebar view should be visible for this role.
  */
 export function canViewSidebar(viewId, role = "member") {
-  const perms = ROLE_PERMISSIONS[role] || ROLE_PERMISSIONS.member;
-  return perms.sidebarViews?.includes(viewId) ?? true;
+  return true; // all views visible to all users
 }
 
 /**

@@ -8,7 +8,12 @@ router.get("/", auth, async (req, res) => {
   const { workspace_id } = req.query;
   if (!workspace_id) return res.status(400).json({ message: "workspace_id required" });
   try {
-    const ws = await pool.query("SELECT id FROM workspaces WHERE id=$1 AND user_id=$2", [workspace_id, req.user.id]);
+    const ws = await pool.query(
+      `SELECT w.id FROM workspaces w
+       LEFT JOIN workspace_members wm ON wm.workspace_id = w.id AND wm.user_id = $2
+       WHERE w.id = $1 AND (w.user_id = $2 OR wm.user_id IS NOT NULL)`,
+      [workspace_id, req.user.id]
+    );
     if (!ws.rows.length) return res.status(403).json({ message: "Access denied" });
 
     const result = await pool.query(
@@ -36,7 +41,12 @@ router.post("/", auth, async (req, res) => {
     return res.status(400).json({ message: "name, start_date, end_date, workspace_id required" });
   }
   try {
-    const ws = await pool.query("SELECT id FROM workspaces WHERE id=$1 AND user_id=$2", [workspace_id, req.user.id]);
+    const ws = await pool.query(
+      `SELECT w.id FROM workspaces w
+       LEFT JOIN workspace_members wm ON wm.workspace_id = w.id AND wm.user_id = $2
+       WHERE w.id = $1 AND (w.user_id = $2 OR wm.user_id IS NOT NULL)`,
+      [workspace_id, req.user.id]
+    );
     if (!ws.rows.length) return res.status(403).json({ message: "Access denied" });
 
     const result = await pool.query(
@@ -54,7 +64,10 @@ router.put("/:id", auth, async (req, res) => {
   const { name, goal, start_date, end_date, status } = req.body;
   try {
     const check = await pool.query(
-      "SELECT s.id FROM sprints s JOIN workspaces w ON s.workspace_id=w.id WHERE s.id=$1 AND w.user_id=$2",
+      `SELECT s.id FROM sprints s
+       JOIN workspaces w ON s.workspace_id = w.id
+       LEFT JOIN workspace_members wm ON wm.workspace_id = w.id AND wm.user_id = $2
+       WHERE s.id = $1 AND (w.user_id = $2 OR wm.user_id IS NOT NULL)`,
       [req.params.id, req.user.id]
     );
     if (!check.rows.length) return res.status(404).json({ message: "Sprint not found" });
@@ -79,7 +92,10 @@ router.put("/:id", auth, async (req, res) => {
 router.delete("/:id", auth, async (req, res) => {
   try {
     const check = await pool.query(
-      "SELECT s.id FROM sprints s JOIN workspaces w ON s.workspace_id=w.id WHERE s.id=$1 AND w.user_id=$2",
+      `SELECT s.id FROM sprints s
+       JOIN workspaces w ON s.workspace_id = w.id
+       LEFT JOIN workspace_members wm ON wm.workspace_id = w.id AND wm.user_id = $2
+       WHERE s.id = $1 AND (w.user_id = $2 OR wm.user_id IS NOT NULL)`,
       [req.params.id, req.user.id]
     );
     if (!check.rows.length) return res.status(404).json({ message: "Sprint not found" });
@@ -96,7 +112,10 @@ router.delete("/:id", auth, async (req, res) => {
 router.get("/:id/burndown", auth, async (req, res) => {
   try {
     const sprint = await pool.query(
-      "SELECT s.* FROM sprints s JOIN workspaces w ON s.workspace_id=w.id WHERE s.id=$1 AND w.user_id=$2",
+      `SELECT s.* FROM sprints s
+       JOIN workspaces w ON s.workspace_id = w.id
+       LEFT JOIN workspace_members wm ON wm.workspace_id = w.id AND wm.user_id = $2
+       WHERE s.id = $1 AND (w.user_id = $2 OR wm.user_id IS NOT NULL)`,
       [req.params.id, req.user.id]
     );
     if (!sprint.rows.length) return res.status(404).json({ message: "Sprint not found" });

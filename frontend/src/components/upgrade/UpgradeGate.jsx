@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { canAccess, requiredPlan } from "../../utils/canAccess";
 import { PLAN_LABELS } from "../../config/features";
@@ -17,9 +17,11 @@ export default function UpgradeGate({ feature, children, style = {} }) {
   const allowed = canAccess(feature, plan, user?.is_admin);
   const needed = requiredPlan(feature);
 
-  if (allowed) return <>{children}</>;
+  useEffect(() => {
+    if (!allowed) analytics.featureBlocked(feature, plan);
+  }, [allowed, feature, plan]); // eslint-disable-line
 
-  analytics.featureBlocked(feature, plan);
+  if (allowed) return <>{children}</>;
 
   return (
     <>

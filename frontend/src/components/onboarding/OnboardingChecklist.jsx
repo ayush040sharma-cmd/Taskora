@@ -18,6 +18,7 @@ export default function OnboardingChecklist({ onViewChange }) {
     return localStorage.getItem(STORAGE_KEY) === "true";
   });
   const [minimised, setMinimised] = useState(false);
+  const [tick, setTick] = useState(0);
 
   // Don't show for users who already have role+complete status and dismissed
   if (!user || dismissed) return null;
@@ -40,9 +41,7 @@ export default function OnboardingChecklist({ onViewChange }) {
   function markItem(id) {
     localStorage.setItem(`checklist_${id}`, "true");
     analytics.checklistItemDone(id);
-    // Force re-render
-    setMinimised(v => !v);
-    setMinimised(v => !v);
+    setTick(v => v + 1);
   }
 
   const progress = (doneCount / items.length) * 100;

@@ -89,7 +89,7 @@ export default function AccountSettingsModal({ onClose }) {
                 type={showNew ? "text" : "password"}
                 value={form.new_password}
                 onChange={set("new_password")}
-                placeholder="Min. 6 characters"
+                placeholder="Min. 8 characters"
               />
               <button type="button" className="modal-eye" onClick={() => setShowNew(v => !v)}>
                 {showNew ? "🙈" : "👁"}

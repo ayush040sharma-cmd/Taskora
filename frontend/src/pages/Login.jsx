@@ -146,7 +146,7 @@ export default function Login() {
         )}
 
         {/* Demo button */}
-        <button style={styles.demoBtn} onClick={handleDemo} disabled={demoLoading}>
+        <button style={demoLoading ? {...styles.demoBtn, opacity: 0.7, cursor: "not-allowed"} : styles.demoBtn} onClick={handleDemo} disabled={demoLoading}>
           {demoLoading ? "Loading demo…" : "🚀 Try demo (5-min session)"}
         </button>
 
@@ -169,8 +169,8 @@ export default function Login() {
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               required
               autoFocus
-              onFocus={e => e.target.style.borderColor = "#6366f1"}
-              onBlur={e => e.target.style.borderColor = "#e2e8f0"}
+              onFocus={e => { e.target.style.borderColor = "#6366f1"; e.target.style.boxShadow = "0 0 0 3px rgba(99,102,241,0.12)"; }}
+              onBlur={e => { e.target.style.borderColor = "#e2e8f0"; e.target.style.boxShadow = "none"; }}
             />
           </div>
 
@@ -189,8 +189,8 @@ export default function Login() {
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 required
-                onFocus={e => e.target.style.borderColor = "#6366f1"}
-                onBlur={e => e.target.style.borderColor = "#e2e8f0"}
+                onFocus={e => { e.target.style.borderColor = "#6366f1"; e.target.style.boxShadow = "0 0 0 3px rgba(99,102,241,0.12)"; }}
+                onBlur={e => { e.target.style.borderColor = "#e2e8f0"; e.target.style.boxShadow = "none"; }}
               />
               <button type="button" style={styles.eyeBtn} onClick={() => setShowPass(v => !v)}>
                 {showPass
@@ -203,7 +203,7 @@ export default function Login() {
 
           <button
             type="submit"
-            style={loading ? {...styles.submitBtn, opacity: 0.7} : styles.submitBtn}
+            style={loading ? {...styles.submitBtn, opacity: 0.7, cursor: "not-allowed"} : styles.submitBtn}
             disabled={loading}
           >
             {loading ? (
@@ -279,8 +279,8 @@ export default function Login() {
                     onChange={e => setForgotEmail(e.target.value)}
                     required
                     autoFocus
-                    onFocus={e => e.target.style.borderColor = "#6366f1"}
-                    onBlur={e => e.target.style.borderColor = "#e2e8f0"}
+                    onFocus={e => { e.target.style.borderColor = "#6366f1"; e.target.style.boxShadow = "0 0 0 3px rgba(99,102,241,0.12)"; }}
+                    onBlur={e => { e.target.style.borderColor = "#e2e8f0"; e.target.style.boxShadow = "none"; }}
                   />
                 </div>
                 <button type="submit" style={{ ...styles.submitBtn, marginTop: 8, opacity: forgotLoading ? 0.7 : 1 }} disabled={forgotLoading}>
@@ -345,11 +345,11 @@ const styles = {
   submitBtn: { width: "100%", padding: "13px", background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", marginTop: 4, letterSpacing: "0.2px", transition: "opacity 0.15s" },
   btnInner: { display: "flex", alignItems: "center", justifyContent: "center", gap: 8 },
   spinner: { animation: "spin 0.7s linear infinite" },
-  divider: { textAlign: "center", margin: "20px 0 14px", fontSize: 13, color: "#94a3b8" },
+  divider: { textAlign: "center", margin: "20px 0 14px", fontSize: 13, color: "#64748b" },
   switchLink: { display: "block", textAlign: "center", padding: "11px", border: "1.5px solid #e2e8f0", borderRadius: 10, fontSize: 14, fontWeight: 600, color: "#6366f1", textDecoration: "none" },
   helpRow: { display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 16 },
-  helpLink: { fontSize: 12, color: "#94a3b8", textDecoration: "none" },
-  helpDot: { fontSize: 12, color: "#cbd5e1" },
+  helpLink: { fontSize: 12, color: "#64748b", textDecoration: "none" },
+  helpDot: { fontSize: 12, color: "#94a3b8" },
   forgotLink: { background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#6366f1", fontWeight: 600, padding: 0 },
   pills: { display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", position: "relative", zIndex: 1 },
   pill: { background: "rgba(255,255,255,0.08)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 99, padding: "6px 14px", fontSize: 12, color: "rgba(255,255,255,0.75)", fontWeight: 500 },

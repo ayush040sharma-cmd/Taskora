@@ -57,7 +57,7 @@ function isDueSoon(d) {
 
 function isStuck(task) {
   if (task.status !== "inprogress" && task.status !== "in_progress") return false;
-  const ref = task.created_at;
+  const ref = task.status_changed_at || task.updated_at || task.created_at;
   if (!ref) return false;
   const days = (Date.now() - new Date(ref)) / (1000 * 60 * 60 * 24);
   return days >= 5;
@@ -140,12 +140,18 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
     }
   };
 
+  const [startError, setStartError] = useState("");
+
   const startTask = async (e) => {
     e.stopPropagation();
+    setStartError("");
     try {
       const res = await api.put(`/tasks/${task.id}`, { status: "inprogress" });
       onUpdate && onUpdate(res.data);
-    } catch {}
+    } catch {
+      setStartError("Failed to start task");
+      setTimeout(() => setStartError(""), 3000);
+    }
   };
 
   const typeMeta  = TYPE_META[task.type] || { label: task.type, icon: "📋" };
@@ -288,7 +294,7 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
                 <span className="task-assignee-name">{task.assignee_name}</span>
               </div>
             )}
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: "auto" }}>
+            <div className="task-card-footer-end">
               {task.comment_count > 0 && (
                 <div className="task-comment-count" title={`${task.comment_count} comment${task.comment_count !== 1 ? "s" : ""}`}>
                   <IconMsg />
@@ -302,6 +308,10 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
               )}
             </div>
           </div>
+
+          {startError && (
+            <div style={{ fontSize: 11, color: "#ef4444", marginTop: 4 }}>{startError}</div>
+          )}
 
           {/* AI hover insight panel */}
           {hovered && !snapshot.isDragging && !isEditing && <InsightPanel task={task} />}

@@ -37,7 +37,7 @@ function score(item, q) {
   return 0;
 }
 
-export default function CommandPalette({ open, onClose, onViewChange, onCreateTask, tasks = [], currentView }) {
+export default function CommandPalette({ open, onClose, onViewChange, onCreateTask, onOpenTask, tasks = [], currentView }) {
   const [query, setQuery]         = useState("");
   const [selectedIndex, setSelected] = useState(0);
   const inputRef  = useRef(null);
@@ -76,7 +76,7 @@ export default function CommandPalette({ open, onClose, onViewChange, onCreateTa
           type: "task",
           section: "Tasks",
           meta: t.assignee_name || "",
-          action() { onClose(); },
+          action() { onOpenTask?.(t); onClose(); },
         }))
     : [];
 

@@ -60,6 +60,7 @@ export default function Sidebar({
   currentWorkspace,
   onWorkspaceChange,
   onNewWorkspace,
+  onDeleteWorkspace,
   activeView,
   onViewChange,
   onOpenPalette,
@@ -218,14 +219,35 @@ export default function Sidebar({
       <div className="sidebar-section-label" style={{ marginTop: 20 }}>WORKSPACES</div>
       <div className="sidebar-workspaces">
         {workspaces.map(ws => (
-          <button
+          <div
             key={ws.id}
             className={`sidebar-workspace-item ${currentWorkspace?.id === ws.id ? "active" : ""}`}
-            onClick={() => onWorkspaceChange?.(ws)}
           >
-            <WorkspaceAvatar name={ws.name} />
-            <span className="sidebar-workspace-name">{ws.name}</span>
-          </button>
+            <button
+              className="sidebar-ws-select"
+              onClick={() => onWorkspaceChange?.(ws)}
+            >
+              <WorkspaceAvatar name={ws.name} />
+              <span className="sidebar-workspace-name">{ws.name}</span>
+            </button>
+            {workspaces.length > 1 && (
+              <button
+                className="sidebar-ws-delete"
+                title="Delete workspace"
+                onClick={e => {
+                  e.stopPropagation();
+                  if (window.confirm(`Delete "${ws.name}"?\n\nThis will permanently delete the workspace and ALL its tasks. This cannot be undone.`)) {
+                    onDeleteWorkspace?.(ws.id);
+                  }
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                  <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                </svg>
+              </button>
+            )}
+          </div>
         ))}
         <button className="sidebar-workspace-add" onClick={onNewWorkspace}>
           <span className="sidebar-workspace-add-icon">+</span>

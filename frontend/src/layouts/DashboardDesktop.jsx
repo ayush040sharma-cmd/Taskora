@@ -13,6 +13,7 @@ export default function DashboardDesktop({
   currentWorkspace,
   onWorkspaceChange,
   onNewWorkspace,
+  onDeleteWorkspace,
   activeView,
   onViewChange,
   onOpenPalette,
@@ -33,6 +34,7 @@ export default function DashboardDesktop({
         currentWorkspace={currentWorkspace}
         onWorkspaceChange={onWorkspaceChange}
         onNewWorkspace={onNewWorkspace}
+        onDeleteWorkspace={onDeleteWorkspace}
         activeView={activeView}
         onViewChange={onViewChange}
         onOpenPalette={onOpenPalette}

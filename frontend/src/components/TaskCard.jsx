@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react";
 import { Draggable } from "@hello-pangea/dnd";
-import ProgressBar from "./ProgressBar";
 import api from "../api/api";
 
 const IconTrash  = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>;
@@ -113,18 +112,14 @@ function InsightPanel({ task }) {
 }
 
 export default function TaskCard({ task, index, columnId, onDelete, onUpdate, onOpenDetail }) {
-  const [progress, setProgress]     = useState(task.progress || 0);
-  const [editingPct, setEditingPct] = useState(false);
-  const [tempPct, setTempPct]       = useState(task.progress || 0);
-  const [hovered, setHovered]       = useState(false);
+  const [hovered, setHovered] = useState(false);
 
   // Inline title editing
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft]     = useState(task.title);
   const titleInputRef = useRef(null);
 
-  // Track if any inline editing is active (disables drag)
-  const isEditing = editingTitle || editingPct;
+  const isEditing = editingTitle;
 
   useEffect(() => {
     if (editingTitle) {
@@ -132,12 +127,6 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
       titleInputRef.current?.select();
     }
   }, [editingTitle]);
-
-  // Sync progress when task prop changes (e.g. after drag to inprogress)
-  useEffect(() => {
-    setProgress(task.progress || 0);
-    setTempPct(task.progress || 0);
-  }, [task.progress]);
 
   const saveTitle = async () => {
     const trimmed = titleDraft.trim();
@@ -151,12 +140,10 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
     }
   };
 
-  const saveProgress = async (val) => {
-    const pct = Math.max(0, Math.min(100, Number(val)));
-    setProgress(pct);
-    setEditingPct(false);
+  const startTask = async (e) => {
+    e.stopPropagation();
     try {
-      const res = await api.put(`/tasks/${task.id}`, { progress: pct });
+      const res = await api.put(`/tasks/${task.id}`, { status: "inprogress" });
       onUpdate && onUpdate(res.data);
     } catch {}
   };
@@ -169,9 +156,7 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
   const overdue   = isOverdue(task.due_date);
   const dueSoon   = !overdue && isDueSoon(task.due_date);
   const stateClass = overdue ? "task-card--overdue" : stuck ? "task-card--stuck" : "";
-
-  // Only show progress bar in inprogress column
-  const showProgress = columnId === "inprogress" || task.status === "inprogress";
+  const isTodo    = columnId === "todo" || task.status === "todo";
 
   return (
     <Draggable draggableId={String(task.id)} index={index}>
@@ -284,31 +269,17 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
           {/* Workload badge */}
           <WorkloadBadge task={task} />
 
-          {/* Progress bar — only shown in "In Progress" column */}
-          {showProgress && (
-            <div className="task-card-progress" onClick={e => { e.stopPropagation(); setEditingPct(true); setTempPct(progress); }}>
-              <ProgressBar progress={progress} height={5} showLabel={false} />
-              {editingPct ? (
-                <div className="task-progress-edit" onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()}>
-                  <input
-                    type="range" min="0" max="100" step="5"
-                    value={tempPct}
-                    onChange={e => setTempPct(e.target.value)}
-                    className="task-progress-slider"
-                    autoFocus
-                  />
-                  <span className="task-progress-pct">{tempPct}%</span>
-                  <button className="task-progress-save" onClick={() => saveProgress(tempPct)}>✓</button>
-                  <button className="task-progress-cancel" onClick={() => setEditingPct(false)}>✕</button>
-                </div>
-              ) : (
-                <span className="task-progress-pct-label">{progress}%</span>
-              )}
-            </div>
-          )}
-
-          {/* Footer: Assignee + comment count + recurrence */}
+          {/* Footer: Start button (todo only) + Assignee + comment count + recurrence */}
           <div className="task-card-footer">
+            {isTodo && (
+              <button
+                className="task-start-btn"
+                onClick={startTask}
+                title="Move to In Progress"
+              >
+                ▶ Start
+              </button>
+            )}
             {task.assignee_name && (
               <div className="task-assignee">
                 <div className="task-assignee-avatar">

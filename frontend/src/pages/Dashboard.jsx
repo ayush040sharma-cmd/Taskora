@@ -414,6 +414,22 @@ export default function Dashboard() {
     showToast("Workspace created");
   };
 
+  // ── Delete workspace ──────────────────────────────────────────
+  const handleDeleteWorkspace = async (wsId) => {
+    try {
+      await api.delete(`/workspaces/${wsId}`);
+      const remaining = workspaces.filter(w => w.id !== wsId);
+      setWorkspaces(remaining);
+      if (currentWorkspace?.id === wsId) {
+        setCurrentWorkspace(remaining[0] || null);
+        setAllTasks([]);
+      }
+      showToast("Workspace deleted");
+    } catch {
+      showToast("Failed to delete workspace", "error");
+    }
+  };
+
   // ── Create sprint ─────────────────────────────────────────────
   const handleCreateSprint = async (formData) => {
     const { data } = await api.post("/sprints", { ...formData, workspace_id: currentWorkspace.id });
@@ -849,6 +865,7 @@ export default function Dashboard() {
         currentWorkspace={currentWorkspace}
         onWorkspaceChange={ws => { setCurrentWorkspace(ws); setActiveSprint(null); }}
         onNewWorkspace={() => setShowWorkspaceModal(true)}
+        onDeleteWorkspace={handleDeleteWorkspace}
         activeView={view}
         onViewChange={setView}
         onOpenPalette={() => setCmdOpen(true)}

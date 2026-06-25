@@ -812,7 +812,7 @@ export default function Dashboard() {
                 <div className="board-title-area"><h1>My Capacity</h1><p>Set your availability, leave, and travel mode</p></div>
               </div>
               <ErrorBoundary inline viewName="Capacity">
-                <CapacityPanel />
+                <CapacityPanel workspaceId={currentWorkspace?.id} />
               </ErrorBoundary>
             </>
           )}

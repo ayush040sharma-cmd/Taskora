@@ -280,4 +280,168 @@ router.get("/predict/:wsId", auth, requireMinRole("manager"), async (req, res) =
   }
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CAPACITY REQUESTS — leave/travel approval workflow for non-managers
+// Uses capacity_requests table (see migrations/add_capacity_requests.sql)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const { notifyOne } = require("../services/notificationService");
+
+// ── POST /api/capacity/requests ──────────────────────────────────────────────
+// Non-manager creates a leave or travel request → manager gets notified
+router.post("/requests", auth, async (req, res) => {
+  const { request_type, workspace_id, leave_start, leave_end, travel_hours, justification } = req.body;
+  if (!request_type || !workspace_id) {
+    return res.status(400).json({ message: "request_type and workspace_id are required" });
+  }
+
+  try {
+    // Find the manager of this workspace (owner or first manager-role member)
+    const managerQ = await pool.query(
+      `SELECT u.id, u.name FROM users u
+       JOIN workspaces w ON w.user_id = u.id
+       WHERE w.id = $1
+       UNION
+       SELECT u.id, u.name FROM users u
+       JOIN workspace_members wm ON wm.user_id = u.id
+       WHERE wm.workspace_id = $1 AND u.role IN ('manager','super_boss')
+       LIMIT 1`,
+      [workspace_id]
+    );
+    const manager = managerQ.rows[0];
+
+    // Insert the request record
+    const r = await pool.query(
+      `INSERT INTO capacity_requests
+         (user_id, workspace_id, manager_id, request_type, leave_start, leave_end, travel_hours, justification)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+       RETURNING *`,
+      [
+        req.user.id, workspace_id, manager?.id || null,
+        request_type,
+        leave_start || null, leave_end || null,
+        travel_hours || null,
+        justification || null,
+      ]
+    );
+
+    // Notify manager
+    if (manager?.id) {
+      await notifyOne(
+        manager.id,
+        "approval_pending",
+        `${request_type === "leave" ? "🏖️ Leave" : "✈️ Travel"} request from ${req.user.name}`,
+        `${req.user.name} has requested ${request_type} approval.`,
+        { capacity_request_id: r.rows[0].id, requester: req.user.name }
+      ).catch(() => {});
+    }
+
+    res.status(201).json(r.rows[0]);
+  } catch (err) {
+    // Gracefully handle missing table (migration not run yet)
+    if (err.code === "42P01") {
+      return res.status(202).json({ message: "Request noted (run capacity_requests migration to persist)" });
+    }
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ── GET /api/capacity/requests ───────────────────────────────────────────────
+// Manager: see all pending capacity requests for a workspace
+router.get("/requests", auth, async (req, res) => {
+  const { workspace_id } = req.query;
+  if (!workspace_id) return res.status(400).json({ message: "workspace_id required" });
+
+  try {
+    const r = await pool.query(
+      `SELECT cr.*,
+              u.name AS requester_name, u.email AS requester_email, u.role AS requester_role
+       FROM capacity_requests cr
+       JOIN users u ON u.id = cr.user_id
+       WHERE cr.workspace_id = $1
+       ORDER BY cr.requested_at DESC`,
+      [workspace_id]
+    );
+    res.json(r.rows);
+  } catch (err) {
+    if (err.code === "42P01") return res.json([]);
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ── PUT /api/capacity/requests/:id/approve ───────────────────────────────────
+router.put("/requests/:id/approve", auth, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const reqR = await pool.query("SELECT * FROM capacity_requests WHERE id=$1", [id]);
+    if (!reqR.rows.length) return res.status(404).json({ message: "Request not found" });
+    const cr = reqR.rows[0];
+
+    // Apply the capacity change
+    await getOrCreate(cr.user_id);
+    if (cr.request_type === "leave") {
+      await pool.query(
+        "UPDATE user_capacity SET on_leave=true, leave_start=$1, leave_end=$2, updated_at=NOW() WHERE user_id=$3",
+        [cr.leave_start, cr.leave_end, cr.user_id]
+      );
+    } else if (cr.request_type === "travel") {
+      await pool.query(
+        "UPDATE user_capacity SET travel_mode=true, travel_hours=$1, updated_at=NOW() WHERE user_id=$2",
+        [cr.travel_hours || 2, cr.user_id]
+      );
+    }
+
+    // Mark request approved
+    const updated = await pool.query(
+      "UPDATE capacity_requests SET status='approved', manager_id=$1, resolved_at=NOW() WHERE id=$2 RETURNING *",
+      [req.user.id, id]
+    );
+
+    // Notify requester
+    await notifyOne(
+      cr.user_id,
+      "approval_resolved",
+      `${cr.request_type === "leave" ? "🏖️ Leave" : "✈️ Travel"} request approved`,
+      `Your ${cr.request_type} request has been approved by ${req.user.name}.`,
+      { capacity_request_id: cr.id }
+    ).catch(() => {});
+
+    res.json(updated.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ── PUT /api/capacity/requests/:id/reject ────────────────────────────────────
+router.put("/requests/:id/reject", auth, async (req, res) => {
+  const { id } = req.params;
+  const { rejection_reason } = req.body;
+  try {
+    const reqR = await pool.query("SELECT * FROM capacity_requests WHERE id=$1", [id]);
+    if (!reqR.rows.length) return res.status(404).json({ message: "Request not found" });
+    const cr = reqR.rows[0];
+
+    const updated = await pool.query(
+      "UPDATE capacity_requests SET status='rejected', rejection_reason=$1, manager_id=$2, resolved_at=NOW() WHERE id=$3 RETURNING *",
+      [rejection_reason || null, req.user.id, id]
+    );
+
+    await notifyOne(
+      cr.user_id,
+      "approval_resolved",
+      `${cr.request_type === "leave" ? "🏖️ Leave" : "✈️ Travel"} request rejected`,
+      `Your ${cr.request_type} request was rejected by ${req.user.name}. ${rejection_reason || ""}`,
+      { capacity_request_id: cr.id, rejected: true }
+    ).catch(() => {});
+
+    res.json(updated.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 module.exports = router;

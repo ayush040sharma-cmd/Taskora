@@ -163,7 +163,7 @@ function EventForm({ date, workspaceId, onSave, onClose }) {
 }
 
 // ── Day Popover ───────────────────────────────────────────────
-function DayPopover({ date, events, deadlines, onEventClick, onClose, onAddEvent }) {
+function DayPopover({ date, events, deadlines, onEventClick, onTaskClick, onClose, onAddEvent }) {
   const label = date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
   return (
     <div className="cal-popover-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -187,21 +187,27 @@ function DayPopover({ date, events, deadlines, onEventClick, onClose, onAddEvent
           <div
             key={ev.id}
             className="cal-popover-item"
-            style={{ borderLeft: `3px solid ${ev.color || TYPE_COLOR[ev.type] || "#6366f1"}` }}
-            onClick={() => onEventClick(ev)}
+            style={{ borderLeft: `3px solid ${ev.color || TYPE_COLOR[ev.type] || "#6366f1"}`, cursor: "pointer" }}
+            onClick={() => { onEventClick(ev); onClose(); }}
           >
             <div className="cal-popover-title">{ev.title}</div>
-            <div className="cal-popover-meta">{ev.type} · {ev.created_by_name}</div>
+            <div className="cal-popover-meta">{ev.type}{ev.created_by_name ? ` · ${ev.created_by_name}` : ""}</div>
           </div>
         ))}
         {deadlines.map(t => (
           <div
             key={`dl-${t.id}`}
             className="cal-popover-item cal-popover-item--deadline"
-            style={{ borderLeft: `3px solid ${PRIORITY_COLOR[t.priority] || "#999"}` }}
+            style={{ borderLeft: `3px solid ${PRIORITY_COLOR[t.priority] || "#999"}`, cursor: onTaskClick ? "pointer" : "default" }}
+            onClick={() => { if (onTaskClick) { onTaskClick(t); onClose(); } }}
+            title={onTaskClick ? "Click to open task details" : ""}
           >
             <div className="cal-popover-title">🚩 {t.title}</div>
-            <div className="cal-popover-meta">{t.type} · deadline</div>
+            <div className="cal-popover-meta">
+              {t.type || "task"} · deadline
+              {t.priority && <span style={{ marginLeft: 6 }}>· {t.priority}</span>}
+              {onTaskClick && <span style={{ marginLeft: 6, fontSize: 11, opacity: 0.6 }}>↗ open</span>}
+            </div>
           </div>
         ))}
       </div>
@@ -461,6 +467,7 @@ export default function CalendarView({ workspaceId, tasks = [], onTaskClick }) {
           events={getDay(popoverDate).events}
           deadlines={getDay(popoverDate).deadlines}
           onEventClick={ev => { setSelectedEv(ev); setPopoverDate(null); }}
+          onTaskClick={onTaskClick || null}
           onClose={() => setPopoverDate(null)}
           onAddEvent={handleAddEventFromPopover}
         />

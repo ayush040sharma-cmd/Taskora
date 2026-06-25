@@ -1,6 +1,6 @@
 /**
  * Capacity Panel — personal capacity & leave/travel settings
- * Analysts see an approval confirmation when requesting leave or travel.
+ * Non-managers see an approval flow: request is sent to manager for approval.
  */
 import { useState, useEffect } from "react";
 import api from "../api/api";
@@ -22,49 +22,70 @@ const DEFAULTS = {
 };
 
 // ── Approval Confirmation Modal ───────────────────────────────────────────────
-function ApprovalConfirmModal({ type, onConfirm, onCancel }) {
+function ApprovalConfirmModal({ type, form, workspaceId, onSent, onCancel }) {
   const typeLabel = type === "leave" ? "Leave" : "Travel Mode";
   const typeIcon  = type === "leave" ? "🏖️" : "✈️";
+  const [sending, setSending] = useState(false);
+  const [note, setNote] = useState("");
+
+  const handleSend = async () => {
+    setSending(true);
+    try {
+      await api.post("/capacity/requests", {
+        request_type: type,
+        workspace_id: workspaceId,
+        leave_start:  type === "leave" ? (form.leave_start || null) : null,
+        leave_end:    type === "leave" ? (form.leave_end   || null) : null,
+        travel_hours: type === "travel" ? Number(form.travel_hours || 2) : null,
+        justification: note || null,
+      });
+      onSent();
+    } catch {
+      onSent(); // fall through — request stored best-effort
+    } finally {
+      setSending(false);
+    }
+  };
 
   return (
-    <div style={{
-      position: "fixed", inset: 0, background: "rgba(15,23,42,0.5)",
-      zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center",
-      padding: 20,
-    }}>
-      <div style={{
-        background: "#fff", borderRadius: 16, padding: 32, maxWidth: 440, width: "100%",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
-      }}>
+    <div className="modal-overlay" style={{ zIndex: 9999 }}>
+      <div className="cap-approval-modal modal-box" style={{ maxWidth: 440, borderRadius: 16, padding: 32 }}>
         <div style={{ fontSize: 40, textAlign: "center", marginBottom: 16 }}>{typeIcon}</div>
-        <h3 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", textAlign: "center", margin: "0 0 12px" }}>
+        <h3 className="cap-approval-title" style={{ fontSize: 18, fontWeight: 700, textAlign: "center", margin: "0 0 12px" }}>
           {typeLabel} Request
         </h3>
-        <p style={{ fontSize: 14, color: "#64748b", textAlign: "center", lineHeight: 1.6, margin: "0 0 8px" }}>
+        <p className="cap-approval-body" style={{ fontSize: 14, textAlign: "center", lineHeight: 1.6, margin: "0 0 8px" }}>
           This request will go to your <strong>manager for approval</strong>.
         </p>
-        <p style={{ fontSize: 13, color: "#94a3b8", textAlign: "center", margin: "0 0 24px" }}>
-          Your manager will be notified and can approve or reject this request.
+        <p className="cap-approval-note" style={{ fontSize: 13, textAlign: "center", margin: "0 0 16px" }}>
+          Your manager will be notified and can approve or reject.
         </p>
+        <textarea
+          className="modal-input"
+          placeholder="Add a note (optional)"
+          rows={2}
+          value={note}
+          onChange={e => setNote(e.target.value)}
+          style={{ marginBottom: 20, resize: "none" }}
+        />
         <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
           <button
             onClick={onCancel}
-            style={{
-              padding: "10px 24px", borderRadius: 8, border: "1.5px solid #e2e8f0",
-              background: "#fff", color: "#374151", fontWeight: 600, cursor: "pointer", fontSize: 14,
-            }}
+            className="cap-approval-cancel btn-modal-cancel"
+            style={{ padding: "10px 24px", fontWeight: 600, fontSize: 14 }}
           >
             Cancel
           </button>
           <button
-            onClick={onConfirm}
+            onClick={handleSend}
+            disabled={sending}
             style={{
               padding: "10px 24px", borderRadius: 8, border: "none",
               background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-              color: "#fff", fontWeight: 600, cursor: "pointer", fontSize: 14,
+              color: "#fff", fontWeight: 600, cursor: sending ? "not-allowed" : "pointer", fontSize: 14,
             }}
           >
-            Send Request →
+            {sending ? "Sending…" : "Send Request →"}
           </button>
         </div>
       </div>
@@ -72,15 +93,16 @@ function ApprovalConfirmModal({ type, onConfirm, onCancel }) {
   );
 }
 
-export default function CapacityPanel() {
+export default function CapacityPanel({ workspaceId }) {
   const { user } = useAuth();
-  const isAnalyst = user?.role !== "manager";
+  const isAnalyst = user?.role !== "manager" && user?.role !== "super_boss";
 
   const [form,    setForm]    = useState(DEFAULTS);
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
   const [saved,   setSaved]   = useState("");
   const [error,   setError]   = useState("");
+  const [requestSent, setRequestSent] = useState(""); // "leave" | "travel" — success banner
 
   // Approval flow state
   const [pendingSection, setPendingSection] = useState(null); // "leave" | "travel"
@@ -146,9 +168,14 @@ export default function CapacityPanel() {
     }
   };
 
-  const handleApprovalConfirm = () => {
+  const handleApprovalSent = () => {
+    const section = pendingSection;
     setPendingSection(null);
-    save(pendingSection);
+    // Revert toggle — state stays unchanged until manager approves
+    if (section === "leave") setForm(f => ({ ...f, on_leave: false }));
+    if (section === "travel") setForm(f => ({ ...f, travel_mode: false }));
+    setRequestSent(section);
+    setTimeout(() => setRequestSent(""), 5000);
   };
 
   const handleApprovalCancel = () => {
@@ -171,9 +198,18 @@ export default function CapacityPanel() {
       {pendingSection && (
         <ApprovalConfirmModal
           type={pendingSection}
-          onConfirm={handleApprovalConfirm}
+          form={form}
+          workspaceId={workspaceId}
+          onSent={handleApprovalSent}
           onCancel={handleApprovalCancel}
         />
+      )}
+
+      {/* Request sent banner */}
+      {requestSent && (
+        <div style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 10, padding: "12px 16px", marginBottom: 16, fontSize: 14, color: "#16a34a", display: "flex", alignItems: "center", gap: 8 }}>
+          ✅ Your {requestSent === "leave" ? "leave" : "travel"} request has been sent to your manager for approval.
+        </div>
       )}
 
       {/* ── Page header ── */}

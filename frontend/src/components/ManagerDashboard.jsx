@@ -219,22 +219,32 @@ function PredictionPanel({ predictions, loading, error }) {
 // ── Approvals Panel ───────────────────────────────────────────────────────────
 function ApprovalsPanel({ workspaceId, onRefresh }) {
   const [approvals,     setApprovals]     = useState([]);
+  const [capRequests,   setCapRequests]   = useState([]);
   const [loading,       setLoading]       = useState(true);
   const [loadError,     setLoadError]     = useState(false);
   const [resolveError,  setResolveError]  = useState("");
   const [rejectId,      setRejectId]      = useState(null);
   const [rejectReason,  setRejectReason]  = useState("");
+  const [rejectCapId,   setRejectCapId]   = useState(null);
+  const [rejectCapReason, setRejectCapReason] = useState("");
+  const [activeTab,     setActiveTab]     = useState("tasks"); // "tasks" | "capacity"
 
-  const fetchApprovals = () => {
+  const fetchAll = () => {
     setLoading(true);
     setLoadError(false);
-    api.get(`/approvals/pending`)
-      .then(r => setApprovals(r.data))
+    Promise.all([
+      api.get(`/approvals/pending`),
+      api.get(`/capacity/requests?workspace_id=${workspaceId}&status=pending`).catch(() => ({ data: [] })),
+    ])
+      .then(([taskR, capR]) => {
+        setApprovals(taskR.data);
+        setCapRequests(capR.data.filter(r => r.status === "pending"));
+      })
       .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchApprovals(); }, []);
+  useEffect(() => { fetchAll(); }, [workspaceId]); // eslint-disable-line
 
   const resolve = async (id, action, reason = "") => {
     setResolveError("");
@@ -248,65 +258,153 @@ function ApprovalsPanel({ workspaceId, onRefresh }) {
     }
   };
 
+  const resolveCapacity = async (id, action, reason = "") => {
+    setResolveError("");
+    try {
+      await api.put(`/capacity/requests/${id}/${action}`, { rejection_reason: reason });
+      setCapRequests(prev => prev.filter(r => r.id !== id));
+    } catch (err) {
+      setResolveError(err.response?.data?.message || "Action failed.");
+      setTimeout(() => setResolveError(""), 4000);
+    }
+  };
+
   if (loading) return <div className="mgr-loading">Loading approvals…</div>;
   if (loadError) return (
     <div className="mgr-empty-note" style={{ color: "#ef4444" }}>
       Could not load approvals.{" "}
-      <button onClick={fetchApprovals} style={{ color: "#6366f1", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>Retry</button>
+      <button onClick={fetchAll} style={{ color: "#6366f1", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>Retry</button>
     </div>
   );
-  if (!approvals.length) return <div className="mgr-empty-note">No pending approvals</div>;
+
+  const totalPending = approvals.length + capRequests.length;
 
   return (
-    <div className="mgr-approvals-list">
+    <div>
+      {/* Sub-tabs */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        <button
+          onClick={() => setActiveTab("tasks")}
+          style={{
+            padding: "6px 14px", borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: "pointer",
+            border: "1px solid var(--border)",
+            background: activeTab === "tasks" ? "var(--primary)" : "var(--column-bg)",
+            color: activeTab === "tasks" ? "#fff" : "var(--text-secondary)",
+          }}
+        >
+          📋 Task Approvals {approvals.length > 0 && <span style={{ background: "#ef4444", color: "#fff", borderRadius: 99, padding: "1px 7px", fontSize: 11, marginLeft: 4 }}>{approvals.length}</span>}
+        </button>
+        <button
+          onClick={() => setActiveTab("capacity")}
+          style={{
+            padding: "6px 14px", borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: "pointer",
+            border: "1px solid var(--border)",
+            background: activeTab === "capacity" ? "var(--primary)" : "var(--column-bg)",
+            color: activeTab === "capacity" ? "#fff" : "var(--text-secondary)",
+          }}
+        >
+          🏖️ Leave & Travel {capRequests.length > 0 && <span style={{ background: "#ef4444", color: "#fff", borderRadius: 99, padding: "1px 7px", fontSize: 11, marginLeft: 4 }}>{capRequests.length}</span>}
+        </button>
+      </div>
+
+      {totalPending === 0 && <div className="mgr-empty-note">No pending approvals</div>}
+
       {resolveError && (
         <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, padding: "10px 14px", marginBottom: 12, color: "#dc2626", fontSize: 13 }}>
           {resolveError}
         </div>
       )}
-      {rejectId && (
-        <div className="modal-overlay" onClick={() => { setRejectId(null); setRejectReason(""); }}>
-          <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
-            <div className="modal-header">
-              <h2 className="modal-title">Reject assignment</h2>
-              <button className="modal-close" onClick={() => { setRejectId(null); setRejectReason(""); }}>✕</button>
+
+      {/* ── Task assignment approvals ── */}
+      {activeTab === "tasks" && (
+        <div className="mgr-approvals-list">
+          {rejectId && (
+            <div className="modal-overlay" onClick={() => { setRejectId(null); setRejectReason(""); }}>
+              <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
+                <div className="modal-header">
+                  <h2 className="modal-title">Reject assignment</h2>
+                  <button className="modal-close" onClick={() => { setRejectId(null); setRejectReason(""); }}>✕</button>
+                </div>
+                <div style={{ padding: "0 0 16px" }}>
+                  <label className="modal-label">Reason (optional)</label>
+                  <input className="modal-input" value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Why are you rejecting this?" autoFocus />
+                </div>
+                <div className="modal-actions">
+                  <button className="btn-modal-cancel" onClick={() => { setRejectId(null); setRejectReason(""); }}>Cancel</button>
+                  <button className="btn-modal-save" style={{ background: "#ef4444" }} onClick={() => { resolve(rejectId, "reject", rejectReason); setRejectId(null); setRejectReason(""); }}>Reject</button>
+                </div>
+              </div>
             </div>
-            <div style={{ padding: "0 0 16px" }}>
-              <label className="modal-label">Reason (optional)</label>
-              <input
-                className="modal-input"
-                value={rejectReason}
-                onChange={e => setRejectReason(e.target.value)}
-                placeholder="Why are you rejecting this?"
-                autoFocus
-              />
+          )}
+          {approvals.length === 0 && <div className="mgr-empty-note">No pending task approvals</div>}
+          {approvals.map(a => (
+            <div key={a.id} className="mgr-approval-card">
+              <div className="mgr-approval-info">
+                <div className="mgr-approval-task">📋 {a.task_title}</div>
+                <div className="mgr-approval-meta">
+                  {a.requested_by_name} → assign to <strong>{a.assigned_to_name}</strong>
+                  {a.justification && <span className="mgr-justification">"{a.justification}"</span>}
+                </div>
+              </div>
+              <div className="mgr-approval-actions">
+                <button className="mgr-btn-approve" onClick={() => resolve(a.id, "approve")}>✓ Approve</button>
+                <button className="mgr-btn-reject" onClick={() => setRejectId(a.id)}>✗ Reject</button>
+              </div>
             </div>
-            <div className="modal-actions">
-              <button className="btn-modal-cancel" onClick={() => { setRejectId(null); setRejectReason(""); }}>Cancel</button>
-              <button className="btn-modal-save" style={{ background: "#ef4444" }} onClick={() => {
-                resolve(rejectId, "reject", rejectReason);
-                setRejectId(null);
-                setRejectReason("");
-              }}>Reject</button>
-            </div>
-          </div>
+          ))}
         </div>
       )}
-      {approvals.map(a => (
-        <div key={a.id} className="mgr-approval-card">
-          <div className="mgr-approval-info">
-            <div className="mgr-approval-task">📋 {a.task_title}</div>
-            <div className="mgr-approval-meta">
-              {a.requested_by_name} → assign to <strong>{a.assigned_to_name}</strong>
-              {a.justification && <span className="mgr-justification">"{a.justification}"</span>}
+
+      {/* ── Leave / Travel capacity requests ── */}
+      {activeTab === "capacity" && (
+        <div className="mgr-approvals-list">
+          {rejectCapId && (
+            <div className="modal-overlay" onClick={() => { setRejectCapId(null); setRejectCapReason(""); }}>
+              <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
+                <div className="modal-header">
+                  <h2 className="modal-title">Reject request</h2>
+                  <button className="modal-close" onClick={() => { setRejectCapId(null); setRejectCapReason(""); }}>✕</button>
+                </div>
+                <div style={{ padding: "0 0 16px" }}>
+                  <label className="modal-label">Reason (optional)</label>
+                  <input className="modal-input" value={rejectCapReason} onChange={e => setRejectCapReason(e.target.value)} placeholder="Why are you rejecting?" autoFocus />
+                </div>
+                <div className="modal-actions">
+                  <button className="btn-modal-cancel" onClick={() => { setRejectCapId(null); setRejectCapReason(""); }}>Cancel</button>
+                  <button className="btn-modal-save" style={{ background: "#ef4444" }} onClick={() => { resolveCapacity(rejectCapId, "reject", rejectCapReason); setRejectCapId(null); setRejectCapReason(""); }}>Reject</button>
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="mgr-approval-actions">
-            <button className="mgr-btn-approve" onClick={() => resolve(a.id, "approve")}>✓ Approve</button>
-            <button className="mgr-btn-reject" onClick={() => setRejectId(a.id)}>✗ Reject</button>
-          </div>
+          )}
+          {capRequests.length === 0 && <div className="mgr-empty-note">No pending leave or travel requests</div>}
+          {capRequests.map(cr => (
+            <div key={cr.id} className="mgr-approval-card">
+              <div className="mgr-approval-info">
+                <div className="mgr-approval-task">
+                  {cr.request_type === "leave" ? "🏖️ Leave Request" : "✈️ Travel Mode Request"}
+                </div>
+                <div className="mgr-approval-meta">
+                  <strong>{cr.requester_name}</strong>
+                  {cr.request_type === "leave" && cr.leave_start && (
+                    <span> · {cr.leave_start}{cr.leave_end ? ` → ${cr.leave_end}` : ""}</span>
+                  )}
+                  {cr.request_type === "travel" && cr.travel_hours && (
+                    <span> · {cr.travel_hours}h/day while travelling</span>
+                  )}
+                  {cr.justification && <span className="mgr-justification">"{cr.justification}"</span>}
+                </div>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
+                  Requested {new Date(cr.requested_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                </div>
+              </div>
+              <div className="mgr-approval-actions">
+                <button className="mgr-btn-approve" onClick={() => resolveCapacity(cr.id, "approve")}>✓ Approve</button>
+                <button className="mgr-btn-reject" onClick={() => setRejectCapId(cr.id)}>✗ Reject</button>
+              </div>
+            </div>
+          ))}
         </div>
-      ))}
+      )}
     </div>
   );
 }

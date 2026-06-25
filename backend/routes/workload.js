@@ -147,9 +147,15 @@ router.get("/users", auth, async (req, res) => {
   const { q } = req.query;
   try {
     const result = await pool.query(
-      `SELECT id, name, email, role FROM users
-       WHERE ($1::text IS NULL OR name ILIKE $1 OR email ILIKE $1)
-       ORDER BY name LIMIT 20`,
+      `SELECT u.id, u.name, u.email, u.role,
+              COALESCE(uc.on_leave, false)    AS on_leave,
+              COALESCE(uc.travel_mode, false)  AS travel_mode,
+              COALESCE(uc.travel_hours, 2)     AS travel_hours,
+              COALESCE(uc.daily_hours, 8)      AS daily_hours
+       FROM users u
+       LEFT JOIN user_capacity uc ON uc.user_id = u.id
+       WHERE ($1::text IS NULL OR u.name ILIKE $1 OR u.email ILIKE $1)
+       ORDER BY u.name LIMIT 20`,
       [q ? `%${q}%` : null]
     );
     res.json(result.rows);

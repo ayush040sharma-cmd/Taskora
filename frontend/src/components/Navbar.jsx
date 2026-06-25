@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import ProfileModal from "./ProfileModal";
 import AccountSettingsModal from "./AccountSettingsModal";
 import NotificationBell from "./NotificationBell";
+import { useTheme } from "../hooks/useTheme";
 import api from "../api/api";
 
 const IconSearch = () => (
@@ -41,6 +42,7 @@ const IconLogout = () => (
 export default function Navbar({ workspaceName, workspaceId, onCreateTask, onMenuToggle, user }) {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const { isDark, toggle: toggleTheme } = useTheme();
   const [open, setOpen] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -98,6 +100,24 @@ export default function Navbar({ workspaceName, workspaceId, onCreateTask, onMen
           Create
         </button>
         <NotificationBell />
+
+        {/* Theme toggle — quick access near notification bell */}
+        <button
+          className="navbar-theme-btn"
+          onClick={toggleTheme}
+          title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+          style={{
+            width: 34, height: 34, borderRadius: 8,
+            border: "1px solid var(--border)",
+            background: "var(--column-bg)",
+            fontSize: 16, cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            transition: "background 0.2s",
+            flexShrink: 0,
+          }}
+        >
+          {isDark ? "☀️" : "🌙"}
+        </button>
 
         {/* Status pill — shown when on leave or travelling */}
         {myStatus === "on_leave" && (

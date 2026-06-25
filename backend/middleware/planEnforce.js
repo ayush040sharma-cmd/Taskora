@@ -3,12 +3,7 @@ const jwt  = require("jsonwebtoken");
 
 const PLAN_RANK = { free: 0, pro: 1, enterprise: 2 };
 
-const PROTECTED = {
-  "/api/sprints":  "pro",
-  "/api/workload": "enterprise",
-  "/api/capacity": "enterprise",
-  "/api/ai":       "enterprise",
-};
+const PROTECTED = {}; // all plan gates removed — every feature is unlocked
 
 module.exports = async (req, res, next) => {
   const required = Object.entries(PROTECTED).find(([prefix]) =>

@@ -628,14 +628,6 @@ function ManagerDashView({ workspaceId }) {
         </div>
         {activityOpen && (
           <div className="mgr-dash-activity-body">
-            <div className="mgr-dash-upgrade-banner">
-              <div className="mgr-dash-upgrade-title">
-                Only the last 24 hours of activity is available on your current plan
-              </div>
-              <div className="mgr-dash-upgrade-cta">
-                Upgrade to <strong>Pro</strong> to unlock 7 days of Activity
-              </div>
-            </div>
             {actLoading ? (
               <div className="mgr-loading" style={{ padding: "20px 16px" }}>Loading…</div>
             ) : activity.length === 0 ? (

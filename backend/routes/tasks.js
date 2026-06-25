@@ -5,6 +5,7 @@ const auth = require("../middleware/auth");
 const { refreshUserWorkloadLog } = require("../services/workloadLogger");
 const { audit } = require("../services/auditService");
 const { validate, schemas } = require("../utils/validate");
+const { notifyOne } = require("../services/notificationService");
 
 // GET /api/tasks/workspace/:workspaceId
 router.get("/workspace/:workspaceId", auth, async (req, res) => {
@@ -125,6 +126,17 @@ router.post("/", auth, validate(schemas.createTask), async (req, res) => {
     const io = req.app.get("io");
     if (io) io.to(`workspace:${workspace_id}`).emit("task:created", task);
 
+    // Notify assignee (skip if assigning to yourself)
+    if (assigned_user_id && assigned_user_id !== req.user.id) {
+      notifyOne(
+        assigned_user_id,
+        "task_assigned",
+        "New task assigned to you",
+        `"${task.title}" has been assigned to you by ${req.user.name}.`,
+        { task_id: task.id, task_title: task.title, workspace_id }
+      ).catch(() => {});
+    }
+
     // Refresh workload log for assignee (non-blocking)
     if (assigned_user_id) {
       refreshUserWorkloadLog(assigned_user_id, workspace_id).catch(() => {});
@@ -192,6 +204,23 @@ router.put("/:id", auth, validate(schemas.updateTask), async (req, res) => {
     // Emit real-time event to workspace room
     const io = req.app.get("io");
     if (io) io.to(`workspace:${updated.workspace_id}`).emit("task:updated", updated);
+
+    // Notify new assignee when assignment changes (skip if assigning to yourself)
+    const prevAssignee = taskCheck.rows[0].assigned_user_id;
+    if (
+      "assigned_user_id" in req.body &&
+      updated.assigned_user_id &&
+      updated.assigned_user_id !== prevAssignee &&
+      updated.assigned_user_id !== req.user.id
+    ) {
+      notifyOne(
+        updated.assigned_user_id,
+        "task_assigned",
+        "Task assigned to you",
+        `"${updated.title}" has been assigned to you by ${req.user.name}.`,
+        { task_id: updated.id, task_title: updated.title, workspace_id: updated.workspace_id }
+      ).catch(() => {});
+    }
 
     // Refresh workload log for assignee (non-blocking)
     if (updated.assigned_user_id) {

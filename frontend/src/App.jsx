@@ -12,6 +12,7 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import AuthCallback from "./pages/AuthCallback";
 import ResetPassword from "./pages/ResetPassword";
+import JoinWorkspace from "./pages/JoinWorkspace";
 import RoleSelection from "./pages/onboarding/RoleSelection";
 import Pricing from "./pages/Pricing";
 import Payment from "./pages/Payment";
@@ -75,6 +76,9 @@ function AppRoutes() {
       <Route path="/payment" element={
         <RequireAuth><Payment /></RequireAuth>
       } />
+
+      {/* Invite accept — accessible with or without auth (page handles both) */}
+      <Route path="/join/:token" element={<JoinWorkspace />} />
 
       {/* Protected app routes */}
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

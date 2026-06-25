@@ -9,6 +9,7 @@
  */
 import { useState, useMemo, useEffect, useCallback } from "react";
 import api from "../api/api";
+import "../styles/calendar.css";
 
 const DAYS   = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = [
@@ -16,17 +17,19 @@ const MONTHS = [
   "July","August","September","October","November","December",
 ];
 
+// Event type identity colors — semantic, not decorative; stay as hex for SVG/inline use
+// Mapped to closest tk-* token equivalents where exact match exists
 const EVENT_TYPES = [
-  { value: "event",     label: "Event",     color: "#6366f1" },
-  { value: "meeting",   label: "Meeting",   color: "#0ea5e9" },
-  { value: "deadline",  label: "Deadline",  color: "#ef4444" },
-  { value: "milestone", label: "Milestone", color: "#f59e0b" },
-  { value: "leave",     label: "Leave",     color: "#10b981" },
-  { value: "travel",    label: "Travel",    color: "#8b5cf6" },
+  { value: "event",     label: "Event",     color: "#3B82F6" }, // tk-accent
+  { value: "meeting",   label: "Meeting",   color: "#06B6D4" }, // tk-accent-2
+  { value: "deadline",  label: "Deadline",  color: "#EF4444" }, // tk-status-danger
+  { value: "milestone", label: "Milestone", color: "#F59E0B" }, // tk-status-warn
+  { value: "leave",     label: "Leave",     color: "#22C55E" }, // tk-status-ok
+  { value: "travel",    label: "Travel",    color: "#8B5CF6" }, // no token — kept as-is
 ];
 
 const TYPE_COLOR = Object.fromEntries(EVENT_TYPES.map(t => [t.value, t.color]));
-const PRIORITY_COLOR = { high: "#ef4444", medium: "#f59e0b", low: "#10b981" };
+const PRIORITY_COLOR = { high: "#EF4444", medium: "#F59E0B", low: "#22C55E" };
 
 function isSameDay(a, b) {
   return (

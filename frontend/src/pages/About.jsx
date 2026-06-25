@@ -91,7 +91,7 @@ export default function About() {
                   <div style={S.avatar}>AS</div>
                   <div>
                     <div style={S.authorName}>Ayush Sharma</div>
-                    <div style={S.authorRole}>Founder, Taskora</div>
+                    <div style={S.authorRole}>Founder & Creator, Taskora</div>
                   </div>
                 </div>
               </div>

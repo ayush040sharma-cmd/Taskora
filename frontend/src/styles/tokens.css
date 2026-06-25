@@ -1,0 +1,288 @@
+/* ==========================================================================
+   TASKORA DESIGN TOKENS — v1
+   Source of truth: taskora_brand_system_v1.html
+   Import this file ONCE at the root of the app (e.g. main.tsx / _app.tsx
+   / index.css) before any component styles.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700;800&display=swap');
+
+:root {
+  /* ---- Surfaces (darkest to lightest) ---- */
+  --tk-bg:            #020617;  /* App background / Void */
+  --tk-bg-elevated:   #0F172A;  /* Dashboard panel bg, inset surfaces */
+  --tk-card:          #0B1220;  /* Card background */
+  --tk-card-2:        #0F1E30;  /* Subtle divider tone used inside cards */
+  --tk-border:        #1E293B;  /* Default border */
+  --tk-border-soft:   rgba(59, 130, 246, 0.2); /* Accent-tinted border, used on AI cards */
+
+  /* ---- Brand accent (signature gradient) ---- */
+  --tk-accent:        #3B82F6;  /* Electric Blue — primary */
+  --tk-accent-2:      #06B6D4;  /* Intelligence Glow — teal accent */
+  --tk-gradient:       linear-gradient(90deg, var(--tk-accent), var(--tk-accent-2));
+  --tk-gradient-vert:  linear-gradient(180deg, var(--tk-accent), var(--tk-accent-2));
+  --tk-accent-glow:    rgba(59, 130, 246, 0.15); /* hero radial glow */
+
+  /* ---- Text ---- */
+  --tk-text-primary:   #E2E8F0;
+  --tk-text-secondary: #94A3B8;
+  --tk-text-muted:     #475569;
+  --tk-text-faint:     #334155;
+
+  /* ---- Status colors (semantic, never repurpose) ---- */
+  --tk-status-ok:      #22C55E;  /* Normal / on track / available */
+  --tk-status-ok-bg:    rgba(34, 197, 94, 0.15);
+  --tk-status-warn:    #F59E0B;  /* Warning / near capacity */
+  --tk-status-warn-bg:  rgba(245, 158, 11, 0.15);
+  --tk-status-danger:  #EF4444;  /* Overload / high risk / overdue */
+  --tk-status-danger-bg: rgba(239, 68, 68, 0.15);
+
+  /* ---- Typography ---- */
+  --tk-font-display: 'Syne', sans-serif;   /* headings, KPI numbers, brand wordmark */
+  --tk-font-body:    'DM Sans', sans-serif; /* everything else */
+
+  --tk-text-h1: 36px;
+  --tk-text-h2: 24px;
+  --tk-text-h3: 20px;
+  --tk-text-body: 14px;
+  --tk-text-small: 12px;
+  --tk-text-micro: 10px; /* eyebrows, labels, uppercase tags */
+
+  /* ---- Radius ---- */
+  --tk-radius-card: 12px;
+  --tk-radius-card-lg: 16px;
+  --tk-radius-btn: 10px;
+  --tk-radius-pill: 20px;
+  --tk-radius-sm: 8px;
+
+  /* ---- Spacing scale (4px base) ---- */
+  --tk-space-1: 4px;
+  --tk-space-2: 8px;
+  --tk-space-3: 12px;
+  --tk-space-4: 16px;
+  --tk-space-5: 20px;
+  --tk-space-6: 24px;
+  --tk-space-8: 32px;
+
+  /* ---- Motion ---- */
+  --tk-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --tk-duration-fast: 150ms;
+  --tk-duration: 250ms;
+}
+
+/* ==========================================================================
+   BASE RESET
+   ========================================================================== */
+* { box-sizing: border-box; }
+
+body.tk-theme {
+  background: var(--tk-bg);
+  color: var(--tk-text-primary);
+  font-family: var(--tk-font-body);
+  font-size: var(--tk-text-body);
+}
+
+/* ==========================================================================
+   PRIMITIVES — the small set of reusable building blocks.
+   Compose these instead of inventing new card/button styles per screen.
+   ========================================================================== */
+
+/* --- Card: default surface for any grouped content --- */
+.tk-card {
+  background: var(--tk-card);
+  border: 1px solid var(--tk-border);
+  border-radius: var(--tk-radius-card);
+  padding: var(--tk-space-4);
+}
+
+/* --- Card: AI / insight variant. This is THE signature motif —
+   use it any time the system is surfacing an AI-generated suggestion,
+   prediction, or risk read. Do not use the plain glow border elsewhere,
+   or it stops meaning "the AI is talking." --- */
+.tk-card-ai {
+  position: relative;
+  background: var(--tk-card);
+  border: 1px solid var(--tk-border);
+  border-left: 3px solid var(--tk-accent);
+  border-radius: var(--tk-radius-card);
+  padding: var(--tk-space-4);
+  overflow: hidden;
+}
+.tk-card-ai::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(59,130,246,0.05), transparent 60%);
+  pointer-events: none;
+}
+.tk-card-ai__glow {
+  position: absolute;
+  top: 0; left: 0;
+  width: 3px; height: 100%;
+  background: var(--tk-gradient-vert);
+}
+
+/* --- Buttons --- */
+.tk-btn-primary {
+  background: var(--tk-gradient);
+  border: none;
+  color: #fff;
+  padding: 9px 20px;
+  border-radius: var(--tk-radius-btn);
+  font-family: var(--tk-font-body);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: opacity var(--tk-duration-fast) var(--tk-ease);
+}
+.tk-btn-primary:hover { opacity: 0.9; }
+
+.tk-btn-secondary {
+  background: transparent;
+  border: 1px solid var(--tk-border);
+  color: var(--tk-text-secondary);
+  padding: 9px 20px;
+  border-radius: var(--tk-radius-btn);
+  font-family: var(--tk-font-body);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.tk-btn-ghost {
+  background: transparent;
+  border: none;
+  color: var(--tk-accent);
+  padding: 9px 16px;
+  border-radius: var(--tk-radius-sm);
+  font-family: var(--tk-font-body);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* --- Status pills (priority, risk, on-track, etc.) --- */
+.tk-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: var(--tk-radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.tk-pill--ok     { background: var(--tk-status-ok-bg);     color: var(--tk-status-ok); }
+.tk-pill--warn   { background: var(--tk-status-warn-bg);   color: var(--tk-status-warn); }
+.tk-pill--danger { background: var(--tk-status-danger-bg); color: var(--tk-status-danger); }
+
+/* --- Section labels / eyebrows --- */
+.tk-eyebrow {
+  font-size: var(--tk-text-micro);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tk-accent);
+  font-weight: 600;
+}
+
+/* --- Display heading + gradient text treatment for the wordmark/hero --- */
+.tk-heading {
+  font-family: var(--tk-font-display);
+  font-weight: 700;
+  color: var(--tk-text-primary);
+  line-height: 1.2;
+}
+.tk-gradient-text {
+  background: var(--tk-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* --- Avatar --- */
+.tk-avatar {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--tk-gradient);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+/* --- Risk / status dot --- */
+.tk-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.tk-dot--danger { background: var(--tk-status-danger); }
+.tk-dot--warn   { background: var(--tk-status-warn); }
+.tk-dot--ok     { background: var(--tk-status-ok); }
+
+/* --- Heatmap cell (workload grid) --- */
+.tk-heatcell {
+  height: 26px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 600;
+}
+.tk-heatcell--ok    { background: var(--tk-status-ok-bg);     color: var(--tk-status-ok); }
+.tk-heatcell--warn  { background: var(--tk-status-warn-bg);   color: var(--tk-status-warn); }
+.tk-heatcell--over  { background: var(--tk-status-danger-bg); color: var(--tk-status-danger); }
+.tk-heatcell--empty { background: var(--tk-bg-elevated); color: transparent; }
+
+/* --- Progress bar (sprint %, capacity %, subtask completion) --- */
+.tk-progress-track {
+  height: 4px;
+  background: var(--tk-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.tk-progress-fill {
+  height: 100%;
+  background: var(--tk-gradient);
+  border-radius: 4px;
+  transition: width var(--tk-duration) var(--tk-ease);
+}
+/* Capacity bars must be able to exceed 100% visually without implying the
+   number itself is fine — see spec doc "Workload bar overflow rule." */
+.tk-progress-fill--danger { background: var(--tk-status-danger); }
+.tk-progress-fill--warn   { background: var(--tk-status-warn); }
+
+/* ==========================================================================
+   LIGHT MODE TOKEN OVERRIDES
+   Only surfaces, text, and status backgrounds change — brand accent and
+   gradients remain constant across themes.
+   ========================================================================== */
+
+[data-theme="light"] {
+  /* Surfaces — matched to existing index.css light-mode palette */
+  --tk-bg:            #F4F5F7;
+  --tk-bg-elevated:   #FFFFFF;
+  --tk-card:          #FFFFFF;
+  --tk-card-2:        #F0F1F4;
+  --tk-border:        #DFE1E6;
+  --tk-border-soft:   rgba(59, 130, 246, 0.20);
+  --tk-accent-glow:   rgba(59, 130, 246, 0.08);
+
+  /* Text — legible on white surfaces */
+  --tk-text-primary:   #172B4D;
+  --tk-text-secondary: #5E6C84;
+  --tk-text-muted:     #97A0AF;
+  --tk-text-faint:     #C1C7D0;
+
+  /* Status — matched to existing --low/medium/high-bg palette in index.css */
+  --tk-status-ok:       #00875A;
+  --tk-status-ok-bg:    #E3FCEF;
+  --tk-status-warn:     #FF8B00;
+  --tk-status-warn-bg:  #FFFAE6;
+  --tk-status-danger:   #DE350B;
+  --tk-status-danger-bg: #FFEBE6;
+}

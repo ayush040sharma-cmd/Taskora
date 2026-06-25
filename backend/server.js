@@ -121,14 +121,18 @@ io.use((socket, next) => {
 });
 
 app.set("io", io);
-alertService.setIO(io); // give alert service access to push real-time events
+alertService.setIO(io);
+require("./services/notificationService").setIO(io);
 
 io.on("connection", (socket) => {
   logger.info(`Socket connected: user=${socket.user?.id}`);
 
+  // Auto-join personal room so targeted notifications arrive instantly
+  if (socket.user?.id) {
+    socket.join(`user:${socket.user.id}`);
+  }
+
   socket.on("join_workspace", (workspaceId) => {
-    // Only allow joining workspaces the token user has access to
-    // (Full workspace membership check can be added here if needed)
     socket.join(`workspace:${workspaceId}`);
   });
 

@@ -10,7 +10,7 @@ const api = axios.create({
   baseURL,
   headers: { "Content-Type": "application/json" },
   withCredentials: true, // send httpOnly cookie on every request
-  timeout: 15000,
+  timeout: 40000, // Render free tier can take 30-60s to cold-start
 });
 
 // Also attach Bearer token from localStorage as a fallback

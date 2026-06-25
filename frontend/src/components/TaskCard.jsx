@@ -23,10 +23,17 @@ const TYPE_META = {
 };
 
 const RISK_LEVELS = {
-  low:      { label: "Low risk",      color: "#10b981", bg: "#f0fdf4" },
-  medium:   { label: "Medium risk",   color: "#f59e0b", bg: "#fffbeb" },
-  high:     { label: "High risk",     color: "#ef4444", bg: "#fef2f2" },
-  critical: { label: "Critical risk", color: "#dc2626", bg: "#fef2f2" },
+  low:      { label: "Low risk",      pillClass: "tk-pill--ok" },
+  medium:   { label: "Medium risk",   pillClass: "tk-pill--warn" },
+  high:     { label: "High risk",     pillClass: "tk-pill--danger" },
+  critical: { label: "Critical risk", pillClass: "tk-pill--danger" },
+};
+
+const PRIORITY_PILL = {
+  low:      "tk-pill--ok",
+  medium:   "tk-pill--warn",
+  high:     "tk-pill--danger",
+  critical: "tk-pill--danger",
 };
 
 function getRiskLevel(score) {
@@ -65,8 +72,8 @@ function isStuck(task) {
 
 function WorkloadBadge({ task }) {
   if (!task.assigned_user_id) return null;
-  if (task.assignee_on_leave)    return <span className="wl-badge wl-badge--leave" title="On leave">🏖 Leave</span>;
-  if (task.assignee_travel_mode) return <span className="wl-badge wl-badge--travel" title="Travel mode">✈️ Travel</span>;
+  if (task.assignee_on_leave)    return <span className="tk-pill tk-pill--ok"     style={{ fontSize: 11 }}>🏖 Leave</span>;
+  if (task.assignee_travel_mode) return <span className="tk-pill tk-pill--accent" style={{ fontSize: 11 }}>✈️ Travel</span>;
   return null;
 }
 
@@ -77,35 +84,38 @@ function InsightPanel({ task }) {
   if (!hasData) return null;
 
   return (
-    <div className="task-insight-panel">
-      <div className="task-insight-header">
+    <div className="tk-card-ai" style={{ marginTop: "var(--tk-space-2)", padding: "var(--tk-space-3)" }}>
+      <div className="tk-card-ai__glow" />
+      <div className="tk-insight-header">
         <IconBrain /> AI Insight
       </div>
       {riskMeta && (
-        <div className="task-insight-row" style={{ color: riskMeta.color, background: riskMeta.bg }}>
-          <span>⚠ {riskMeta.label}</span>
-          <span style={{ fontWeight: 700 }}>{Math.round(task.risk_score)}/100</span>
+        <div className="tk-insight-row">
+          <span className={`tk-pill ${riskMeta.pillClass}`} style={{ fontSize: 10, padding: "2px 8px" }}>
+            ⚠ {riskMeta.label}
+          </span>
+          <span className="tk-insight-row-value">{Math.round(task.risk_score)}/100</span>
         </div>
       )}
       {task.delay_probability != null && (
-        <div className="task-insight-row">
+        <div className="tk-insight-row">
           <span>Delay probability</span>
-          <span style={{ fontWeight: 700, color: task.delay_probability > 0.6 ? "#ef4444" : "#64748b" }}>
+          <span className={`tk-insight-row-value${task.delay_probability > 0.6 ? " tk-text-danger" : ""}`}>
             {Math.round(task.delay_probability * 100)}%
           </span>
         </div>
       )}
       {task.estimated_hours && (
-        <div className="task-insight-row">
+        <div className="tk-insight-row">
           <span>Estimated hours</span>
-          <span style={{ fontWeight: 700 }}>{task.estimated_hours}h</span>
+          <span className="tk-insight-row-value">{task.estimated_hours}h</span>
         </div>
       )}
       {task.ai_suggestion && (
-        <div className="task-insight-suggestion">💡 {task.ai_suggestion}</div>
+        <div className="tk-insight-suggestion">💡 {task.ai_suggestion}</div>
       )}
       {task.ai_fallback && (
-        <div className="task-insight-fallback">Rule-based analysis</div>
+        <div className="tk-insight-fallback">Rule-based analysis</div>
       )}
     </div>
   );
@@ -114,7 +124,6 @@ function InsightPanel({ task }) {
 export default function TaskCard({ task, index, columnId, onDelete, onUpdate, onOpenDetail }) {
   const [hovered, setHovered] = useState(false);
 
-  // Inline title editing
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft]     = useState(task.title);
   const titleInputRef = useRef(null);
@@ -161,8 +170,8 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
   const stuck     = isStuck(task);
   const overdue   = isOverdue(task.due_date);
   const dueSoon   = !overdue && isDueSoon(task.due_date);
-  const stateClass = overdue ? "task-card--overdue" : stuck ? "task-card--stuck" : "";
   const isTodo    = columnId === "todo" || task.status === "todo";
+  const priorityPillClass = PRIORITY_PILL[task.priority] || "tk-pill--warn";
 
   return (
     <Draggable draggableId={String(task.id)} index={index}>
@@ -171,37 +180,40 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
           ref={provided.innerRef}
           {...provided.draggableProps}
           {...(isEditing ? {} : provided.dragHandleProps)}
-          className={`task-card ${snapshot.isDragging ? "dragging" : ""} ${isBlocked ? "task-card--blocked" : ""} ${stateClass}`}
+          className={`tk-task-card${snapshot.isDragging ? " dragging" : ""}${isBlocked ? " tk-task-card--blocked" : ""}`}
           style={provided.draggableProps.style}
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
         >
-          {/* Status strip — overdue / stuck */}
+          {/* Status banner — overdue / stuck */}
           {overdue && (
-            <div className="task-status-strip task-status-strip--overdue">
+            <div className="tk-task-banner tk-task-banner--danger">
               <IconCal /> Overdue
             </div>
           )}
           {!overdue && stuck && (
-            <div className="task-status-strip task-status-strip--stuck">
+            <div className="tk-task-banner tk-task-banner--warn">
               <IconStuck /> Stuck 5+ days
             </div>
           )}
 
-          {/* Blocked indicator strip */}
+          {/* Blocked indicator */}
           {isBlocked && (
-            <div className="task-blocked-bar" title={`Blocked by ${task.blocking_dep_count} unresolved dependenc${task.blocking_dep_count === 1 ? "y" : "ies"}`}>
+            <div
+              className="tk-task-blocked-bar"
+              title={`Blocked by ${task.blocking_dep_count} unresolved dependenc${task.blocking_dep_count === 1 ? "y" : "ies"}`}
+            >
               <IconLink />
               <span>Blocked · {task.blocking_dep_count} dep{task.blocking_dep_count !== 1 ? "s" : ""}</span>
             </div>
           )}
 
           {/* Title row */}
-          <div className="task-card-top">
+          <div className="tk-task-top">
             {editingTitle ? (
               <input
                 ref={titleInputRef}
-                className="task-title-input"
+                className="tk-task-title-input"
                 value={titleDraft}
                 onChange={e => setTitleDraft(e.target.value)}
                 onBlur={saveTitle}
@@ -214,7 +226,7 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
               />
             ) : (
               <div
-                className="task-card-title"
+                className="tk-task-title"
                 onClick={e => { e.stopPropagation(); onOpenDetail && onOpenDetail(task); }}
                 title="Click to open"
               >
@@ -222,17 +234,16 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
               </div>
             )}
 
-            {/* Action buttons */}
-            <div className="task-card-actions">
+            <div className="tk-task-actions">
               <button
-                className="task-card-edit"
+                className="tk-task-action-btn"
                 onClick={e => { e.stopPropagation(); onOpenDetail && onOpenDetail(task); }}
                 title="Edit task"
               >
                 <IconEdit />
               </button>
               <button
-                className="task-card-delete"
+                className="tk-task-action-btn tk-task-action-btn--delete"
                 onClick={e => { e.stopPropagation(); onDelete(task.id); }}
                 title="Delete task"
               >
@@ -241,29 +252,29 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
             </div>
           </div>
 
-          {/* Type + Priority + Risk badge + Due date */}
-          <div className="task-card-meta">
+          {/* Type + Priority + Risk + Due date */}
+          <div className="tk-task-meta">
             {task.type && (
-              <span className={`wl-type-badge wl-type--${task.type}`}>
+              <span className="tk-task-type">
                 {typeMeta.icon} {typeMeta.label}
               </span>
             )}
-            <span className={`priority-badge ${task.priority}`}>
-              <span className="priority-dot" />
-              {task.priority?.charAt(0).toUpperCase() + task.priority?.slice(1)}
-            </span>
+            {task.priority && (
+              <span className={`tk-pill ${priorityPillClass}`} style={{ fontSize: 11, padding: "2px 10px" }}>
+                {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+              </span>
+            )}
             {riskMeta && riskLevel !== "low" && (
               <span
-                className="task-risk-badge"
-                style={{ color: riskMeta.color, background: riskMeta.bg, border: `1px solid ${riskMeta.color}33` }}
+                className={`tk-pill ${riskMeta.pillClass}`}
+                style={{ fontSize: 11, padding: "2px 10px" }}
                 title={`Risk score: ${Math.round(task.risk_score)}/100`}
               >
                 ⚠ {Math.round(task.risk_score)}
               </span>
             )}
             {task.due_date && (
-              <span
-                className={`task-due-date ${overdue ? "overdue" : ""} ${dueSoon ? "due-soon" : ""}`}
+              <span className={`tk-task-due${overdue ? " tk-task-due--overdue" : ""}${dueSoon ? " tk-task-due--soon" : ""}`}
                 title={overdue ? "Overdue!" : dueSoon ? "Due within 48 hours" : ""}
               >
                 {dueSoon ? <IconClock /> : <IconCal />}
@@ -275,43 +286,37 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
           {/* Workload badge */}
           <WorkloadBadge task={task} />
 
-          {/* Footer: Start button (todo only) + Assignee + comment count + recurrence */}
-          <div className="task-card-footer">
+          {/* Footer: Start button + Assignee + comments + recurrence */}
+          <div className="tk-task-footer">
             {isTodo && (
-              <button
-                className="task-start-btn"
-                onClick={startTask}
-                title="Move to In Progress"
-              >
+              <button className="tk-task-start-btn" onClick={startTask} title="Move to In Progress">
                 ▶ Start
               </button>
             )}
             {task.assignee_name && (
-              <div className="task-assignee">
-                <div className="task-assignee-avatar">
+              <div className="tk-task-assignee">
+                <div className="tk-avatar">
                   {task.assignee_name.slice(0, 2).toUpperCase()}
                 </div>
-                <span className="task-assignee-name">{task.assignee_name}</span>
+                <span className="tk-task-assignee-name">{task.assignee_name}</span>
               </div>
             )}
-            <div className="task-card-footer-end">
+            <div className="tk-task-footer-end">
               {task.comment_count > 0 && (
-                <div className="task-comment-count" title={`${task.comment_count} comment${task.comment_count !== 1 ? "s" : ""}`}>
+                <div className="tk-task-comments" title={`${task.comment_count} comment${task.comment_count !== 1 ? "s" : ""}`}>
                   <IconMsg />
                   <span>{task.comment_count}</span>
                 </div>
               )}
               {task.recurrence && (
-                <span className="task-recurrence-badge" title={`Recurring: ${task.recurrence}`}>
+                <span className="tk-task-recurrence" title={`Recurring: ${task.recurrence}`}>
                   🔁 {task.recurrence}
                 </span>
               )}
             </div>
           </div>
 
-          {startError && (
-            <div style={{ fontSize: 11, color: "#ef4444", marginTop: 4 }}>{startError}</div>
-          )}
+          {startError && <div className="tk-task-error">{startError}</div>}
 
           {/* AI hover insight panel */}
           {hovered && !snapshot.isDragging && !isEditing && <InsightPanel task={task} />}

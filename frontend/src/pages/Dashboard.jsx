@@ -28,6 +28,7 @@ import HelpGuide from "../components/HelpGuide";
 import TaskDetailModal from "../components/TaskDetailModal";
 import CommandPalette from "../components/CommandPalette";
 import AIBubble from "../components/AIBubble";
+import ApprovalsView from "../components/ApprovalsView";
 import api from "../api/api";
 import { useSocket } from "../hooks/useSocket";
 import AIInsightsPanel from "../components/AIInsightsPanel";
@@ -243,9 +244,9 @@ export default function Dashboard() {
       if (err.response?.status === 401) return;
 
       const isServerSleep = !err.response || err.response.status >= 500 || err.response.status === 503;
-      if (isServerSleep && attempt < 6) {
-        // Server is waking up — retry with backoff: 3s, 5s, 7s, 10s, 12s, 15s
-        const delays = [3000, 5000, 7000, 10000, 12000, 15000];
+      if (isServerSleep && attempt < 8) {
+        // Server is waking up — retry with backoff (Render cold start ~45s)
+        const delays = [5000, 10000, 15000, 20000, 25000, 30000];
         setWakeStatus("waking");
         setTimeout(() => loadWorkspaces(attempt + 1), delays[attempt] || 10000);
       } else {
@@ -366,9 +367,30 @@ export default function Dashboard() {
   // ── Create task ───────────────────────────────────────────────
   const handleCreateTask = async (formData) => {
     if (!currentWorkspace) throw new Error("No workspace selected");
-    const { data } = await api.post("/tasks", { ...formData, workspace_id: currentWorkspace.id });
-    // Dedup: socket task:created may arrive before or after this — avoid duplicate
-    setAllTasks(p => p.some(t => t.id === data.id) ? p : [...p, data]);
+    const { data: task } = await api.post("/tasks", { ...formData, workspace_id: currentWorkspace.id });
+    setAllTasks(p => p.some(t => t.id === task.id) ? p : [...p, task]);
+
+    // Super Boss: route through manager approval instead of direct assignment
+    if (user?.role === "super_boss" && formData.assigned_user_id) {
+      try {
+        const membersRes = await api.get(`/members?workspace_id=${currentWorkspace.id}`);
+        const manager = membersRes.data.find(
+          m => (m.role === "manager" || m.global_role === "manager") && m.user_id !== user.id
+        );
+        if (manager) {
+          await api.post("/approvals", {
+            task_id: task.id,
+            assigned_to: formData.assigned_user_id,
+            approver_id: manager.user_id,
+            workspace_id: currentWorkspace.id,
+            justification: `Assignment request from ${user.name}`,
+          });
+          setAllTasks(p => p.map(t => t.id === task.id ? { ...t, status: "pending_approval" } : t));
+          showToast("Assignment sent to manager for approval");
+          return;
+        }
+      } catch {}
+    }
     showToast("Task created");
   };
 
@@ -510,11 +532,11 @@ export default function Dashboard() {
           The backend is starting up — this takes about 30 seconds on the free plan. Hang tight!
         </p>
         <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-          {[0,1,2,3,4,5].map(i => (
+          {[0,1,2,3,4,5,6,7].map(i => (
             <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: i < wakeAttempt ? "#6366f1" : "#dfe1e6", transition: "background 0.3s" }} />
           ))}
         </div>
-        <p style={{ color: "#97a0af", fontSize: 12 }}>Attempt {wakeAttempt + 1} of 6</p>
+        <p style={{ color: "#97a0af", fontSize: 12 }}>Attempt {wakeAttempt + 1} of 8</p>
       </div>
     );
   }
@@ -839,6 +861,13 @@ export default function Dashboard() {
                 <DependencyGraph workspaceId={currentWorkspace?.id} />
               </ErrorBoundary>
             </>
+          )}
+
+          {/* ── Approvals ── */}
+          {view === "approvals" && (
+            <ErrorBoundary inline viewName="Approvals">
+              <ApprovalsView workspaceId={currentWorkspace?.id} />
+            </ErrorBoundary>
           )}
 
   </>); // end viewContent

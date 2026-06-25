@@ -21,6 +21,7 @@ const SECTIONS = [
       { id: "members",      icon: "👤", label: "Members" },
       { id: "capacity",     icon: "⚡", label: "My Capacity" },
       { id: "collaboration",icon: "🤝", label: "Collaboration" },
+      { id: "approvals",    icon: "✅", label: "Approvals" },
     ],
   },
   {

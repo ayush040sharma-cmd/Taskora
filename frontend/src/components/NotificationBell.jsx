@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import api from "../api/api";
+import { getSocket } from "../hooks/useSocket";
 
 const IconBell = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -52,6 +53,20 @@ export default function NotificationBell() {
     fetchCount();
     const interval = setInterval(fetchCount, 30000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Real-time: listen on personal socket room for instant notification delivery
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    const socket = getSocket();
+    if (!socket.connected) socket.connect();
+    const handler = (notif) => {
+      setCount(c => c + 1);
+      setItems(prev => [notif, ...prev].slice(0, 20));
+    };
+    socket.on("notification", handler);
+    return () => socket.off("notification", handler);
   }, []);
 
   useEffect(() => {

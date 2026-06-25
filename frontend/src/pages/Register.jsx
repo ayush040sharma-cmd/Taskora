@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/api";
 
@@ -38,6 +38,7 @@ const ROLES = [
 
 export default function Register() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { register } = useAuth();
 
   // Step 1 = credentials, Step 2 = role selection
@@ -70,7 +71,8 @@ export default function Register() {
     setError(""); setLoading(true);
     try {
       await register(form.name, form.email, form.password, selectedRole.dbRole);
-      navigate("/onboarding");
+      const redirect = searchParams.get("redirect");
+      navigate(redirect || "/onboarding");
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed. Please try again.");
       setStep(1);

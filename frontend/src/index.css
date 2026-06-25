@@ -354,6 +354,96 @@
 [data-theme="dark"] .cap-approval-cancel { background: var(--column-bg) !important; border-color: var(--border) !important; color: var(--text-primary) !important; }
 [data-theme="dark"] .cap-approval-cancel:hover { background: #2d333b !important; }
 
+/* ── Supplemental dark overrides: gaps not covered above ───────────────── */
+
+/* Generic .modal (different from .modal-box) */
+[data-theme="dark"] .modal           { background: var(--card-bg) !important; border-color: var(--border) !important; color: var(--text-primary) !important; }
+[data-theme="dark"] .modal-input,
+[data-theme="dark"] .modal-select,
+[data-theme="dark"] .modal-textarea  { background: var(--column-bg) !important; border-color: var(--border) !important; color: var(--text-primary) !important; }
+[data-theme="dark"] .modal-title     { color: var(--text-primary) !important; }
+[data-theme="dark"] .modal-close:hover { background: var(--column-bg) !important; }
+
+/* Analytics KPI cards */
+[data-theme="dark"] .analytics-kpi   { background: var(--card-bg) !important; border-color: var(--border) !important; color: var(--text-primary) !important; }
+[data-theme="dark"] .analytics-kpi-label { color: var(--text-secondary) !important; }
+
+/* Gantt toolbar buttons & containers */
+[data-theme="dark"] .gantt-group-btn  { background: var(--card-bg) !important; border-color: var(--border) !important; color: var(--text-secondary) !important; }
+[data-theme="dark"] .gantt-scroll-wrap { border-color: var(--border) !important; }
+[data-theme="dark"] .gantt-toolbar-label { color: var(--text-secondary) !important; }
+[data-theme="dark"] .gantt-legend     { color: var(--text-secondary) !important; }
+
+/* Dependency graph node detail panel */
+[data-theme="dark"] .dep-graph-detail { background: var(--card-bg) !important; border-color: var(--border) !important; }
+[data-theme="dark"] .dep-graph-svg    { background: var(--main-bg) !important; border-color: var(--border) !important; }
+[data-theme="dark"] .dep-detail-title { color: var(--text-primary) !important; }
+[data-theme="dark"] .dep-detail-val   { color: var(--text-primary) !important; }
+[data-theme="dark"] .dep-detail-row,
+[data-theme="dark"] .dep-detail-deps-label,
+[data-theme="dark"] .dep-detail-dep-item { color: var(--text-secondary) !important; }
+
+/* Personal Execution Dashboard (ped-*) — no dark overrides existed */
+[data-theme="dark"] .ped-root          { background: var(--main-bg) !important; color: var(--text-primary) !important; }
+[data-theme="dark"] .ped-card          { background: var(--card-bg) !important; border-color: var(--border) !important; color: var(--text-primary) !important; }
+[data-theme="dark"] .ped-card--accent  { background: var(--column-bg) !important; border-color: var(--border) !important; }
+[data-theme="dark"] .ped-card--muted   { background: var(--column-bg) !important; }
+[data-theme="dark"] .ped-card-title    { color: var(--text-primary) !important; }
+[data-theme="dark"] .ped-task-row--overdue { background: rgba(239,68,68,0.08) !important; }
+[data-theme="dark"] .ped-task-row--today   { background: rgba(245,158,11,0.08) !important; }
+[data-theme="dark"] .ped-loading           { color: var(--text-secondary) !important; }
+[data-theme="dark"] .ped-loading-spinner   { border-color: var(--border) !important; border-top-color: var(--primary) !important; }
+
+/* Mobile header/tiles */
+[data-theme="dark"] .mob-header       { background: var(--card-bg) !important; border-color: var(--border) !important; }
+[data-theme="dark"] .mob-more-tile    { background: var(--card-bg) !important; }
+[data-theme="dark"] .mob-more-tile:hover { background: var(--column-bg) !important; }
+
+/* Sprint status chips & selector */
+[data-theme="dark"] .sprint-selector-btn.active  { background: #1e3a5f !important; color: var(--primary) !important; }
+[data-theme="dark"] .sprint-status--planning      { background: var(--column-bg) !important; color: var(--text-secondary) !important; }
+[data-theme="dark"] .sprint-status--completed     { background: #1e2d3d !important; color: var(--primary) !important; }
+
+/* Task card status indicators */
+[data-theme="dark"] .task-blocked-bar              { background: rgba(245,158,11,0.10) !important; color: #fbbf24 !important; }
+[data-theme="dark"] .task-status-strip--overdue    { background: rgba(239,68,68,0.10) !important; color: #f87171 !important; }
+[data-theme="dark"] .task-status-strip--stuck      { background: rgba(245,158,11,0.10) !important; color: #fbbf24 !important; }
+[data-theme="dark"] .task-due-date.due-soon        { background: rgba(245,158,11,0.10) !important; color: #fbbf24 !important; }
+
+/* Workload type badges */
+[data-theme="dark"] .wl-type--proposal { background: rgba(245,158,11,0.12) !important; color: #fbbf24 !important; }
+[data-theme="dark"] .wl-type--normal   { background: var(--column-bg) !important; color: var(--text-secondary) !important; }
+
+/* Member badges */
+[data-theme="dark"] .member-owner-tag  { background: rgba(245,158,11,0.12) !important; color: #fbbf24 !important; }
+
+/* Manager dashboard section headers (old inline selectors in index.css) */
+[data-theme="dark"] .mgr-dash-section          { background: var(--column-bg) !important; border-color: var(--border) !important; color: var(--text-primary) !important; }
+[data-theme="dark"] .mgr-dash-section:hover    { background: #2d333b !important; }
+[data-theme="dark"] .mgr-dash-section--overdue { background: rgba(239,68,68,0.08) !important; }
+[data-theme="dark"] .mgr-dash-count            { background: var(--column-bg) !important; color: var(--text-secondary) !important; }
+[data-theme="dark"] .mgr-dash-add-row          { color: var(--text-muted) !important; border-color: var(--border) !important; }
+[data-theme="dark"] .mgr-dash-add-row:hover    { color: var(--primary) !important; background: var(--column-bg) !important; }
+
+/* Collaboration top performer banner */
+[data-theme="dark"] .collab-top-performer { background: rgba(245,158,11,0.08) !important; border-color: rgba(245,158,11,0.2) !important; color: var(--text-primary) !important; }
+
+/* Capacity leave/travel note background (color already set above, background was missing) */
+[data-theme="dark"] .cap-leave-note   { background: var(--column-bg) !important; }
+[data-theme="dark"] .cap-travel-note  { background: var(--column-bg) !important; }
+
+/* Activity feed header strip */
+[data-theme="dark"] .af-header        { background: var(--column-bg) !important; border-color: var(--border) !important; }
+
+/* Channel plus-menu */
+[data-theme="dark"] .ch-plus-menu-item       { color: var(--text-primary) !important; }
+[data-theme="dark"] .ch-plus-menu-item:hover { background: var(--column-bg) !important; color: var(--primary) !important; }
+
+/* Simulation status pills */
+[data-theme="dark"] .sim-status-pill--moderate { background: rgba(245,158,11,0.12) !important; color: #fbbf24 !important; }
+[data-theme="dark"] .sim-warn-pill             { background: rgba(249,115,22,0.12) !important; color: #fb923c !important; }
+[data-theme="dark"] .sim-verdict--warn         { background: rgba(245,158,11,0.12) !important; color: #fbbf24 !important; }
+
 body { background: var(--main-bg); }
 #root { width: 100%; max-width: 100%; text-align: left; min-height: 100vh; display: flex; flex-direction: column; }
 a { text-decoration: none; color: inherit; }

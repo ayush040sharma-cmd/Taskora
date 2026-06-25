@@ -1,6 +1,35 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import api from "../api/api";
 import { useAuth } from "../context/AuthContext";
+import "../styles/summary.css";
+
+// ── Token-mapped color constants ──────────────────────────────────────────────
+
+const PRIORITY_COLOR = {
+  critical: "var(--tk-status-danger)",
+  high:     "var(--tk-status-danger)",
+  medium:   "var(--tk-status-warn)",
+  low:      "var(--tk-status-ok)",
+};
+
+const PRIORITY_PILL = {
+  critical: "tk-pill--danger",
+  high:     "tk-pill--danger",
+  medium:   "tk-pill--warn",
+  low:      "tk-pill--ok",
+};
+
+const TYPE_ICON = {
+  task: "📋", bug: "🐛", story: "📖", rfp: "📑",
+  proposal: "📝", presentation: "🎤", upgrade: "⬆️", poc: "🔬",
+};
+
+const RISK_COLOR = {
+  critical: "var(--tk-status-danger)",
+  high:     "var(--tk-status-danger)",
+  medium:   "var(--tk-status-warn)",
+  low:      "var(--tk-text-muted)",
+};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -26,12 +55,12 @@ function daysLeft(dueDateStr) {
   return Math.ceil(diff);
 }
 
-const PRIORITY_COLOR = { critical: "#7c3aed", high: "#ef4444", medium: "#f59e0b", low: "#10b981" };
-const TYPE_ICON = {
-  task: "📋", bug: "🐛", story: "📖", rfp: "📑",
-  proposal: "📝", presentation: "🎤", upgrade: "⬆️", poc: "🔬",
-};
-const RISK_COLOR = { critical: "#ef4444", high: "#f97316", medium: "#f59e0b", low: "#94a3b8" };
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "morning";
+  if (h < 17) return "afternoon";
+  return "evening";
+}
 
 // ── Today Focus Card ──────────────────────────────────────────────────────────
 
@@ -44,57 +73,50 @@ function TodayFocusCard({ todayFocus, user }) {
     : "calm";
 
   const urgencyConfig = {
-    critical: { bg: "#fef2f2", border: "#fecaca", text: "#dc2626", icon: "🚨", label: "Needs urgent attention" },
-    warning:  { bg: "#fffbeb", border: "#fde68a", text: "#d97706", icon: "⚠️", label: "Action required today" },
-    moderate: { bg: "#fff7ed", border: "#fed7aa", text: "#ea580c", icon: "👀", label: "A few things to watch" },
-    calm:     { bg: "#f0fdf4", border: "#bbf7d0", text: "#16a34a", icon: "✅", label: "Looking good today!" },
+    critical: { variantClass: "sd-focus-card--danger", textColor: "var(--tk-status-danger)", icon: "🚨", label: "Needs urgent attention" },
+    warning:  { variantClass: "sd-focus-card--warn",   textColor: "var(--tk-status-warn)",   icon: "⚠️", label: "Action required today" },
+    moderate: { variantClass: "sd-focus-card--warn",   textColor: "var(--tk-status-warn)",   icon: "👀", label: "A few things to watch" },
+    calm:     { variantClass: "sd-focus-card--ok",     textColor: "var(--tk-status-ok)",     icon: "✅", label: "Looking good today!" },
   };
 
   const cfg = urgencyConfig[urgencyLevel];
 
   return (
-    <div className="ped-focus-card" style={{ background: cfg.bg, borderColor: cfg.border }}>
-      <div className="ped-focus-top">
-        <div className="ped-focus-greeting">
-          <span className="ped-focus-icon">{cfg.icon}</span>
+    <div className={`sd-focus-card ${cfg.variantClass}`}>
+      <div className="sd-focus-top">
+        <div className="sd-focus-greeting">
+          <span className="sd-focus-icon">{cfg.icon}</span>
           <div>
-            <div className="ped-focus-name">Good {getGreeting()}, {user?.name?.split(" ")[0]}</div>
-            <div className="ped-focus-status" style={{ color: cfg.text }}>{cfg.label}</div>
+            <div className="sd-focus-name">Good {getGreeting()}, {user?.name?.split(" ")[0]}</div>
+            <div className="sd-focus-status" style={{ color: cfg.textColor }}>{cfg.label}</div>
           </div>
         </div>
-        <div className="ped-focus-free">
-          <div className="ped-focus-free-num">{free_hours}h</div>
-          <div className="ped-focus-free-label">free today</div>
+        <div className="sd-focus-free">
+          <div className="sd-focus-free-num">{free_hours}h</div>
+          <div className="sd-focus-free-label">free today</div>
         </div>
       </div>
 
-      <div className="ped-focus-pills">
+      <div className="sd-focus-pills">
         {overdue_count > 0 && (
-          <span className="ped-focus-pill ped-focus-pill--red">{overdue_count} overdue</span>
+          <span className="tk-pill tk-pill--danger">{overdue_count} overdue</span>
         )}
         {due_today_count > 0 && (
-          <span className="ped-focus-pill ped-focus-pill--yellow">{due_today_count} due today</span>
+          <span className="tk-pill tk-pill--warn">{due_today_count} due today</span>
         )}
         {attention_count === 0 && (
-          <span className="ped-focus-pill ped-focus-pill--green">All clear</span>
+          <span className="tk-pill tk-pill--ok">All clear</span>
         )}
       </div>
 
       {recommended_task && (
-        <div className="ped-focus-rec">
-          <span className="ped-focus-rec-label">Start with →</span>
-          <span className="ped-focus-rec-task">{recommended_task}</span>
+        <div className="sd-focus-rec">
+          <span className="sd-focus-rec-label">Start with →</span>
+          <span className="sd-focus-rec-task">{recommended_task}</span>
         </div>
       )}
     </div>
   );
-}
-
-function getGreeting() {
-  const h = new Date().getHours();
-  if (h < 12) return "morning";
-  if (h < 17) return "afternoon";
-  return "evening";
 }
 
 // ── Next Best Action Panel ────────────────────────────────────────────────────
@@ -102,44 +124,47 @@ function getGreeting() {
 function NextActionPanel({ nextAction, onOpenTask }) {
   if (!nextAction) {
     return (
-      <div className="ped-card">
-        <div className="ped-card-header">
-          <span className="ped-card-icon">⚡</span>
-          <span className="ped-card-title">Next Best Action</span>
+      <div className="tk-card">
+        <div className="sd-card-header">
+          <span className="sd-card-icon">⚡</span>
+          <span className="sd-card-title">Next Best Action</span>
         </div>
-        <div className="ped-empty">No active tasks — you're all caught up!</div>
+        <div className="sd-empty">No active tasks — you're all caught up!</div>
       </div>
     );
   }
 
   const { task, score, reason } = nextAction;
   const dl = daysLeft(task.due_date);
-  const pColor = PRIORITY_COLOR[task.priority] || "#94a3b8";
+  const pColor = PRIORITY_COLOR[task.priority] || "var(--tk-text-secondary)";
+  const isOverdue = dl !== null && dl < 0;
+  const isSoon    = dl !== null && dl >= 0 && dl < 2;
 
   return (
-    <div className="ped-card ped-card--accent">
-      <div className="ped-card-header">
-        <span className="ped-card-icon">⚡</span>
-        <span className="ped-card-title">Next Best Action</span>
-        <span className="ped-score-badge">{score}pts</span>
+    <div className="tk-card-ai">
+      <div className="tk-card-ai__glow" />
+      <div className="sd-card-header">
+        <span className="sd-card-icon">⚡</span>
+        <span className="sd-card-title">Next Best Action</span>
+        <span className="sd-score-badge">{score}pts</span>
       </div>
 
-      <div className="ped-next-task" onClick={() => onOpenTask && onOpenTask(task)}>
-        <div className="ped-next-type">{TYPE_ICON[task.type] || "📋"} {task.type || "task"}</div>
-        <div className="ped-next-title">{task.title}</div>
-        <div className="ped-next-meta">
-          <span className="ped-priority-dot" style={{ background: pColor }} />
-          <span className="ped-next-priority">{task.priority}</span>
+      <div className="sd-next-task" onClick={() => onOpenTask && onOpenTask(task)}>
+        <div className="sd-next-type">{TYPE_ICON[task.type] || "📋"} {task.type || "task"}</div>
+        <div className="sd-next-title">{task.title}</div>
+        <div className="sd-next-meta">
+          <span className="tk-dot" style={{ background: pColor }} />
+          <span className="sd-next-priority">{task.priority}</span>
           {task.due_date && (
-            <span className={`ped-due-label ${dl !== null && dl < 0 ? "ped-due--overdue" : dl !== null && dl < 2 ? "ped-due--soon" : ""}`}>
-              {dl !== null && dl < 0 ? `${Math.abs(dl)}d overdue` : `Due ${fmtDate(task.due_date)}`}
+            <span className={`sd-due-label${isOverdue ? " sd-due--overdue" : isSoon ? " sd-due--soon" : ""}`}>
+              {isOverdue ? `${Math.abs(dl)}d overdue` : `Due ${fmtDate(task.due_date)}`}
             </span>
           )}
           {task.progress > 0 && (
-            <span className="ped-progress-label">{task.progress}% done</span>
+            <span className="sd-progress-label">{task.progress}% done</span>
           )}
         </div>
-        <div className="ped-next-reason">💡 {reason}</div>
+        <div className="sd-next-reason">💡 {reason}</div>
       </div>
     </div>
   );
@@ -150,46 +175,46 @@ function NextActionPanel({ nextAction, onOpenTask }) {
 function DayTimeline({ dayPlan }) {
   if (!dayPlan?.length) {
     return (
-      <div className="ped-card">
-        <div className="ped-card-header">
-          <span className="ped-card-icon">🗓️</span>
-          <span className="ped-card-title">My Day Plan</span>
+      <div className="tk-card">
+        <div className="sd-card-header">
+          <span className="sd-card-icon">🗓️</span>
+          <span className="sd-card-title">My Day Plan</span>
         </div>
-        <div className="ped-empty">No tasks to plan — add some tasks to get started.</div>
+        <div className="sd-empty">No tasks to plan — add some tasks to get started.</div>
       </div>
     );
   }
 
   return (
-    <div className="ped-card">
-      <div className="ped-card-header">
-        <span className="ped-card-icon">🗓️</span>
-        <span className="ped-card-title">My Day Plan</span>
-        <span className="ped-card-sub">{dayPlan.length} blocks</span>
+    <div className="tk-card">
+      <div className="sd-card-header">
+        <span className="sd-card-icon">🗓️</span>
+        <span className="sd-card-title">My Day Plan</span>
+        <span className="sd-card-sub">{dayPlan.length} blocks</span>
       </div>
 
-      <div className="ped-timeline">
+      <div className="sd-timeline">
         {dayPlan.map((block, i) => {
-          const pColor = PRIORITY_COLOR[block.priority] || "#94a3b8";
+          const pColor = PRIORITY_COLOR[block.priority] || "var(--tk-text-secondary)";
           return (
-            <div key={block.task_id} className="ped-tl-row">
-              <div className="ped-tl-time">
-                <div className="ped-tl-start">{block.start}</div>
-                <div className="ped-tl-end">{block.end}</div>
+            <div key={block.task_id} className="sd-tl-row">
+              <div className="sd-tl-time">
+                <div className="sd-tl-start">{block.start}</div>
+                <div className="sd-tl-end">{block.end}</div>
               </div>
-              <div className="ped-tl-connector">
-                <div className="ped-tl-dot" style={{ background: pColor }} />
-                {i < dayPlan.length - 1 && <div className="ped-tl-line" />}
+              <div className="sd-tl-connector">
+                <div className="sd-tl-dot" style={{ background: pColor }} />
+                {i < dayPlan.length - 1 && <div className="sd-tl-line" />}
               </div>
-              <div className="ped-tl-block">
-                <div className="ped-tl-task-title">
+              <div className="sd-tl-block">
+                <div className="sd-tl-task-title">
                   {TYPE_ICON[block.type] || "📋"} {block.title}
-                  {block.is_partial && <span className="ped-tl-partial">partial</span>}
+                  {block.is_partial && <span className="sd-tl-partial">partial</span>}
                 </div>
-                <div className="ped-tl-meta">
+                <div className="sd-tl-meta">
                   <span style={{ color: pColor }}>{block.priority}</span>
-                  <span className="ped-tl-hours">{block.hours}h</span>
-                  {block.progress > 0 && <span className="ped-tl-prog">{block.progress}%</span>}
+                  <span className="sd-tl-hours">{block.hours}h</span>
+                  {block.progress > 0 && <span className="sd-tl-prog">{block.progress}%</span>}
                 </div>
               </div>
             </div>
@@ -205,68 +230,75 @@ function DayTimeline({ dayPlan }) {
 function CapacityWidget({ capacity }) {
   const { daily_hours, used_hours, free_hours, load_percent, tomorrow_load_pct, tomorrow_overloaded, on_leave, travel_mode } = capacity;
 
-  const barColor = load_percent >= 90 ? "#ef4444" : load_percent >= 70 ? "#f59e0b" : "#10b981";
+  const barColor = load_percent >= 90 ? "var(--tk-status-danger)"
+                 : load_percent >= 70 ? "var(--tk-status-warn)"
+                 : "var(--tk-status-ok)";
+
+  const barClass = load_percent >= 90 ? "tk-progress-fill--danger"
+                 : load_percent >= 70 ? "tk-progress-fill--warn"
+                 : "";
 
   if (on_leave) {
     return (
-      <div className="ped-card ped-card--muted">
-        <div className="ped-card-header">
-          <span className="ped-card-icon">🏖️</span>
-          <span className="ped-card-title">Capacity</span>
+      <div className="tk-card">
+        <div className="sd-card-header">
+          <span className="sd-card-icon">🏖️</span>
+          <span className="sd-card-title">Capacity</span>
         </div>
-        <div className="ped-empty" style={{ color: "#6366f1" }}>You're marked as on leave today.</div>
+        <div className="sd-empty" style={{ color: "var(--tk-accent)" }}>You're marked as on leave today.</div>
       </div>
     );
   }
 
   return (
-    <div className="ped-card">
-      <div className="ped-card-header">
-        <span className="ped-card-icon">⚙️</span>
-        <span className="ped-card-title">Capacity</span>
-        {travel_mode && <span className="ped-travel-badge">✈️ Travel mode</span>}
+    <div className="tk-card">
+      <div className="sd-card-header">
+        <span className="sd-card-icon">⚙️</span>
+        <span className="sd-card-title">Capacity</span>
+        {travel_mode && <span className="sd-travel-badge">✈️ Travel mode</span>}
       </div>
 
-      <div className="ped-cap-ring-wrap">
+      <div className="sd-cap-ring-wrap">
         <svg width="100" height="100" viewBox="0 0 100 100">
-          <circle cx="50" cy="50" r="40" fill="none" stroke="#e2e8f0" strokeWidth="10" />
+          <circle cx="50" cy="50" r="40" fill="none" className="sd-ring-track" strokeWidth="10" />
           <circle
             cx="50" cy="50" r="40" fill="none"
-            stroke={barColor} strokeWidth="10"
+            stroke={barColor}
+            strokeWidth="10"
             strokeDasharray={`${load_percent * 2.513} 251.3`}
             strokeDashoffset="62.8"
             strokeLinecap="round"
             style={{ transition: "stroke-dasharray 0.5s ease" }}
           />
-          <text x="50" y="46" textAnchor="middle" fontSize="18" fontWeight="800" fill="#0f172a">{load_percent}%</text>
-          <text x="50" y="60" textAnchor="middle" fontSize="9" fill="#64748b">load</text>
+          <text x="50" y="46" textAnchor="middle" fontSize="18" fontWeight="800" className="sd-ring-text-main">{load_percent}%</text>
+          <text x="50" y="60" textAnchor="middle" fontSize="9" className="sd-ring-text-sub">load</text>
         </svg>
 
-        <div className="ped-cap-stats">
-          <div className="ped-cap-stat">
-            <div className="ped-cap-num" style={{ color: "#ef4444" }}>{used_hours}h</div>
-            <div className="ped-cap-label">committed</div>
+        <div className="sd-cap-stats">
+          <div className="sd-cap-stat">
+            <div className="sd-cap-num" style={{ color: "var(--tk-status-danger)" }}>{used_hours}h</div>
+            <div className="sd-cap-label">committed</div>
           </div>
-          <div className="ped-cap-stat">
-            <div className="ped-cap-num" style={{ color: "#10b981" }}>{free_hours}h</div>
-            <div className="ped-cap-label">free</div>
+          <div className="sd-cap-stat">
+            <div className="sd-cap-num" style={{ color: "var(--tk-status-ok)" }}>{free_hours}h</div>
+            <div className="sd-cap-label">free</div>
           </div>
-          <div className="ped-cap-stat">
-            <div className="ped-cap-num">{daily_hours}h</div>
-            <div className="ped-cap-label">daily</div>
+          <div className="sd-cap-stat">
+            <div className="sd-cap-num" style={{ color: "var(--tk-text-secondary)" }}>{daily_hours}h</div>
+            <div className="sd-cap-label">daily</div>
           </div>
         </div>
       </div>
 
-      <div className="ped-cap-bar-wrap">
-        <div className="ped-cap-bar-track">
-          <div className="ped-cap-bar-fill" style={{ width: `${load_percent}%`, background: barColor }} />
+      <div className="sd-cap-bar-wrap">
+        <div className="tk-progress-track">
+          <div className={`tk-progress-fill ${barClass}`} style={{ width: `${Math.min(load_percent, 100)}%` }} />
         </div>
       </div>
 
-      <div className="ped-cap-tomorrow">
-        <span className="ped-cap-tm-label">Tomorrow forecast:</span>
-        <span className={`ped-cap-tm-val ${tomorrow_overloaded ? "ped-cap-tm--warn" : ""}`}>
+      <div className="sd-cap-tomorrow">
+        <span className="sd-cap-tm-label">Tomorrow forecast:</span>
+        <span className={`sd-cap-tm-val${tomorrow_overloaded ? " sd-cap-tm--warn" : ""}`}>
           {tomorrow_load_pct}% {tomorrow_overloaded ? "⚠️ Heavy" : ""}
         </span>
       </div>
@@ -279,12 +311,12 @@ function CapacityWidget({ capacity }) {
 function RiskRadar({ risks }) {
   if (!risks?.length) {
     return (
-      <div className="ped-card">
-        <div className="ped-card-header">
-          <span className="ped-card-icon">🛡️</span>
-          <span className="ped-card-title">Risk Radar</span>
+      <div className="tk-card">
+        <div className="sd-card-header">
+          <span className="sd-card-icon">🛡️</span>
+          <span className="sd-card-title">Risk Radar</span>
         </div>
-        <div className="ped-empty ped-empty--green">No risks detected — great work!</div>
+        <div className="sd-empty sd-empty--green">No risks detected — great work!</div>
       </div>
     );
   }
@@ -298,22 +330,22 @@ function RiskRadar({ risks }) {
   };
 
   return (
-    <div className="ped-card">
-      <div className="ped-card-header">
-        <span className="ped-card-icon">🛡️</span>
-        <span className="ped-card-title">Risk Radar</span>
-        <span className="ped-risk-count">{risks.length} item{risks.length !== 1 ? "s" : ""}</span>
+    <div className="tk-card">
+      <div className="sd-card-header">
+        <span className="sd-card-icon">🛡️</span>
+        <span className="sd-card-title">Risk Radar</span>
+        <span className="sd-risk-count">{risks.length} item{risks.length !== 1 ? "s" : ""}</span>
       </div>
 
-      <div className="ped-risk-list">
+      <div className="sd-risk-list">
         {risks.map((r, i) => (
-          <div key={i} className="ped-risk-row" style={{ borderLeftColor: RISK_COLOR[r.severity] }}>
-            <span className="ped-risk-icon">{RISK_ICON[r.riskType] || "⚠️"}</span>
-            <div className="ped-risk-body">
-              <div className="ped-risk-title">{r.task.title}</div>
-              <div className="ped-risk-meta">
-                <span className="ped-risk-label" style={{ color: RISK_COLOR[r.severity] }}>{r.label}</span>
-                {r.task.due_date && <span className="ped-risk-date">Due {fmtDate(r.task.due_date)}</span>}
+          <div key={i} className="sd-risk-row" style={{ borderLeftColor: RISK_COLOR[r.severity] || "var(--tk-border)" }}>
+            <span className="sd-risk-icon">{RISK_ICON[r.riskType] || "⚠️"}</span>
+            <div className="sd-risk-body">
+              <div className="sd-risk-title">{r.task.title}</div>
+              <div className="sd-risk-meta">
+                <span className="sd-risk-label" style={{ color: RISK_COLOR[r.severity] || "var(--tk-text-muted)" }}>{r.label}</span>
+                {r.task.due_date && <span className="sd-risk-date">Due {fmtDate(r.task.due_date)}</span>}
               </div>
             </div>
           </div>
@@ -328,60 +360,56 @@ function RiskRadar({ risks }) {
 function ProgressMomentum({ progress }) {
   const { completed_week, completed_prev_week, inprogress, delayed, trend, trend_pct } = progress;
 
-  const trendColor = trend === "up" ? "#10b981" : trend === "down" ? "#ef4444" : "#94a3b8";
-  const trendIcon  = trend === "up" ? "↑" : trend === "down" ? "↓" : "→";
+  const trendColor = trend === "up"   ? "var(--tk-status-ok)"
+                   : trend === "down" ? "var(--tk-status-danger)"
+                   : "var(--tk-text-secondary)";
+
+  const trendIcon = trend === "up" ? "↑" : trend === "down" ? "↓" : "→";
 
   const stats = [
-    { label: "Done this week",  value: completed_week, color: "#10b981", icon: "✅" },
-    { label: "Last week",       value: completed_prev_week, color: "#94a3b8", icon: "📅" },
-    { label: "In progress",     value: inprogress, color: "#6366f1", icon: "🔄" },
-    { label: "Delayed",         value: delayed,    color: "#ef4444", icon: "⏰" },
+    { label: "Done this week",  value: completed_week,      color: "var(--tk-status-ok)",     icon: "✅" },
+    { label: "Last week",       value: completed_prev_week, color: "var(--tk-text-secondary)", icon: "📅" },
+    { label: "In progress",     value: inprogress,           color: "var(--tk-accent)",         icon: "🔄" },
+    { label: "Delayed",         value: delayed,              color: "var(--tk-status-danger)",  icon: "⏰" },
   ];
 
   return (
-    <div className="ped-card">
-      <div className="ped-card-header">
-        <span className="ped-card-icon">📈</span>
-        <span className="ped-card-title">Progress</span>
-        <span className="ped-trend" style={{ color: trendColor }}>
+    <div className="tk-card">
+      <div className="sd-card-header">
+        <span className="sd-card-icon">📈</span>
+        <span className="sd-card-title">Progress</span>
+        <span className="sd-trend" style={{ color: trendColor }}>
           {trendIcon} {trend_pct !== 0 ? `${Math.abs(trend_pct)}%` : ""}
-          <span className="ped-trend-label">{trend === "up" ? "vs last week" : trend === "down" ? "vs last week" : "flat"}</span>
+          <span className="sd-trend-label">{trend === "up" ? "vs last week" : trend === "down" ? "vs last week" : "flat"}</span>
         </span>
       </div>
 
-      <div className="ped-momentum-grid">
+      <div className="sd-momentum-grid">
         {stats.map(s => (
-          <div key={s.label} className="ped-momentum-stat">
-            <div className="ped-momentum-icon">{s.icon}</div>
-            <div className="ped-momentum-num" style={{ color: s.color }}>{s.value}</div>
-            <div className="ped-momentum-label">{s.label}</div>
+          <div key={s.label} className="sd-momentum-stat">
+            <div className="sd-momentum-icon">{s.icon}</div>
+            <div className="sd-momentum-num" style={{ color: s.color }}>{s.value}</div>
+            <div className="sd-momentum-label">{s.label}</div>
           </div>
         ))}
       </div>
 
-      {/* Mini sparkline bar */}
       {(completed_week > 0 || completed_prev_week > 0) && (
-        <div className="ped-sparkbar">
-          <div className="ped-sparkbar-label">This week vs last week</div>
-          <div className="ped-sparkbar-row">
-            <span className="ped-sparkbar-week">Last</span>
-            <div className="ped-sparkbar-track">
-              <div
-                className="ped-sparkbar-fill ped-sparkbar-fill--prev"
-                style={{ width: `${Math.min(100, completed_prev_week * 15)}%` }}
-              />
+        <div className="sd-sparkbar">
+          <div className="sd-sparkbar-label">This week vs last week</div>
+          <div className="sd-sparkbar-row">
+            <span className="sd-sparkbar-week">Last</span>
+            <div className="sd-sparkbar-track">
+              <div className="sd-sparkbar-fill--prev" style={{ width: `${Math.min(100, completed_prev_week * 15)}%` }} />
             </div>
-            <span className="ped-sparkbar-val">{completed_prev_week}</span>
+            <span className="sd-sparkbar-val">{completed_prev_week}</span>
           </div>
-          <div className="ped-sparkbar-row">
-            <span className="ped-sparkbar-week">Now</span>
-            <div className="ped-sparkbar-track">
-              <div
-                className="ped-sparkbar-fill ped-sparkbar-fill--cur"
-                style={{ width: `${Math.min(100, completed_week * 15)}%` }}
-              />
+          <div className="sd-sparkbar-row">
+            <span className="sd-sparkbar-week">Now</span>
+            <div className="sd-sparkbar-track">
+              <div className="sd-sparkbar-fill--cur" style={{ width: `${Math.min(100, completed_week * 15)}%` }} />
             </div>
-            <span className="ped-sparkbar-val">{completed_week}</span>
+            <span className="sd-sparkbar-val">{completed_week}</span>
           </div>
         </div>
       )}
@@ -391,32 +419,38 @@ function ProgressMomentum({ progress }) {
 
 // ── Smart Activity Feed ───────────────────────────────────────────────────────
 
-const FEED_COLOR = { completed: "#10b981", inprogress: "#6366f1", created: "#3b82f6", updated: "#f59e0b" };
-const FEED_ICON  = { completed: "✅", inprogress: "🔄", created: "➕", updated: "✏️" };
+const FEED_COLOR = {
+  completed:  "var(--tk-status-ok)",
+  inprogress: "var(--tk-accent)",
+  created:    "var(--tk-accent)",
+  updated:    "var(--tk-status-warn)",
+};
 
 function SmartActivityFeed({ feed }) {
+  const FEED_ICON = { completed: "✅", inprogress: "🔄", created: "➕", updated: "✏️" };
+
   return (
-    <div className="ped-card">
-      <div className="ped-card-header">
-        <span className="ped-card-icon">📡</span>
-        <span className="ped-card-title">Activity Feed</span>
+    <div className="tk-card">
+      <div className="sd-card-header">
+        <span className="sd-card-icon">📡</span>
+        <span className="sd-card-title">Activity Feed</span>
       </div>
 
       {!feed?.length ? (
-        <div className="ped-empty">No recent activity yet.</div>
+        <div className="sd-empty">No recent activity yet.</div>
       ) : (
-        <div className="ped-feed-list">
+        <div className="sd-feed-list">
           {feed.map((item, i) => (
-            <div key={i} className="ped-feed-row">
+            <div key={i} className="sd-feed-row">
               <div
-                className="ped-feed-dot"
-                style={{ background: FEED_COLOR[item.type] || "#94a3b8" }}
+                className="sd-feed-dot"
+                style={{ background: FEED_COLOR[item.type] || "var(--tk-border)" }}
               >
                 {FEED_ICON[item.type] || "•"}
               </div>
-              <div className="ped-feed-body">
-                <div className="ped-feed-msg">{item.message}</div>
-                <div className="ped-feed-time">{timeAgo(item.time)}</div>
+              <div className="sd-feed-body">
+                <div className="sd-feed-msg">{item.message}</div>
+                <div className="sd-feed-time">{timeAgo(item.time)}</div>
               </div>
             </div>
           ))}
@@ -431,7 +465,7 @@ function SmartActivityFeed({ feed }) {
 function SortBtn({ field, label, activeSort, onSort }) {
   return (
     <button
-      className={`ped-tasks-sort ${activeSort === field ? "active" : ""}`}
+      className={`sd-tasks-sort${activeSort === field ? " active" : ""}`}
       onClick={() => onSort(field)}
     >
       {label}
@@ -440,7 +474,7 @@ function SortBtn({ field, label, activeSort, onSort }) {
 }
 
 function MyTasksTable({ tasks }) {
-  const [sort, setSort] = useState("score"); // score | priority | due | title
+  const [sort, setSort] = useState("score");
 
   const sorted = [...(tasks || [])].sort((a, b) => {
     if (sort === "score")    return (b._score || 0) - (a._score || 0);
@@ -456,54 +490,70 @@ function MyTasksTable({ tasks }) {
     return a.title.localeCompare(b.title);
   });
 
+  const statusClass = (status) => {
+    if (status === "todo")                              return "sd-status-todo";
+    if (status === "inprogress" || status === "in_progress") return "sd-status-inprogress";
+    if (status === "review")                            return "sd-status-review";
+    if (status === "done")                              return "sd-status-done";
+    return "sd-status-todo";
+  };
+
+  const statusLabel = (status) => {
+    if (status === "inprogress" || status === "in_progress") return "In Progress";
+    if (status === "todo")   return "To Do";
+    if (status === "review") return "In Review";
+    if (status === "done")   return "Done";
+    return status;
+  };
+
   return (
-    <div className="ped-card ped-card--full">
-      <div className="ped-card-header">
-        <span className="ped-card-icon">📋</span>
-        <span className="ped-card-title">My Active Tasks</span>
-        <div className="ped-tasks-sorts">
+    <div className="tk-card sd-card-full">
+      <div className="sd-card-header">
+        <span className="sd-card-icon">📋</span>
+        <span className="sd-card-title">My Active Tasks</span>
+        <div className="sd-tasks-sorts">
           <SortBtn field="score"    label="Recommended" activeSort={sort} onSort={setSort} />
           <SortBtn field="priority" label="Priority"    activeSort={sort} onSort={setSort} />
           <SortBtn field="due"      label="Due date"    activeSort={sort} onSort={setSort} />
         </div>
-        <span className="ped-card-sub">{tasks?.length || 0} tasks</span>
+        <span className="sd-card-sub">{tasks?.length || 0} tasks</span>
       </div>
 
       {!sorted.length ? (
-        <div className="ped-empty">No active tasks — nice work!</div>
+        <div className="sd-empty">No active tasks — nice work!</div>
       ) : (
-        <div className="ped-tasks-list">
+        <div className="sd-tasks-list">
           {sorted.map((task, i) => {
-            const dl     = daysLeft(task.due_date);
-            const pColor = PRIORITY_COLOR[task.priority] || "#94a3b8";
-            const isOverdue = dl !== null && dl < 0;
+            const dl         = daysLeft(task.due_date);
+            const pColor     = PRIORITY_COLOR[task.priority] || "var(--tk-text-secondary)";
+            const isOverdue  = dl !== null && dl < 0;
             const isDueToday = dl !== null && dl < 1 && dl >= 0;
 
             return (
-              <div key={task.id} className={`ped-task-row ${isOverdue ? "ped-task-row--overdue" : isDueToday ? "ped-task-row--today" : ""}`}>
-                <div className="ped-task-rank">#{i + 1}</div>
-                <div className="ped-task-icon">{TYPE_ICON[task.type] || "📋"}</div>
-                <div className="ped-task-main">
-                  <div className="ped-task-title">{task.title}</div>
-                  <div className="ped-task-meta">
-                    <span className="ped-task-priority-dot" style={{ background: pColor }} />
-                    <span style={{ color: pColor, fontSize: 11 }}>{task.priority}</span>
-                    <span className="ped-task-type">{task.type}</span>
+              <div
+                key={task.id}
+                className={`sd-task-row${isOverdue ? " sd-task-row--overdue" : isDueToday ? " sd-task-row--today" : ""}`}
+              >
+                <div className="sd-task-rank">#{i + 1}</div>
+                <div className="sd-task-icon">{TYPE_ICON[task.type] || "📋"}</div>
+                <div className="sd-task-main">
+                  <div className="sd-task-title">{task.title}</div>
+                  <div className="sd-task-meta">
+                    <span className="sd-task-priority-dot" style={{ background: pColor }} />
+                    <span style={{ color: pColor, fontSize: 11, fontFamily: "var(--tk-font-body)" }}>{task.priority}</span>
+                    <span className="sd-task-type">{task.type}</span>
                   </div>
                 </div>
-                <div className="ped-task-progress-wrap">
-                  <div className="ped-task-prog-bar">
+                <div className="sd-task-progress-wrap">
+                  <div className="tk-progress-track" style={{ flex: 1 }}>
                     <div
-                      className="ped-task-prog-fill"
-                      style={{
-                        width: `${task.progress || 0}%`,
-                        background: (task.progress || 0) >= 80 ? "#10b981" : "#6366f1",
-                      }}
+                      className="tk-progress-fill"
+                      style={{ width: `${task.progress || 0}%` }}
                     />
                   </div>
-                  <span className="ped-task-prog-pct">{task.progress || 0}%</span>
+                  <span className="sd-task-prog-pct">{task.progress || 0}%</span>
                 </div>
-                <div className={`ped-task-due ${isOverdue ? "ped-task-due--overdue" : isDueToday ? "ped-task-due--today" : ""}`}>
+                <div className={`sd-task-due${isOverdue ? " sd-task-due--overdue" : isDueToday ? " sd-task-due--today" : ""}`}>
                   {task.due_date
                     ? (isOverdue
                         ? `${Math.abs(dl)}d late`
@@ -512,12 +562,9 @@ function MyTasksTable({ tasks }) {
                           : fmtDate(task.due_date))
                     : "—"}
                 </div>
-                <div className="ped-task-status">
-                  <span className={`ped-status-pill ped-status--${task.status === "in_progress" ? "inprogress" : task.status}`}>
-                    {task.status === "inprogress" || task.status === "in_progress" ? "In Progress"
-                      : task.status === "todo" ? "To Do"
-                      : task.status === "review" ? "In Review"
-                      : task.status}
+                <div className="sd-task-status">
+                  <span className={`tk-pill ${statusClass(task.status)}`} style={{ fontSize: 10, padding: "2px 8px" }}>
+                    {statusLabel(task.status)}
                   </span>
                 </div>
               </div>
@@ -536,7 +583,7 @@ const POMODORO = 25 * 60;
 function FocusMode({ task, onClose }) {
   const [timeLeft, setTimeLeft] = useState(POMODORO);
   const [running, setRunning]   = useState(false);
-  const [phase, setPhase]       = useState("focus"); // focus | break
+  const [phase, setPhase]       = useState("focus");
   const intervalRef = useRef(null);
 
   const tick = useCallback(() => {
@@ -571,54 +618,53 @@ function FocusMode({ task, onClose }) {
     : ((5 * 60 - timeLeft) / (5 * 60)) * 100;
 
   const circumference = 2 * Math.PI * 70;
+  const activeStroke  = phase === "focus" ? "var(--tk-accent)" : "var(--tk-status-ok)";
 
   return (
-    <div className="ped-focus-overlay">
-      <div className="ped-focus-modal">
-        <button className="ped-focus-close" onClick={onClose}>✕</button>
-        <div className="ped-focus-badge">{phase === "focus" ? "🎯 Focus" : "☕ Break"}</div>
+    <div className="sd-focus-overlay">
+      <div className="sd-focus-modal">
+        <button className="sd-focus-close" onClick={onClose}>✕</button>
+        <div className="sd-focus-timer-badge">{phase === "focus" ? "🎯 Focus" : "☕ Break"}</div>
 
         {task && (
-          <div className="ped-focus-task-label">
+          <div className="sd-focus-task-label">
             {TYPE_ICON[task.type] || "📋"} {task.title}
           </div>
         )}
 
-        <div className="ped-focus-timer-wrap">
-          <svg width="180" height="180" viewBox="0 0 180 180">
-            <circle cx="90" cy="90" r="70" fill="none" stroke="#e2e8f0" strokeWidth="8" />
-            <circle
-              cx="90" cy="90" r="70" fill="none"
-              stroke={phase === "focus" ? "#6366f1" : "#10b981"}
-              strokeWidth="8"
-              strokeDasharray={`${(progress / 100) * circumference} ${circumference}`}
-              strokeDashoffset={circumference / 4}
-              strokeLinecap="round"
-              style={{ transition: "stroke-dasharray 1s linear" }}
-            />
-            <text x="90" y="84" textAnchor="middle" fontSize="32" fontWeight="800" fill="#0f172a">{mins}:{secs}</text>
-            <text x="90" y="105" textAnchor="middle" fontSize="12" fill="#64748b">
-              {phase === "focus" ? "remaining" : "break"}
-            </text>
-          </svg>
-        </div>
+        <svg width="180" height="180" viewBox="0 0 180 180">
+          <circle cx="90" cy="90" r="70" fill="none" className="sd-timer-track" strokeWidth="8" />
+          <circle
+            cx="90" cy="90" r="70" fill="none"
+            stroke={activeStroke}
+            strokeWidth="8"
+            strokeDasharray={`${(progress / 100) * circumference} ${circumference}`}
+            strokeDashoffset={circumference / 4}
+            strokeLinecap="round"
+            style={{ transition: "stroke-dasharray 1s linear" }}
+          />
+          <text x="90" y="84" textAnchor="middle" fontSize="32" fontWeight="800" className="sd-timer-text-main">{mins}:{secs}</text>
+          <text x="90" y="105" textAnchor="middle" fontSize="12" className="sd-timer-text-sub">
+            {phase === "focus" ? "remaining" : "break"}
+          </text>
+        </svg>
 
-        <div className="ped-focus-controls">
+        <div className="sd-focus-controls">
           <button
-            className={`ped-focus-btn ${running ? "ped-focus-btn--pause" : "ped-focus-btn--start"}`}
+            className={running ? "tk-btn-secondary" : "tk-btn-primary"}
             onClick={() => setRunning(r => !r)}
           >
             {running ? "⏸ Pause" : "▶ Start"}
           </button>
           <button
-            className="ped-focus-btn ped-focus-btn--reset"
+            className="tk-btn-ghost"
             onClick={() => { setRunning(false); setTimeLeft(POMODORO); setPhase("focus"); }}
           >
             ↺ Reset
           </button>
         </div>
 
-        <div className="ped-focus-tips">
+        <div className="sd-focus-tips">
           {phase === "focus"
             ? "Stay focused — one task at a time. No distractions."
             : "Take a real break — stretch, hydrate, breathe."}
@@ -632,11 +678,11 @@ function FocusMode({ task, onClose }) {
 
 function QuickActions({ nextTask, onFocusMode, onRefresh }) {
   return (
-    <div className="ped-quick-actions">
-      <button className="ped-qa-btn ped-qa-btn--primary" onClick={() => onFocusMode(nextTask)}>
+    <div className="sd-quick-actions">
+      <button className="tk-btn-primary" onClick={() => onFocusMode(nextTask)}>
         🎯 Enter Focus Mode
       </button>
-      <button className="ped-qa-btn" onClick={onRefresh}>
+      <button className="tk-btn-secondary" onClick={onRefresh}>
         🔄 Refresh
       </button>
     </div>
@@ -647,28 +693,24 @@ function QuickActions({ nextTask, onFocusMode, onRefresh }) {
 
 export default function SummaryDashboard({ workspaceId }) {
   useAuth();
-  const [data,       setData]       = useState(null);
-  const [loading,    setLoading]    = useState(false);
-  const [error,      setError]      = useState(null);
-  const [refresh,    setRefresh]    = useState(0);
-  const [focusTask,  setFocusTask]  = useState(null);
-  const [focusOpen,  setFocusOpen]  = useState(false);
+  const [data,      setData]      = useState(null);
+  const [loading,   setLoading]   = useState(false);
+  const [error,     setError]     = useState(null);
+  const [refresh,   setRefresh]   = useState(0);
+  const [focusTask, setFocusTask] = useState(null);
+  const [focusOpen, setFocusOpen] = useState(false);
 
   useEffect(() => {
     if (!workspaceId) { setLoading(false); setData(null); return; }
     let cancelled = false;
-    setLoading(true); // eslint-disable-line react-hooks/set-state-in-effect
+    setLoading(true);
     setError(null);
     api.get(`/personal/dashboard?workspace_id=${workspaceId}`)
-      .then(r => {
-        if (!cancelled) { setData(r.data); setLoading(false); }
-      })
+      .then(r => { if (!cancelled) { setData(r.data); setLoading(false); } })
       .catch(err => {
         if (!cancelled) {
-          const msg = err.response?.data?.message || err.message || "Failed to load dashboard";
-          setError(msg);
+          setError(err.response?.data?.message || err.message || "Failed to load dashboard");
           setLoading(false);
-          console.error("Personal dashboard error:", err);
         }
       });
     return () => { cancelled = true; };
@@ -683,9 +725,9 @@ export default function SummaryDashboard({ workspaceId }) {
 
   if (loading) {
     return (
-      <div className="ped-root">
-        <div className="ped-loading">
-          <div className="ped-loading-spinner" />
+      <div className="sd-root">
+        <div className="sd-loading">
+          <div className="sd-loading-spinner" />
           <span>Loading your dashboard…</span>
         </div>
       </div>
@@ -694,11 +736,11 @@ export default function SummaryDashboard({ workspaceId }) {
 
   if (error) {
     return (
-      <div className="ped-root">
-        <div className="ped-error-state">
-          <div className="ped-error-icon">⚠️</div>
-          <div className="ped-error-msg">{error}</div>
-          <button className="ped-qa-btn" onClick={load}>Try again</button>
+      <div className="sd-root">
+        <div className="sd-error-state">
+          <div className="sd-error-icon">⚠️</div>
+          <div className="sd-error-msg">{error}</div>
+          <button className="tk-btn-secondary" onClick={load}>Try again</button>
         </div>
       </div>
     );
@@ -706,49 +748,34 @@ export default function SummaryDashboard({ workspaceId }) {
 
   if (!data) {
     return (
-      <div className="ped-root">
-        <div className="ped-empty-state">Select a workspace to see your personal dashboard.</div>
+      <div className="sd-root">
+        <div className="sd-empty-state">Select a workspace to see your personal dashboard.</div>
       </div>
     );
   }
 
   return (
-    <div className="ped-root">
-      {/* Focus Mode Overlay */}
-      {focusOpen && (
-        <FocusMode
-          task={focusTask}
-          onClose={() => setFocusOpen(false)}
-        />
-      )}
+    <div className="sd-root">
+      {focusOpen && <FocusMode task={focusTask} onClose={() => setFocusOpen(false)} />}
 
-      {/* Quick Actions */}
-      <QuickActions
-        nextTask={data.next_action?.task}
-        onFocusMode={openFocus}
-        onRefresh={load}
-      />
+      <QuickActions nextTask={data.next_action?.task} onFocusMode={openFocus} onRefresh={load} />
 
-      {/* Row 1: Today Focus + Next Action + Capacity */}
-      <div className="ped-row-3">
+      <div className="sd-row-3">
         <TodayFocusCard todayFocus={data.today_focus} user={data.user} />
         <NextActionPanel nextAction={data.next_action} onOpenTask={null} />
         <CapacityWidget capacity={data.capacity} />
       </div>
 
-      {/* Row 2: Day Timeline + Risk Radar */}
-      <div className="ped-row-2">
+      <div className="sd-row-2">
         <DayTimeline dayPlan={data.day_plan} />
         <RiskRadar risks={data.risk_radar} />
       </div>
 
-      {/* Row 3: Progress + Activity Feed */}
-      <div className="ped-row-2">
+      <div className="sd-row-2">
         <ProgressMomentum progress={data.progress} />
         <SmartActivityFeed feed={data.activity_feed} />
       </div>
 
-      {/* Full-width: My Tasks Table */}
       <MyTasksTable tasks={data.my_tasks} />
     </div>
   );

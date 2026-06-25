@@ -213,14 +213,16 @@ export default function JarvisVoiceAssistant({ workspaceId }) {
   const [messages, dispatchMessages]          = useReducer(messagesReducer, []);
 
   // ── Refs for stable callbacks ────────────────────────────────────────────────
-  const assistantStateRef  = useRef(STATES.IDLE);
-  const commandBufferRef   = useRef("");
-  const commandTimerRef    = useRef(null);
-  const lastProcessedRef   = useRef("");
-  const debounceTimerRef   = useRef(null);
-  const processingRef      = useRef(false);
-  const abortRef           = useRef(null);
-  const chatEndRef         = useRef(null);
+  const assistantStateRef      = useRef(STATES.IDLE);
+  const commandBufferRef       = useRef("");
+  const commandTimerRef        = useRef(null);
+  const lastProcessedRef       = useRef("");
+  const debounceTimerRef       = useRef(null);
+  const processingRef          = useRef(false);
+  const abortRef               = useRef(null);
+  const chatEndRef             = useRef(null);
+  // Stores pending_action/pending_task_id/pending_params from a confirm_required response
+  const pendingConfirmationRef = useRef(null);
 
   const setState = useCallback((s) => {
     assistantStateRef.current = s;
@@ -260,11 +262,31 @@ export default function JarvisVoiceAssistant({ workspaceId }) {
     abortRef.current = controller;
 
     try {
+      const pending = pendingConfirmationRef.current;
       const { data } = await api.post(
         "/jarvis/command",
-        { message: command, workspace_id: workspaceId },
+        {
+          message: command,
+          workspace_id: workspaceId,
+          ...(pending ? {
+            pending_action:  pending.action,
+            pending_task_id: pending.task_id,
+            pending_params:  pending.params,
+          } : {}),
+        },
         { signal: controller.signal }
       );
+
+      // Store or clear pending confirmation based on response
+      if (data.action === "confirm_required") {
+        pendingConfirmationRef.current = {
+          action:  data.pending_action,
+          task_id: data.pending_task_id,
+          params:  data.pending_params,
+        };
+      } else {
+        pendingConfirmationRef.current = null;
+      }
 
       const reply = data.reply || data.message || "I couldn't process that command.";
 
@@ -280,6 +302,7 @@ export default function JarvisVoiceAssistant({ workspaceId }) {
       // Swallow cancellations silently
       if (err.name === "AbortError" || err.name === "CanceledError" || err.code === "ERR_CANCELED") return;
 
+      pendingConfirmationRef.current = null;
       const serverMsg = err.response?.data?.reply || err.response?.data?.message;
       const spokenErr = serverMsg || "Sorry, something went wrong. Please try again.";
 

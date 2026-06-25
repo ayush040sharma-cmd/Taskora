@@ -468,11 +468,21 @@ export default function JarvisVoiceAssistant({ workspaceId }) {
                 </div>
               </div>
               <div className="jarvis-panel-controls">
+                {/* Stop speaking */}
+                <button
+                  className={`jarvis-ctrl-btn ${assistantState === STATES.SPEAKING ? "jarvis-ctrl-btn--speaking" : ""}`}
+                  onClick={stopSpeaking}
+                  disabled={assistantState !== STATES.SPEAKING}
+                  title="Stop speaking"
+                  style={{ opacity: assistantState === STATES.SPEAKING ? 1 : 0.35 }}
+                >
+                  ⏹
+                </button>
                 {/* Toggle mic */}
                 <button
                   className={`jarvis-ctrl-btn ${enabled ? "jarvis-ctrl-btn--on" : "jarvis-ctrl-btn--off"}`}
                   onClick={handleToggle}
-                  title={enabled ? "Disable Jarvis (Alt+J)" : "Enable Jarvis (Alt+J)"}
+                  title={enabled ? "Disable mic (Alt+J)" : "Enable mic (Alt+J)"}
                 >
                   {enabled ? "🎙️" : "🔇"}
                 </button>

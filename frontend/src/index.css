@@ -1776,7 +1776,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
   background: linear-gradient(135deg, #6366f1, #8b5cf6);
   display: flex; align-items: center; justify-content: center;
 }
-.sidebar-logo-text { font-size: 15px; font-weight: 800; color: #fff; flex: 1; }
+.sidebar-logo-text { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: #E2E8F0; flex: 1; }
 .sidebar-ai-badge {
   font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 99px;
   background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff;

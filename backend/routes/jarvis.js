@@ -286,15 +286,53 @@ async function findTask(titleHint, workspaceId) {
   return r.rows[0] || null;
 }
 
-// Returns the confirmation-required payload for fuzzy matches before destructive actions.
-// Frontend stores action/task_id/params and sends them back when user says "yes/confirm".
+// Returns up to 5 candidates for a title hint, ordered exact → prefix → fuzzy.
+async function findTaskCandidates(titleHint, workspaceId) {
+  if (!titleHint) return [];
+  const r = await pool.query(
+    `SELECT t.*, u.name AS assignee_name,
+            CASE WHEN LOWER(t.title) = $3    THEN 'exact'
+                 WHEN LOWER(t.title) LIKE $4 THEN 'prefix'
+                 ELSE                              'fuzzy'
+            END AS "matchConfidence"
+     FROM tasks t LEFT JOIN users u ON u.id = t.assigned_user_id
+     WHERE t.workspace_id=$1 AND LOWER(t.title) LIKE $2
+     ORDER BY
+       CASE WHEN LOWER(t.title) = $3 THEN 0
+            WHEN LOWER(t.title) LIKE $4 THEN 1
+            ELSE 2 END,
+       t.updated_at DESC LIMIT 5`,
+    [workspaceId, `%${titleHint.toLowerCase()}%`,
+     titleHint.toLowerCase(), `${titleHint.toLowerCase()}%`]
+  );
+  return r.rows;
+}
+
+const ACTION_VERB = {
+  mark_done:   "mark as done",
+  delete_task: "delete",
+  assign_task: "assign",
+  set_status:  "update status for",
+};
+
+// Single fuzzy match — one task found, ask for confirmation before acting.
 function fuzzyConfirmReply(task, intent, pendingParams) {
+  const verb = ACTION_VERB[intent] || "action on";
   return {
-    reply: `Did you mean "${task.title}"? Say "yes" or "confirm" to proceed, or try again with the exact task name.`,
+    reply: `Found "${task.title}" — say yes to ${verb} it, or be more specific.`,
     action: "confirm_required",
     pending_action: intent,
     pending_task_id: task.id,
     pending_params: pendingParams,
+  };
+}
+
+// Multiple fuzzy matches — list them and tell the user to be more specific (no action taken).
+function ambiguousReply(titleHint, candidates) {
+  const list = candidates.map(t => `"${t.title}"`).join(", ");
+  return {
+    reply: `Found ${candidates.length} tasks matching "${titleHint}": ${list}. Which one? Say the exact task name.`,
+    action: "ambiguous",
   };
 }
 
@@ -437,11 +475,12 @@ router.post("/command", auth, async (req, res) => {
     if (intent === "mark_done") {
       const titleHint = extractTargetTitle(message)
         || extractSearchTerm(message, ["mark","set","move","complete","finish","close","as","done","task"]);
-      const task = await findTask(titleHint, workspace_id);
-      if (!task) {
-        return res.json({ reply: `I couldn't find a task matching "${titleHint || message}". Try quoting the exact task name.` });
+      const candidates = await findTaskCandidates(titleHint, workspace_id);
+      if (!candidates.length) return res.json({ reply: `I couldn't find a task matching "${titleHint || message}". Try quoting the exact task name.` });
+      const task = candidates[0];
+      if (task.matchConfidence === "fuzzy") {
+        return res.json(candidates.length > 1 ? ambiguousReply(titleHint, candidates) : fuzzyConfirmReply(task, "mark_done", {}));
       }
-      if (task.matchConfidence === "fuzzy") return res.json(fuzzyConfirmReply(task, "mark_done", {}));
 
       await pool.query(
         "UPDATE tasks SET status='done', completed_at=NOW() WHERE id=$1",
@@ -462,11 +501,14 @@ router.post("/command", auth, async (req, res) => {
       const status    = extractStatus(message);
       const titleHint = extractTargetTitle(message)
         || extractSearchTerm(message, ["mark","move","set","change","status","as","to","task"]);
-      const task = await findTask(titleHint, workspace_id);
+      const candidates = await findTaskCandidates(titleHint, workspace_id);
 
-      if (!task)   return res.json({ reply: `I couldn't find a task matching "${titleHint || message}".` });
-      if (!status) return res.json({ reply: `What status should I use? Options: todo, in progress, done.` });
-      if (task.matchConfidence === "fuzzy") return res.json(fuzzyConfirmReply(task, "set_status", { status }));
+      if (!candidates.length) return res.json({ reply: `I couldn't find a task matching "${titleHint || message}".` });
+      if (!status)             return res.json({ reply: `What status should I use? Options: todo, in progress, done.` });
+      const task = candidates[0];
+      if (task.matchConfidence === "fuzzy") {
+        return res.json(candidates.length > 1 ? ambiguousReply(titleHint, candidates) : fuzzyConfirmReply(task, "set_status", { status }));
+      }
 
       const clearCompleted = status !== "done" ? ", completed_at=NULL" : ", completed_at=NOW()";
       await pool.query(
@@ -490,14 +532,19 @@ router.post("/command", auth, async (req, res) => {
       const titleHint  = extractTargetTitle(message)
         || extractSearchTerm(message, ["assign","give","reassign","delegate","to","task"]);
 
-      const [task, member] = await Promise.all([
-        findTask(titleHint, workspace_id),
+      const [candidates, member] = await Promise.all([
+        findTaskCandidates(titleHint, workspace_id),
         findMember(personName, workspace_id),
       ]);
 
-      if (!task)   return res.json({ reply: `I couldn't find a task matching "${titleHint || message}".` });
-      if (!member) return res.json({ reply: `I couldn't find a workspace member matching "${personName || "that person"}".` });
-      if (task.matchConfidence === "fuzzy") return res.json(fuzzyConfirmReply(task, "assign_task", { member_id: member.id, member_name: member.name }));
+      if (!candidates.length) return res.json({ reply: `I couldn't find a task matching "${titleHint || message}".` });
+      if (!member)            return res.json({ reply: `I couldn't find a workspace member matching "${personName || "that person"}".` });
+      const task = candidates[0];
+      if (task.matchConfidence === "fuzzy") {
+        return res.json(candidates.length > 1
+          ? ambiguousReply(titleHint, candidates)
+          : fuzzyConfirmReply(task, "assign_task", { member_id: member.id, member_name: member.name }));
+      }
 
       await pool.query("UPDATE tasks SET assigned_user_id=$1 WHERE id=$2", [member.id, task.id]);
       refreshUserWorkloadLog(member.id, workspace_id).catch(() => {});
@@ -547,10 +594,13 @@ router.post("/command", auth, async (req, res) => {
     if (intent === "delete_task") {
       const titleHint = extractTargetTitle(message)
         || extractSearchTerm(message, ["delete","remove","cancel","drop","trash","task"]);
-      const task = await findTask(titleHint, workspace_id);
+      const candidates = await findTaskCandidates(titleHint, workspace_id);
 
-      if (!task) return res.json({ reply: `I couldn't find a task matching "${titleHint || message}".` });
-      if (task.matchConfidence === "fuzzy") return res.json(fuzzyConfirmReply(task, "delete_task", {}));
+      if (!candidates.length) return res.json({ reply: `I couldn't find a task matching "${titleHint || message}".` });
+      const task = candidates[0];
+      if (task.matchConfidence === "fuzzy") {
+        return res.json(candidates.length > 1 ? ambiguousReply(titleHint, candidates) : fuzzyConfirmReply(task, "delete_task", {}));
+      }
 
       await pool.query("DELETE FROM tasks WHERE id=$1", [task.id]);
       if (io) io.to(`workspace:${workspace_id}`).emit("task:deleted", { id: task.id, workspace_id });

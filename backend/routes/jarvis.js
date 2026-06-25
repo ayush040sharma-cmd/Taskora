@@ -31,8 +31,15 @@ function detectIntent(msg) {
   if (/\b(mark|move|set|change)\b.{0,35}\b(todo|to-do|in.?progress|inprogress|doing|backlog|review)\b/i.test(msg))
     return "set_status";
 
-  if (/\b(create|add|make|new)\b.{0,25}\b(task|bug|feature|ticket|story|item|issue)\b/i.test(msg))
+  if (/\b(create|add|make|new)\b.{0,25}\b(task|bug|feature|ticket|story|item|issue)\b/i.test(msg)) {
+    // Disambiguate "Make X bug high priority" (set_priority) from "Make a bug called X" (create_task)
+    const hasCreationArticle = /\b(create|add|make)\b\s+(?:a\s|an\s|new\s)/i.test(msg);
+    const tailsPriority = /\b(critical|urgent|high|medium|low)\s*(?:priority)?\s*$/i.test(msg.trim());
+    const tailsStatus   = /\b(todo|to-do|in.?progress|inprogress|doing|backlog|review)\s*$/i.test(msg.trim());
+    if (!hasCreationArticle && tailsPriority) return "set_priority";
+    if (!hasCreationArticle && tailsStatus)   return "set_status";
     return "create_task";
+  }
 
   // "give [something] to [person]" = assign; "give me" = query — require "to" after give
   if (/\b(assign|reassign|delegate)\b/i.test(msg) || /\bgive\b.{1,30}\bto\b/i.test(msg))
@@ -83,27 +90,37 @@ function extractQuoted(text) {
   return m ? m[1].trim() : null;
 }
 
+// test: "Create a task called Fix the high priority login bug" → "Fix the high priority login bug"
+// test: "Make a bug called High availability fix" → "High availability fix" (bare "high" mid-sentence stays)
+// test: "Add a feature called Auth system, high priority" → "Auth system"
+// test: "Create a task called Fix login bug, due tomorrow" → "Fix login bug"
+// test: "Make a new bug high priority" → stripped fallback gives empty → null (falls to set_priority via detectIntent)
 function extractCreateTitle(msg) {
   const quoted = extractQuoted(msg);
   if (quoted) return quoted;
 
-  // "called/named/titled <title>"
-  const named = /\b(?:called|named|titled)\s+(.+?)(?:\s+(?:with|due|by|for|assign|high|medium|low|critical|urgent|and|,)\b|$)/i.exec(msg);
+  // Pre-clean: strip "high/medium/low/critical/urgent priority" compound, and trailing bare level word.
+  // Bare level word mid-sentence without "priority" following stays (e.g. "High availability fix").
+  const cleaned = msg
+    .replace(/\b(high|medium|low|critical|urgent)\s+priority\b/gi, " ")
+    .replace(/\s+\b(high|medium|low|critical|urgent)\s*$/gi, " ")
+    .replace(/\s+/g, " ").trim();
+
+  // "called/named/titled <title>" — stop list no longer needs priority words (pre-cleaned above)
+  const named = /\b(?:called|named|titled)\s+(.+?)(?:\s+(?:with|due|by|for|assign|and)\b|,|$)/i.exec(cleaned);
   if (named) return named[1].trim();
 
   // "for <title>" — but NOT "for next/this/today/tomorrow/<weekday>" (those are dates)
-  const forTitle = /\bfor\s+(?!(?:next|this|today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b)(.+?)(?:\s+(?:with|due|by|assign|high|medium|low|critical|urgent|and|,)\b|\s+for\s+(?:next|this)\b|\s+(?:next|this)\s+(?:week|month)\b|$)/i.exec(msg);
+  const forTitle = /\bfor\s+(?!(?:next|this|today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b)(.+?)(?:\s+(?:with|due|by|assign|and)\b|\s+(?:next|this)\s+(?:week|month)\b|,|$)/i.exec(cleaned);
   if (forTitle) return forTitle[1].trim();
 
   // Strip the create verb + object word, keep the rest as the title
-  const stripped = msg
+  const stripped = cleaned
     .replace(/\b(?:create|add|make|new)\b\s*/gi, "")
     .replace(/\b(?:a|an|the)\s*/gi, "")
     .replace(/\b(?:task|bug|feature|ticket|story|item|issue)\b\s*/gi, "")
     .replace(/\s*\b(?:with|due|by)\b.*/i, "")
-    // only strip "for" when it precedes a date expression
     .replace(/\s*\bfor\s+(?:next|this|today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b.*/i, "")
-    .replace(/\s*\b(?:high|medium|low|critical|urgent)\b.*/i, "")
     .trim();
   return stripped || null;
 }
@@ -227,7 +244,15 @@ function extractPersonName(msg) {
   const m = /\bassign(?:ed)?\s+(?:it\s+)?to\s+([a-zA-Z][a-zA-Z ]{1,30})(?:\s+(?:and|with|due|for|,)|$)/i.exec(msg)
          || /\bto\s+([a-zA-Z][a-zA-Z ]{1,30})(?:\s+(?:and|with|due|for|,)|$)/i.exec(msg)
          || /\bfor\s+([a-zA-Z][a-zA-Z ]{1,30})(?:\s+(?:and|with|due|,)|$)/i.exec(msg);
-  return m ? m[1].trim() : null;
+  if (!m) return null;
+  let name = m[1].trim();
+  // Iteratively strip leading articles/filler so "the new guy Rohan" → "Rohan"
+  let prev;
+  do {
+    prev = name;
+    name = name.replace(/^(?:the|a|an|new|guy|person|user)\s+/i, "").trim();
+  } while (name !== prev);
+  return name || null;
 }
 
 // ── DB helpers ────────────────────────────────────────────────────────────────
@@ -242,7 +267,11 @@ async function checkAccess(workspaceId, userId) {
 async function findTask(titleHint, workspaceId) {
   if (!titleHint) return null;
   const r = await pool.query(
-    `SELECT t.*, u.name AS assignee_name
+    `SELECT t.*, u.name AS assignee_name,
+            CASE WHEN LOWER(t.title) = $3    THEN 'exact'
+                 WHEN LOWER(t.title) LIKE $4 THEN 'prefix'
+                 ELSE                              'fuzzy'
+            END AS "matchConfidence"
      FROM tasks t LEFT JOIN users u ON u.id = t.assigned_user_id
      WHERE t.workspace_id=$1 AND LOWER(t.title) LIKE $2
      ORDER BY
@@ -255,6 +284,18 @@ async function findTask(titleHint, workspaceId) {
      titleHint.toLowerCase(), `${titleHint.toLowerCase()}%`]
   );
   return r.rows[0] || null;
+}
+
+// Returns the confirmation-required payload for fuzzy matches before destructive actions.
+// Frontend stores action/task_id/params and sends them back when user says "yes/confirm".
+function fuzzyConfirmReply(task, intent, pendingParams) {
+  return {
+    reply: `Did you mean "${task.title}"? Say "yes" or "confirm" to proceed, or try again with the exact task name.`,
+    action: "confirm_required",
+    pending_action: intent,
+    pending_task_id: task.id,
+    pending_params: pendingParams,
+  };
 }
 
 async function findMember(nameHint, workspaceId) {
@@ -290,7 +331,54 @@ router.post("/command", auth, async (req, res) => {
       return res.status(403).json({ reply: "You don't have access to this workspace." });
     }
 
-    const intent = detectIntent(message);
+    // ── PENDING CONFIRMATION HANDLER ─────────────────────────────────────────
+    // When the client received action:"confirm_required" it stores the pending action
+    // and sends it back here on the next "yes / confirm / yeah / yep / do it" message.
+    const { pending_action, pending_task_id, pending_params } = req.body;
+    if (
+      pending_action && pending_task_id &&
+      /^\s*(yes|confirm|yeah|yep|do it|correct|sure|ok)\b/i.test(message.trim())
+    ) {
+      const confirmedTask = await pool.query(
+        `SELECT t.*, u.name AS assignee_name FROM tasks t
+         LEFT JOIN users u ON u.id = t.assigned_user_id
+         WHERE t.id=$1 AND t.workspace_id=$2`,
+        [pending_task_id, workspace_id]
+      );
+      const task = confirmedTask.rows[0];
+      if (!task) return res.json({ reply: "That task no longer exists." });
+
+      const io2 = req.app.get("io");
+
+      if (pending_action === "mark_done") {
+        await pool.query("UPDATE tasks SET status='done', completed_at=NOW() WHERE id=$1", [task.id]);
+        if (io2) io2.to(`workspace:${workspace_id}`).emit("task:updated", { ...task, status: "done" });
+        audit({ workspace_id, actor_id: req.user.id, action: "task_completed", target_type: "task", target_id: task.id, meta: { task_title: task.title, source: "jarvis_voice" } }).catch(() => {});
+        return res.json({ reply: `Marked "${task.title}" as done. ✅`, action: "mark_done", task });
+      }
+      if (pending_action === "delete_task") {
+        await pool.query("DELETE FROM tasks WHERE id=$1", [task.id]);
+        if (io2) io2.to(`workspace:${workspace_id}`).emit("task:deleted", { id: task.id, workspace_id });
+        audit({ workspace_id, actor_id: req.user.id, action: "task_deleted", target_type: "task", target_id: task.id, meta: { task_title: task.title, source: "jarvis_voice" } }).catch(() => {});
+        return res.json({ reply: `Deleted task "${task.title}".`, action: "delete_task" });
+      }
+      if (pending_action === "assign_task" && pending_params?.member_id) {
+        await pool.query("UPDATE tasks SET assigned_user_id=$1 WHERE id=$2", [pending_params.member_id, task.id]);
+        refreshUserWorkloadLog(pending_params.member_id, workspace_id).catch(() => {});
+        if (io2) io2.to(`workspace:${workspace_id}`).emit("task:updated", { ...task, assigned_user_id: pending_params.member_id, assignee_name: pending_params.member_name });
+        return res.json({ reply: `Assigned "${task.title}" to ${pending_params.member_name}.`, action: "assign_task", task });
+      }
+      if (pending_action === "set_status" && pending_params?.status) {
+        const st = pending_params.status;
+        const clearCompleted = st !== "done" ? ", completed_at=NULL" : ", completed_at=NOW()";
+        await pool.query(`UPDATE tasks SET status=$1${clearCompleted} WHERE id=$2`, [st, task.id]);
+        if (io2) io2.to(`workspace:${workspace_id}`).emit("task:updated", { ...task, status: st });
+        const label = st === "inprogress" ? "in progress" : st;
+        return res.json({ reply: `Moved "${task.title}" to ${label}.`, action: "set_status", task });
+      }
+    }
+
+    let intent = detectIntent(message);
     const io     = req.app.get("io");
 
     // ── CREATE TASK ───────────────────────────────────────────────────────────
@@ -353,6 +441,7 @@ router.post("/command", auth, async (req, res) => {
       if (!task) {
         return res.json({ reply: `I couldn't find a task matching "${titleHint || message}". Try quoting the exact task name.` });
       }
+      if (task.matchConfidence === "fuzzy") return res.json(fuzzyConfirmReply(task, "mark_done", {}));
 
       await pool.query(
         "UPDATE tasks SET status='done', completed_at=NOW() WHERE id=$1",
@@ -377,6 +466,7 @@ router.post("/command", auth, async (req, res) => {
 
       if (!task)   return res.json({ reply: `I couldn't find a task matching "${titleHint || message}".` });
       if (!status) return res.json({ reply: `What status should I use? Options: todo, in progress, done.` });
+      if (task.matchConfidence === "fuzzy") return res.json(fuzzyConfirmReply(task, "set_status", { status }));
 
       const clearCompleted = status !== "done" ? ", completed_at=NULL" : ", completed_at=NOW()";
       await pool.query(
@@ -407,6 +497,7 @@ router.post("/command", auth, async (req, res) => {
 
       if (!task)   return res.json({ reply: `I couldn't find a task matching "${titleHint || message}".` });
       if (!member) return res.json({ reply: `I couldn't find a workspace member matching "${personName || "that person"}".` });
+      if (task.matchConfidence === "fuzzy") return res.json(fuzzyConfirmReply(task, "assign_task", { member_id: member.id, member_name: member.name }));
 
       await pool.query("UPDATE tasks SET assigned_user_id=$1 WHERE id=$2", [member.id, task.id]);
       refreshUserWorkloadLog(member.id, workspace_id).catch(() => {});
@@ -459,6 +550,7 @@ router.post("/command", auth, async (req, res) => {
       const task = await findTask(titleHint, workspace_id);
 
       if (!task) return res.json({ reply: `I couldn't find a task matching "${titleHint || message}".` });
+      if (task.matchConfidence === "fuzzy") return res.json(fuzzyConfirmReply(task, "delete_task", {}));
 
       await pool.query("DELETE FROM tasks WHERE id=$1", [task.id]);
       if (io) io.to(`workspace:${workspace_id}`).emit("task:deleted", { id: task.id, workspace_id });
@@ -610,11 +702,93 @@ router.post("/command", auth, async (req, res) => {
         : `${tasks.length} unassigned task${tasks.length !== 1 ? "s" : ""}.`;
     }
 
-    else { // search / fallback
-      const term = message
+    else { // search / fallback — try LLM re-interpretation before raw keyword search
+      let searchTerm = message
         .replace(/\b(show|find|list|get|search|look for|tell me|what are|display|are there any)\b/gi, "")
         .replace(/\b(tasks?|please|the|a|an)\b/gi, "")
         .trim();
+
+      // LLM fallback: ask Claude to re-classify the intent or extract a cleaner search term.
+      // Hard 3-second timeout — if it takes longer we fall back to keyword search.
+      try {
+        const Anthropic = require("@anthropic-ai/sdk");
+        const anthropic = new Anthropic.default();
+        const llmStart  = Date.now();
+
+        const llmResult = await Promise.race([
+          anthropic.messages.create({
+            model: "claude-haiku-4-5-20251001",
+            max_tokens: 120,
+            system: `You are a task management intent classifier. Given a user voice command, respond ONLY with valid JSON (no markdown).
+Return: { "intent": "<one of: my_tasks|overdue|summary|high_priority|due_today|due_this_week|high_risk|blocked|unassigned|search>", "raw_query": "<clean keyword for DB search if intent is search, else null>" }`,
+            messages: [{ role: "user", content: message }],
+          }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("llm_timeout")), 3000)),
+        ]);
+
+        const latencyMs = Date.now() - llmStart;
+        const raw = llmResult.content?.[0]?.text?.trim() || "{}";
+        let parsed;
+        try { parsed = JSON.parse(raw); } catch { parsed = {}; }
+
+        audit({
+          workspace_id, actor_id: req.user.id, action: "jarvis_llm_fallback",
+          meta: { message, llm_intent: parsed.intent, latency_ms: latencyMs },
+        }).catch(() => {});
+
+        // If LLM returned a non-search intent, switch to it (handler re-runs next request via client retry is not needed — we re-run inline)
+        if (parsed.intent && parsed.intent !== "search") {
+          intent = parsed.intent;
+          // Re-enter the relevant query branch
+          const reQuery = async () => {
+            const intentHandlers = {
+              my_tasks: () => pool.query(
+                `SELECT t.*, u.name AS assignee_name FROM tasks t LEFT JOIN users u ON u.id=t.assigned_user_id WHERE t.workspace_id=$1 AND t.assigned_user_id=$2 AND t.status!='done' ORDER BY t.priority DESC, t.due_date ASC NULLS LAST LIMIT 10`,
+                [workspace_id, req.user.id]
+              ),
+              overdue: () => pool.query(
+                `SELECT t.*, u.name AS assignee_name FROM tasks t LEFT JOIN users u ON u.id=t.assigned_user_id WHERE t.workspace_id=$1 AND t.due_date < NOW() AND t.status!='done' ORDER BY t.due_date ASC LIMIT 10`,
+                [workspace_id]
+              ),
+              high_priority: () => pool.query(
+                `SELECT t.*, u.name AS assignee_name FROM tasks t LEFT JOIN users u ON u.id=t.assigned_user_id WHERE t.workspace_id=$1 AND t.priority IN ('critical','high') AND t.status!='done' ORDER BY CASE t.priority WHEN 'critical' THEN 0 WHEN 'high' THEN 1 END, t.due_date ASC LIMIT 10`,
+                [workspace_id]
+              ),
+              due_today: () => pool.query(
+                `SELECT t.*, u.name AS assignee_name FROM tasks t LEFT JOIN users u ON u.id=t.assigned_user_id WHERE t.workspace_id=$1 AND DATE(t.due_date)=CURRENT_DATE AND t.status!='done' ORDER BY t.priority DESC LIMIT 10`,
+                [workspace_id]
+              ),
+              unassigned: () => pool.query(
+                `SELECT t.* FROM tasks t WHERE t.workspace_id=$1 AND t.assigned_user_id IS NULL AND t.status!='done' ORDER BY t.priority DESC LIMIT 10`,
+                [workspace_id]
+              ),
+            };
+            const handler = intentHandlers[parsed.intent];
+            if (handler) {
+              const r2 = await handler();
+              return r2.rows;
+            }
+            return null;
+          };
+          const llmTasks = await reQuery();
+          if (llmTasks !== null) {
+            tasks  = llmTasks;
+            answer = tasks.length === 0 ? "No matching tasks found." : `${tasks.length} task${tasks.length !== 1 ? "s" : ""} found.`;
+            const reply2 = tasks.length > 0
+              ? `${answer} ${tasks.slice(0, 4).map(t => t.title + (t.assignee_name ? ` (${t.assignee_name})` : "")).join(", ")}${tasks.length > 4 ? `, and ${tasks.length - 4} more` : ""}.`
+              : answer;
+            return res.json({ reply: reply2, action: intent, tasks });
+          }
+        }
+
+        // LLM returned search — use its cleaner raw_query if available
+        if (parsed.raw_query) searchTerm = parsed.raw_query;
+
+      } catch (llmErr) {
+        if (llmErr.message !== "llm_timeout") console.warn("Jarvis LLM fallback error:", llmErr.message);
+        // continue with keyword search below
+      }
+
       const r = await pool.query(
         `SELECT t.*, u.name AS assignee_name FROM tasks t
          LEFT JOIN users u ON u.id=t.assigned_user_id
@@ -622,12 +796,12 @@ router.post("/command", auth, async (req, res) => {
            AND (LOWER(t.title) LIKE $2 OR LOWER(COALESCE(t.description,'')) LIKE $2)
            AND t.status!='done'
          ORDER BY t.priority DESC LIMIT 10`,
-        [workspace_id, `%${term.toLowerCase()}%`]
+        [workspace_id, `%${searchTerm.toLowerCase()}%`]
       );
       tasks  = r.rows;
       answer = tasks.length === 0
-        ? `No open tasks found matching "${term}".`
-        : `Found ${tasks.length} task${tasks.length !== 1 ? "s" : ""} matching "${term}".`;
+        ? `No open tasks found matching "${searchTerm}".`
+        : `Found ${tasks.length} task${tasks.length !== 1 ? "s" : ""} matching "${searchTerm}".`;
     }
 
     // Build a spoken-friendly reply (include up to 4 task names)

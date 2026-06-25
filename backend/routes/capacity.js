@@ -39,7 +39,7 @@ router.get("/me", auth, async (req, res) => {
       customer_facing_hours: 6,
       internal_hours:        2,
       travel_mode:           false,
-      travel_hours:          2,
+      travel_hours:          4,   // 4h = half day while travelling
       on_leave:              false,
       leave_start:           null,
       leave_end:             null,
@@ -56,7 +56,7 @@ router.get("/me", auth, async (req, res) => {
     // Return safe defaults so the UI still renders
     res.json({
       daily_hours: 8, customer_facing_hours: 6, internal_hours: 2,
-      travel_mode: false, travel_hours: 2, on_leave: false,
+      travel_mode: false, travel_hours: 4, on_leave: false,
       max_rfp: 1, max_proposals: 2, max_presentations: 2, max_upgrades: 2,
     });
   }
@@ -389,7 +389,7 @@ router.put("/requests/:id/approve", auth, async (req, res) => {
     } else if (cr.request_type === "travel") {
       await pool.query(
         "UPDATE user_capacity SET travel_mode=true, travel_hours=$1, updated_at=NOW() WHERE user_id=$2",
-        [cr.travel_hours || 2, cr.user_id]
+        [cr.travel_hours || 4, cr.user_id]
       );
     }
 

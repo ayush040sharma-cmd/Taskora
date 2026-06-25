@@ -61,7 +61,7 @@ function getTaskHours(taskType) {
 /** Effective daily capacity (respects leave / travel mode) */
 function effectiveCapacity(cap) {
   if (!cap || cap.on_leave)  return 0;
-  if (cap.travel_mode)       return Math.max(1, parseFloat(cap.travel_hours) || 2);
+  if (cap.travel_mode)       return Math.max(1, parseFloat(cap.travel_hours) || 4);
   return Math.max(1, parseFloat(cap.daily_hours) || DEFAULT_DAILY_HOURS);
 }
 

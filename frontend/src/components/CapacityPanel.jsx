@@ -11,7 +11,7 @@ const DEFAULTS = {
   customer_facing_hours: 6,
   internal_hours: 2,
   travel_mode: false,
-  travel_hours: 2,
+  travel_hours: 4,   // 4h default while travelling (half day)
   on_leave: false,
   leave_start: "",
   leave_end: "",
@@ -234,9 +234,38 @@ export default function CapacityPanel({ workspaceId }) {
           </div>
         </div>
 
+        {/* Live effective capacity banner */}
+        {(form.on_leave || form.travel_mode) && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 12,
+            background: form.on_leave ? "#fef2f2" : "#eff6ff",
+            border: `1px solid ${form.on_leave ? "#fca5a5" : "#93c5fd"}`,
+            borderRadius: 10, padding: "10px 14px", marginBottom: 12,
+          }}>
+            <span style={{ fontSize: 20 }}>{form.on_leave ? "🏖️" : "✈️"}</span>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 13, color: form.on_leave ? "#dc2626" : "#1d4ed8" }}>
+                {form.on_leave ? "On leave — effective capacity: 0 h/day" : `Travelling — effective capacity: ${form.travel_hours || 4} h/day`}
+              </div>
+              <div style={{ fontSize: 12, color: "#64748b", marginTop: 1 }}>
+                {form.on_leave
+                  ? `Normal capacity (${form.daily_hours}h) is suspended while on leave`
+                  : `Normal capacity reduced from ${form.daily_hours}h → ${form.travel_hours || 4}h while travelling`}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="cap-fields">
           <div className="cap-field">
-            <label className="cap-field-label">Total daily capacity</label>
+            <label className="cap-field-label">
+              Total daily capacity
+              {form.travel_mode && !form.on_leave && (
+                <span style={{ marginLeft: 6, fontSize: 11, color: "#6366f1", fontWeight: 600 }}>
+                  (travel: {form.travel_hours || 4}h active)
+                </span>
+              )}
+            </label>
             <div className="cap-field-input-wrap">
               <input className="modal-input" type="number" min={0} max={24} step={0.5}
                 value={form.daily_hours} onChange={set("daily_hours")} style={{ maxWidth: 90 }} />
@@ -261,22 +290,48 @@ export default function CapacityPanel({ workspaceId }) {
           </div>
         </div>
 
-        {/* Visual hours bar */}
+        {/* Visual hours bar — shows effective vs normal */}
         <div className="cap-hours-viz">
           <div className="cap-hours-bar">
-            <div className="cap-hours-seg cap-seg--customer"
-              style={{ width: `${Math.min(100, (form.customer_facing_hours / Math.max(form.daily_hours, 1)) * 100)}%` }}
-              title="Customer-facing"
-            />
-            <div className="cap-hours-seg cap-seg--internal"
-              style={{ width: `${Math.min(100, (form.internal_hours / Math.max(form.daily_hours, 1)) * 100)}%` }}
-              title="Internal"
-            />
+            {form.on_leave ? (
+              <div style={{ width: "100%", background: "#fee2e2", borderRadius: 4, height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ fontSize: 11, color: "#dc2626", fontWeight: 600 }}>0h — on leave</span>
+              </div>
+            ) : (
+              <>
+                <div className="cap-hours-seg cap-seg--customer"
+                  style={{ width: `${Math.min(100, (form.customer_facing_hours / Math.max(form.daily_hours, 1)) * 100)}%` }}
+                  title="Customer-facing"
+                />
+                <div className="cap-hours-seg cap-seg--internal"
+                  style={{ width: `${Math.min(100, (form.internal_hours / Math.max(form.daily_hours, 1)) * 100)}%` }}
+                  title="Internal"
+                />
+                {form.travel_mode && (
+                  <div style={{
+                    position: "absolute", top: 0, right: 0, bottom: 0,
+                    width: `${Math.min(100, ((form.daily_hours - (form.travel_hours || 4)) / Math.max(form.daily_hours, 1)) * 100)}%`,
+                    background: "repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(99,102,241,0.15) 4px,rgba(99,102,241,0.15) 8px)",
+                    borderRadius: "0 4px 4px 0",
+                  }} title={`${form.daily_hours - (form.travel_hours || 4)}h unavailable while travelling`} />
+                )}
+              </>
+            )}
           </div>
           <div className="cap-hours-legend">
-            <span><span className="cap-dot cap-dot--customer" />Customer ({form.customer_facing_hours}h)</span>
-            <span><span className="cap-dot cap-dot--internal" />Internal ({form.internal_hours}h)</span>
-            <span className="cap-hours-total">Total: {form.daily_hours}h</span>
+            {!form.on_leave && (
+              <>
+                <span><span className="cap-dot cap-dot--customer" />Customer ({form.customer_facing_hours}h)</span>
+                <span><span className="cap-dot cap-dot--internal" />Internal ({form.internal_hours}h)</span>
+              </>
+            )}
+            <span className="cap-hours-total">
+              {form.on_leave
+                ? "Effective: 0h (on leave)"
+                : form.travel_mode
+                  ? `Effective: ${form.travel_hours || 4}h / Normal: ${form.daily_hours}h`
+                  : `Total: ${form.daily_hours}h`}
+            </span>
           </div>
         </div>
 
@@ -314,10 +369,10 @@ export default function CapacityPanel({ workspaceId }) {
       <div className="cap-card">
         <div className="cap-card-header">
           <span className="cap-card-icon">✈️</span>
-          <div>
+          <div style={{ flex: 1 }}>
             <div className="cap-card-title">Travel Mode</div>
             <div className="cap-card-desc">
-              Reduces your daily capacity while you're on the road
+              Automatically reduces your daily capacity from <strong>{form.daily_hours}h → {form.travel_hours || 4}h</strong> while you're travelling
               {isAnalyst && <span style={{ color: "#6366f1", marginLeft: 6, fontSize: 12 }}>· requires manager approval</span>}
             </div>
           </div>
@@ -329,17 +384,43 @@ export default function CapacityPanel({ workspaceId }) {
           </label>
         </div>
 
+        {/* Always-visible quick reference */}
+        <div style={{ display: "flex", gap: 12, margin: "8px 0 4px", flexWrap: "wrap" }}>
+          <div style={{
+            flex: 1, minWidth: 120, background: form.travel_mode ? "#eff6ff" : "var(--column-bg)",
+            border: `1px solid ${form.travel_mode ? "#93c5fd" : "var(--border)"}`,
+            borderRadius: 8, padding: "10px 14px", textAlign: "center",
+          }}>
+            <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 2 }}>NORMAL</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: form.travel_mode ? "var(--text-muted)" : "var(--text-primary)" }}>{form.daily_hours}h</div>
+            <div style={{ fontSize: 11, color: "var(--text-muted)" }}>per day</div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", fontSize: 18, color: "var(--text-muted)" }}>→</div>
+          <div style={{
+            flex: 1, minWidth: 120, background: form.travel_mode ? "#dbeafe" : "var(--column-bg)",
+            border: `2px solid ${form.travel_mode ? "#3b82f6" : "var(--border)"}`,
+            borderRadius: 8, padding: "10px 14px", textAlign: "center",
+          }}>
+            <div style={{ fontSize: 11, color: form.travel_mode ? "#1d4ed8" : "var(--text-muted)", marginBottom: 2 }}>TRAVELLING</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: form.travel_mode ? "#1d4ed8" : "var(--text-muted)" }}>{form.travel_hours || 4}h</div>
+            <div style={{ fontSize: 11, color: form.travel_mode ? "#3b82f6" : "var(--text-muted)" }}>{form.travel_mode ? "✈️ active now" : "per day"}</div>
+          </div>
+        </div>
+
         {form.travel_mode && (
-          <div className="cap-travel-detail">
+          <div className="cap-travel-detail" style={{ marginTop: 12 }}>
             <div className="cap-travel-note">
-              ✈️ Travel mode is <strong>active</strong> — your capacity is reduced
+              ✈️ Travel mode is <strong>ON</strong> — workload engine now uses <strong>{form.travel_hours || 4}h/day</strong> for all calculations
             </div>
             <div className="cap-field" style={{ marginTop: 12 }}>
-              <label className="cap-field-label">Available hours while travelling</label>
+              <label className="cap-field-label">Hours available while travelling</label>
               <div className="cap-field-input-wrap">
                 <input className="modal-input" type="number" min={0} max={24} step={0.5}
-                  value={form.travel_hours || 2} onChange={set("travel_hours")} style={{ maxWidth: 90 }} />
+                  value={form.travel_hours || 4} onChange={set("travel_hours")} style={{ maxWidth: 90 }} />
                 <span className="cap-unit">h / day</span>
+              </div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
+                Changing this updates immediately — no full save needed after toggling.
               </div>
             </div>
           </div>

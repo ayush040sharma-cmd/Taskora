@@ -29,7 +29,6 @@ const SECTIONS = [
     views: [
       { id: "ai-risk",      icon: "🔥", label: "AI Risk Map" },
       { id: "analytics",    icon: "📈", label: "Analytics" },
-      { id: "chat",          icon: "🧠", label: "AI Assistant" },
       { id: "simulation",   icon: "🔬", label: "What-If Sim" },
     ],
   },

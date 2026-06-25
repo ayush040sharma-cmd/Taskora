@@ -57,29 +57,51 @@ function detectIntent(msg) {
     return "set_due_date";
   if (/\b(delete|remove|cancel|drop|trash)\b/i.test(msg))
     return "delete_task";
-  if (/\bmy (tasks?|work|tickets?)\b/i.test(msg) || /\bassigned to me\b/i.test(msg))
-    return "my_tasks";
-  if (/\boverdue\b/i.test(msg))
-    return "overdue";
+  if (
+    /\bmy (tasks?|work|tickets?)\b/i.test(msg) ||
+    /\bassigned to me\b/i.test(msg) ||
+    /\bwhat (am i|i am) (working on|doing|supposed to do|assigned)\b/i.test(msg) ||
+    /\bwhat (do i|should i|must i) (do|need to do|work on|pick up|handle)\b/i.test(msg) ||
+    /\bwhat'?s (on my plate|my workload|my work|my todo)\b/i.test(msg) ||
+    /\b(show|list|get) (me )?(my )?(open |current )?(tasks?|work|tickets?|assignments?)\b/i.test(msg)
+  ) return "my_tasks";
 
-  // "summarize", "summary", "overview" — remove trailing \b so partial words match
-  if (/\bsummar/i.test(msg) || /\b(overview|how many tasks|total tasks|workspace health)\b/i.test(msg))
-    return "summary";
+  if (
+    /\boverdue\b/i.test(msg) ||
+    /\bwhat'?s? (late|past due|missed deadline)\b/i.test(msg) ||
+    /\bwhat is (late|past due)\b/i.test(msg) ||
+    /\b(tasks?|tickets?|items?).{0,20}(late|past due|overdue)\b/i.test(msg)
+  ) return "overdue";
+
+  if (
+    /\bsummar/i.test(msg) ||
+    /\b(overview|how many tasks|total tasks|workspace health)\b/i.test(msg) ||
+    /\bhow (is|are) (the |this )?(project|workspace|team|things|we) (doing|going|looking)\b/i.test(msg) ||
+    /\bproject (status|health|update)\b/i.test(msg)
+  ) return "summary";
 
   // "high priority tasks", "high-priority", "critical tasks" — remove trailing \b
-  if (/\bhigh.{0,5}priorit/i.test(msg) || /\bcritical tasks?\b/i.test(msg))
-    return "high_priority";
+  if (
+    /\bhigh.{0,5}priorit/i.test(msg) || /\bcritical tasks?\b/i.test(msg) ||
+    /\bwhat'?s? (urgent|most important|top priority)\b/i.test(msg) ||
+    /\bwhat is (urgent|most important|top priority)\b/i.test(msg) ||
+    /\b(urgent|important) (tasks?|tickets?|items?)\b/i.test(msg)
+  ) return "high_priority";
 
-  if (/\bdue today\b/i.test(msg))
+  if (/\bdue today\b/i.test(msg) || /\bwhat'?s?.{0,10}due today\b/i.test(msg))
     return "due_today";
-  if (/\b(this week|due.?week)\b/i.test(msg))
-    return "due_this_week";
-  if (/\b(high.?risk|at.?risk|risky)\b/i.test(msg))
+  if (
+    /\b(this week|due.?week)\b/i.test(msg) ||
+    /\bwhat'?s?.{0,10}due this week\b/i.test(msg)
+  ) return "due_this_week";
+  if (/\b(high.?risk|at.?risk|risky)\b/i.test(msg) || /\bwhat'?s?.{0,10}(at risk|risky)\b/i.test(msg))
     return "high_risk";
-  if (/\b(blocked|stuck|depend)\b/i.test(msg))
+  if (/\b(blocked|stuck|depend)\b/i.test(msg) || /\bwhat'?s?.{0,10}blocked\b/i.test(msg))
     return "blocked";
-  if (/\bunassign(ed)?\b/i.test(msg))
-    return "unassigned";
+  if (
+    /\bunassign(ed)?\b/i.test(msg) ||
+    /\b(tasks?|tickets?).{0,20}(no one|nobody|not assigned|without (an )?owner|with no owner)\b/i.test(msg)
+  ) return "unassigned";
 
   return "search";
 }

@@ -91,7 +91,7 @@ export default function Sidebar({
             <rect x="18" y="2" width="4" height="20" rx="1.5" fill="#fff"/>
           </svg>
         </div>
-        <span className="sidebar-logo-text">Taskora</span>
+        <span className="sidebar-logo-text" style={{ color: '#E2E8F0', WebkitTextFillColor: '#E2E8F0', fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 15 }}>Taskora</span>
         <span className="sidebar-ai-badge">AI</span>
       </div>
 

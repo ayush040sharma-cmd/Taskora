@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import axios from "axios";
+import api from "../api/api";
 import { useAuth } from "../context/AuthContext";
-
-const API = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 const SCOPE_LABELS = { self: "Self", team: "Team", department: "Dept", project: "Project", org: "Org" };
 const SCOPE_ORDER  = ["self","team","department","project","org"];
@@ -59,7 +57,6 @@ function Modal({ onClose, width = 400, children }) {
 
 // ── Users Tab ─────────────────────────────────────────────────────────────────
 function UsersTab({ roles }) {
-  const { token } = useAuth();
   const [users, setUsers]         = useState([]);
   const [loading, setLoading]     = useState(true);
   const [search, setSearch]       = useState("");
@@ -69,17 +66,15 @@ function UsersTab({ roles }) {
   const [assignRole, setAssignRole] = useState("");
   const [assignExpiry, setAssignExpiry] = useState("");
 
-  const headers = { Authorization: `Bearer ${token}` };
-
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await axios.get(`${API}/api/user-mgmt/users`, { headers });
+      const { data } = await api.get("/user-mgmt/users");
       setUsers(data);
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => { load(); }, [load]);
 
@@ -91,7 +86,7 @@ function UsersTab({ roles }) {
   async function createUser() {
     if (!createForm.name || !createForm.email) return;
     try {
-      await axios.post(`${API}/api/user-mgmt/users`, createForm, { headers });
+      await api.post("/user-mgmt/users", createForm);
       setShowCreate(false);
       setCreateForm({ name: "", email: "", password: "" });
       load();
@@ -103,7 +98,7 @@ function UsersTab({ roles }) {
   async function toggleStatus(user) {
     const newStatus = user.status === "active" ? "suspended" : "active";
     try {
-      await axios.put(`${API}/api/user-mgmt/users/${user.id}`, { status: newStatus }, { headers });
+      await api.put(`/user-mgmt/users/${user.id}`, { status: newStatus });
       load();
     } catch (err) {
       alert(err.response?.data?.message || "Update failed");
@@ -113,10 +108,9 @@ function UsersTab({ roles }) {
   async function assignRoleToUser() {
     if (!assignRole) return;
     try {
-      await axios.post(
-        `${API}/api/user-mgmt/users/${assigning}/roles`,
-        { role_id: parseInt(assignRole), expires_at: assignExpiry || undefined },
-        { headers }
+      await api.post(
+        `/user-mgmt/users/${assigning}/roles`,
+        { role_id: parseInt(assignRole), expires_at: assignExpiry || undefined }
       );
       setAssigning(null); setAssignRole(""); setAssignExpiry(""); load();
     } catch (err) {
@@ -126,7 +120,7 @@ function UsersTab({ roles }) {
 
   async function removeRole(userId, roleId) {
     try {
-      await axios.delete(`${API}/api/user-mgmt/users/${userId}/roles/${roleId}`, { headers });
+      await api.delete(`/user-mgmt/users/${userId}/roles/${roleId}`);
       load();
     } catch (err) {
       alert(err.response?.data?.message || "Remove failed");
@@ -260,8 +254,6 @@ function UsersTab({ roles }) {
 
 // ── Roles Tab ─────────────────────────────────────────────────────────────────
 function RolesTab({ roles, catalog, reload }) {
-  const { token } = useAuth();
-  const headers = { Authorization: `Bearer ${token}` };
   const [editingRole, setEditingRole] = useState(null);
   const [editPerms, setEditPerms]     = useState({});
   const [showCreate, setShowCreate]   = useState(false);
@@ -274,7 +266,7 @@ function RolesTab({ roles, catalog, reload }) {
 
   async function openEdit(role) {
     try {
-      const { data } = await axios.get(`${API}/api/roles/${role.id}`, { headers });
+      const { data } = await api.get(`/roles/${role.id}`);
       const map = {};
       data.permissions.forEach(p => { map[p.permission_key] = p.data_scope; });
       setEditPerms(map);
@@ -287,7 +279,7 @@ function RolesTab({ roles, catalog, reload }) {
     setSaving(true);
     try {
       const permissions = Object.entries(editPerms).map(([key, data_scope]) => ({ key, data_scope }));
-      await axios.put(`${API}/api/roles/${editingRole.id}/permissions`, { permissions }, { headers });
+      await api.put(`/roles/${editingRole.id}/permissions`, { permissions });
       setEditingRole(null);
       reload();
     } catch (err) {
@@ -301,7 +293,7 @@ function RolesTab({ roles, catalog, reload }) {
     if (!createForm.display_name) return;
     try {
       const name = createForm.display_name.toLowerCase().replace(/[^a-z0-9_]/g, "_");
-      await axios.post(`${API}/api/roles`, { ...createForm, name }, { headers });
+      await api.post(`/roles`, { ...createForm, name });
       setShowCreate(false);
       setCreateForm({ display_name: "", description: "", color: "#6366f1" });
       reload();
@@ -313,7 +305,7 @@ function RolesTab({ roles, catalog, reload }) {
   async function cloneRole() {
     if (!cloneName || !cloneSource) return;
     try {
-      await axios.post(`${API}/api/roles/${cloneSource.id}/clone`, { display_name: cloneName }, { headers });
+      await api.post(`/roles/${cloneSource.id}/clone`, { display_name: cloneName });
       setCloneSource(null); setCloneName(""); reload();
     } catch (err) {
       alert(err.response?.data?.message || "Clone failed");
@@ -323,7 +315,7 @@ function RolesTab({ roles, catalog, reload }) {
   async function deleteRole(role) {
     if (!window.confirm(`Delete role "${role.display_name}"?`)) return;
     try {
-      await axios.delete(`${API}/api/roles/${role.id}`, { headers });
+      await api.delete(`/roles/${role.id}`);
       reload();
     } catch (err) {
       alert(err.response?.data?.message || "Delete failed");
@@ -516,21 +508,19 @@ function RolesTab({ roles, catalog, reload }) {
 
 // ── Audit Log Tab ─────────────────────────────────────────────────────────────
 function AuditTab() {
-  const { token } = useAuth();
   const [logs, setLogs]       = useState([]);
   const [loading, setLoading] = useState(true);
-  const headers = { Authorization: `Bearer ${token}` };
 
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await axios.get(`${API}/api/user-mgmt/audit`, { headers });
+        const { data } = await api.get("/user-mgmt/audit");
         setLogs(data);
       } finally {
         setLoading(false);
       }
     })();
-  }, [token]);
+  }, []);
 
   return (
     <div>
@@ -567,8 +557,6 @@ function AuditTab() {
 
 // ── Departments & Teams Tab ───────────────────────────────────────────────────
 function DepartmentsTeamsTab() {
-  const { token } = useAuth();
-  const headers = { Authorization: `Bearer ${token}` };
   const [depts, setDepts]           = useState([]);
   const [teams, setTeams]           = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -582,20 +570,20 @@ function DepartmentsTeamsTab() {
     setLoading(true);
     try {
       const [dRes, tRes] = await Promise.all([
-        axios.get(`${API}/api/user-mgmt/departments`, { headers }),
-        axios.get(`${API}/api/user-mgmt/teams`, { headers }),
+        api.get("/user-mgmt/departments"),
+        api.get("/user-mgmt/teams"),
       ]);
       setDepts(dRes.data); setTeams(tRes.data);
     } catch {}
     finally { setLoading(false); }
-  }, [token]);
+  }, []);
 
   useEffect(() => { load(); }, [load]);
 
   async function createDept() {
     if (!deptForm.name) return;
     try {
-      await axios.post(`${API}/api/user-mgmt/departments`, { workspace_id: 1, name: deptForm.name }, { headers });
+      await api.post("/user-mgmt/departments", { workspace_id: 1, name: deptForm.name });
       setShowDeptForm(false); setDeptForm({ name: "" }); load();
     } catch (err) { alert(err.response?.data?.message || "Failed"); }
   }
@@ -603,7 +591,7 @@ function DepartmentsTeamsTab() {
   async function createTeam() {
     if (!teamForm.name) return;
     try {
-      await axios.post(`${API}/api/user-mgmt/teams`, { workspace_id: 1, name: teamForm.name, department_id: teamForm.department_id || undefined }, { headers });
+      await api.post("/user-mgmt/teams", { workspace_id: 1, name: teamForm.name, department_id: teamForm.department_id || undefined });
       setShowTeamForm(false); setTeamForm({ name: "", department_id: "" }); load();
     } catch (err) { alert(err.response?.data?.message || "Failed"); }
   }
@@ -708,22 +696,21 @@ function DepartmentsTeamsTab() {
 
 // ── Root Component ────────────────────────────────────────────────────────────
 export default function AccessControlPanel({ hideHeader = false }) {
-  const { token, refreshSidebarViews } = useAuth();
+  const { refreshSidebarViews } = useAuth();
   const [tab, setTab]         = useState("users");
   const [roles, setRoles]     = useState([]);
   const [catalog, setCatalog] = useState([]);
-  const headers = { Authorization: `Bearer ${token}` };
 
   const loadRoles = useCallback(async () => {
     try {
       const [rolesRes, catalogRes] = await Promise.all([
-        axios.get(`${API}/api/roles`, { headers }),
-        axios.get(`${API}/api/roles/permissions/all`, { headers }),
+        api.get("/roles"),
+        api.get("/roles/permissions/all"),
       ]);
       setRoles(rolesRes.data);
       setCatalog(catalogRes.data);
     } catch {}
-  }, [token]);
+  }, []);
 
   useEffect(() => { loadRoles(); }, [loadRoles]);
 

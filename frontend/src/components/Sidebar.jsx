@@ -41,6 +41,14 @@ const SECTIONS = [
       { id: "integrations", icon: "🔗", label: "Integrations" },
     ],
   },
+  {
+    label: "ADMIN",
+    views: [
+      { id: "enterprise-approvals", icon: "📨", label: "Approval Center" },
+      { id: "access-control",       icon: "🔐", label: "Access Control" },
+      { id: "notifications",        icon: "🔔", label: "Notifications" },
+    ],
+  },
 ];
 
 function getInitials(name = "") {

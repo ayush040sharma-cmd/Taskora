@@ -84,8 +84,7 @@ export default function About() {
               <div style={S.quoteCard}>
                 <div style={S.quoteIcon}>"</div>
                 <p style={S.quoteText}>
-                  The board showed green. Reality was red. We needed a system
-                  that could see what humans miss.
+                  Taskora was built on a simple belief: teams shouldn’t have to rely on fragmented updates, manual follow-ups, and incomplete visibility to get work done. We help bring clarity, accountability, and momentum to execution.
                 </p>
                 <div style={S.quoteAuthor}>
                   <div style={S.avatar}>AS</div>

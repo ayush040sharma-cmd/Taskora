@@ -20,6 +20,7 @@ const PORT       = process.env.PORT || 3001;
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
   "http://localhost:5174",
+  "http://localhost:5175",
   "http://localhost:3000",
   ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
 ];
@@ -124,6 +125,9 @@ app.set("io", io);
 alertService.setIO(io);
 require("./services/notificationService").setIO(io);
 
+const approvalEngine = require("./routes/approval-engine");
+approvalEngine.setIO(io);
+
 io.on("connection", (socket) => {
   logger.info(`Socket connected: user=${socket.user?.id}`);
 
@@ -172,6 +176,9 @@ app.use("/api/firewall",      require("./routes/firewall"));
 app.use("/api/admin",         require("./routes/admin"));
 app.use("/api/payments",      require("./routes/payments"));
 app.use("/api/seed",          require("./routes/seed"));
+app.use("/api/roles",         require("./routes/roles"));
+app.use("/api/user-mgmt",     require("./routes/user-management"));
+app.use("/api/approvals-engine", approvalEngine.router);
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get("/health", async (req, res) => {

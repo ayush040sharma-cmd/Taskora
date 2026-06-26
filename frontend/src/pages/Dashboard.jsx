@@ -38,6 +38,9 @@ import SecurityDashboard from "../components/SecurityDashboard";
 import DependencyGraph from "../components/DependencyGraph";
 import CollaborationScore from "../components/CollaborationScore";
 import OnboardingChecklist from "../components/onboarding/OnboardingChecklist";
+import AccessControlPanel from "../components/AccessControlPanel";
+import EnterpriseApprovalCenter from "../components/EnterpriseApprovalCenter";
+import NotificationCenter from "../components/NotificationCenter";
 
 
 // ── Undo Toast ────────────────────────────────────────────────────
@@ -867,6 +870,27 @@ export default function Dashboard() {
           {view === "approvals" && (
             <ErrorBoundary inline viewName="Approvals">
               <ApprovalsView workspaceId={currentWorkspace?.id} />
+            </ErrorBoundary>
+          )}
+
+          {/* ── Enterprise Approval Center ── */}
+          {view === "enterprise-approvals" && (
+            <ErrorBoundary inline viewName="Approval Center">
+              <EnterpriseApprovalCenter />
+            </ErrorBoundary>
+          )}
+
+          {/* ── Access Control ── */}
+          {view === "access-control" && (
+            <ErrorBoundary inline viewName="Access Control">
+              <AccessControlPanel />
+            </ErrorBoundary>
+          )}
+
+          {/* ── Notification Center ── */}
+          {view === "notifications" && (
+            <ErrorBoundary inline viewName="Notifications">
+              <NotificationCenter />
             </ErrorBoundary>
           )}
 

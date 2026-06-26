@@ -40,8 +40,8 @@ const PLATFORM_PERMISSIONS = {
 };
 
 // Sidebar views restricted by minimum role
-const MANAGER_ONLY_VIEWS = new Set(["manager", "workload", "analytics", "simulation"]);
-const ADMIN_ONLY_VIEWS   = new Set([]);  // no dedicated admin sidebar view yet
+const MANAGER_ONLY_VIEWS = new Set(["manager", "workload", "analytics", "simulation", "enterprise-approvals"]);
+const ADMIN_ONLY_VIEWS   = new Set(["access-control"]);
 
 const ROLE_LEVELS = { team_member: 1, manager: 2, super_boss: 3 };
 

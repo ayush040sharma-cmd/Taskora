@@ -27,8 +27,8 @@ router.get("/status", (req, res) => res.json({ ok: true, ts: Date.now() }));
 router.post("/register", authLimiter, validate(schemas.register), async (req, res) => {
   const { name, email, password, role } = req.body;
 
-  // Only allow safe role values; default to manager for solo/business/manager users
-  const safeRole = ["manager", "member"].includes(role) ? role : "manager";
+  // Every new registrant becomes super_boss — they created their own org so they own it
+  const safeRole = "super_boss";
 
   try {
     const existing = await pool.query("SELECT id FROM users WHERE email = $1", [email]);
@@ -46,6 +46,16 @@ router.post("/register", authLimiter, validate(schemas.register), async (req, re
       [name, email, password_hash, safeRole]
     );
     const user = userResult.rows[0];
+
+    // Assign super_admin enterprise role so requirePerm() works without legacy fallback
+    try {
+      await pool.query(
+        `INSERT INTO user_roles (user_id, role_id)
+         SELECT $1, id FROM roles WHERE name = 'super_admin'
+         ON CONFLICT DO NOTHING`,
+        [user.id]
+      );
+    } catch {}
 
     // Create default workspace for new user
     await pool.query(

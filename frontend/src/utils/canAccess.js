@@ -40,7 +40,7 @@ const PLATFORM_PERMISSIONS = {
 };
 
 // Sidebar views restricted by minimum role
-const MANAGER_ONLY_VIEWS = new Set(["manager", "workload", "analytics", "simulation"]);
+const MANAGER_ONLY_VIEWS = new Set(["manager", "workload", "members", "approvals", "ai-risk", "analytics", "simulation"]);
 const ADMIN_ONLY_VIEWS   = new Set([]);
 
 const ROLE_LEVELS = { team_member: 1, manager: 2, super_boss: 3 };
@@ -57,10 +57,11 @@ export function hasPermission(permission, role = "team_member") {
 
 /**
  * Check if a sidebar view should be visible for this platform role.
- * @param {string} viewId — sidebar view id e.g. 'manager', 'board'
- * @param {string} role   — users.role
+ * customViews (optional Set) — view IDs granted via custom roles from the backend.
+ * A custom-role grant can unlock restricted views regardless of platform role.
  */
-export function canViewSidebar(viewId, role = "team_member") {
+export function canViewSidebar(viewId, role = "team_member", customViews = null) {
+  if (customViews && customViews.has(viewId)) return true;
   if (ADMIN_ONLY_VIEWS.has(viewId))   return role === "super_boss";
   if (MANAGER_ONLY_VIEWS.has(viewId)) return (ROLE_LEVELS[role] || 0) >= ROLE_LEVELS.manager;
   return true;

@@ -765,7 +765,7 @@ export default function ManagerDashboard({ workspaceId, workspaceName, onNavigat
         <ManagerOverview
           workspaceId={workspaceId}
           team={team}
-          onNavigateToSimulate={() => { if (onNavigate) onNavigate("simulate"); }}
+          onNavigateToSimulate={() => { if (onNavigate) onNavigate("simulation"); }}
         />
       )}
 

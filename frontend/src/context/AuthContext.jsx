@@ -14,7 +14,26 @@ export function AuthProvider({ children }) {
       return null;
     }
   });
+  const [sidebarViews, setSidebarViews] = useState(() => {
+    try {
+      const stored = localStorage.getItem("sidebar-views");
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
   const demoTimerRef = useRef(null);
+
+  const fetchSidebarViews = async () => {
+    try {
+      const { data } = await api.get("/auth/me/sidebar-views");
+      const viewSet = new Set(data.views || []);
+      localStorage.setItem("sidebar-views", JSON.stringify([...viewSet]));
+      setSidebarViews(viewSet);
+    } catch {
+      setSidebarViews(new Set());
+    }
+  };
 
   // Clear any existing demo timer
   const clearDemoTimer = () => {
@@ -67,8 +86,9 @@ export function AuthProvider({ children }) {
     const { data } = await api.post("/auth/login", { email, password });
     localStorage.setItem("token", data.token);
     localStorage.setItem("user", JSON.stringify(data.user));
-    resetSocket(); // force new socket with fresh token
+    resetSocket();
     setUser(data.user);
+    fetchSidebarViews();
     return data.user;
   };
 
@@ -77,6 +97,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem("token", data.token);
     localStorage.setItem("user", JSON.stringify(data.user));
     setUser(data.user);
+    fetchSidebarViews();
     return data.user;
   };
 
@@ -84,7 +105,7 @@ export function AuthProvider({ children }) {
   const loginWithToken = (token, userData, isDemo = false) => {
     localStorage.setItem("token", token);
     localStorage.setItem("user", JSON.stringify(userData));
-    resetSocket(); // force new socket with fresh token
+    resetSocket();
     if (isDemo) {
       localStorage.setItem("demo_session", String(Date.now()));
       startDemoTimer();
@@ -93,6 +114,7 @@ export function AuthProvider({ children }) {
       clearDemoTimer();
     }
     setUser(userData);
+    fetchSidebarViews();
   };
 
   const updateUser = (updatedUser) => {
@@ -102,16 +124,18 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     clearDemoTimer();
-    resetSocket(); // disconnect before clearing token
+    resetSocket();
     try { await api.post("/auth/logout"); } catch {}
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     localStorage.removeItem("demo_session");
+    localStorage.removeItem("sidebar-views");
     setUser(null);
+    setSidebarViews(new Set());
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, updateUser, loginWithToken }}>
+    <AuthContext.Provider value={{ user, login, register, logout, updateUser, loginWithToken, sidebarViews, refreshSidebarViews: fetchSidebarViews }}>
       {children}
     </AuthContext.Provider>
   );

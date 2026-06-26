@@ -7,27 +7,65 @@ const API = import.meta.env.VITE_API_URL || "http://localhost:3001";
 const SCOPE_LABELS = { self: "Self", team: "Team", department: "Dept", project: "Project", org: "Org" };
 const SCOPE_ORDER  = ["self","team","department","project","org"];
 
-function Badge({ color, label }) {
+// ── Shared style tokens ──────────────────────────────────────────────────────
+const S = {
+  btn: {
+    primary: { background: "#4f46e5", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" },
+    ghost:   { background: "#fff", color: "#374151", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 16px", fontSize: 13, cursor: "pointer" },
+    link:    { background: "none", border: "none", color: "#4f46e5", fontSize: 12, cursor: "pointer", textDecoration: "underline", padding: 0 },
+    linkGray:{ background: "none", border: "none", color: "#6b7280", fontSize: 12, cursor: "pointer", textDecoration: "underline", padding: 0 },
+    linkRed: { background: "none", border: "none", color: "#ef4444", fontSize: 12, cursor: "pointer", textDecoration: "underline", padding: 0 },
+  },
+  input: { width: "100%", boxSizing: "border-box", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 12px", fontSize: 13, outline: "none" },
+  badge: {
+    green:  { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "#dcfce7", color: "#15803d" },
+    red:    { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "#fee2e2", color: "#dc2626" },
+    blue:   { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "#dbeafe", color: "#1d4ed8" },
+    purple: { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "#ede9fe", color: "#7c3aed" },
+    orange: { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "#ffedd5", color: "#9a3412" },
+    sky:    { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "#e0f2fe", color: "#0369a1" },
+    yellow: { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "#fef9c3", color: "#854d0e" },
+    teal:   { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "#ccfbf1", color: "#0f766e" },
+  },
+  overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 },
+  modal:   { background: "#fff", borderRadius: 14, padding: 24, boxShadow: "0 20px 60px rgba(0,0,0,0.2)" },
+  card:    { border: "1px solid #e5e7eb", borderRadius: 12, padding: 16 },
+  section: { fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 },
+  divider: { borderBottom: "1px solid #f3f4f6" },
+};
+
+const ACTION_BADGE = {
+  role_created:              S.badge.green,
+  role_deleted:              S.badge.red,
+  role_assigned:             S.badge.blue,
+  role_removed:              S.badge.orange,
+  override_set:              S.badge.purple,
+  role_permissions_updated:  S.badge.blue,
+  user_created:              S.badge.teal,
+  role_cloned:               S.badge.sky,
+  role_updated:              S.badge.yellow,
+};
+
+// ── Modal wrapper ────────────────────────────────────────────────────────────
+function Modal({ onClose, width = 400, children }) {
   return (
-    <span
-      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium text-white"
-      style={{ backgroundColor: color }}
-    >
-      {label}
-    </span>
+    <div style={S.overlay} onClick={onClose}>
+      <div style={{ ...S.modal, width, maxWidth: "90vw" }} onClick={e => e.stopPropagation()}>
+        {children}
+      </div>
+    </div>
   );
 }
 
 // ── Users Tab ─────────────────────────────────────────────────────────────────
 function UsersTab({ roles }) {
   const { token } = useAuth();
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState(null);
+  const [users, setUsers]         = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [search, setSearch]       = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState({ name: "", email: "", password: "" });
-  const [assigning, setAssigning] = useState(null); // userId
+  const [assigning, setAssigning] = useState(null);
   const [assignRole, setAssignRole] = useState("");
   const [assignExpiry, setAssignExpiry] = useState("");
 
@@ -80,10 +118,7 @@ function UsersTab({ roles }) {
         { role_id: parseInt(assignRole), expires_at: assignExpiry || undefined },
         { headers }
       );
-      setAssigning(null);
-      setAssignRole("");
-      setAssignExpiry("");
-      load();
+      setAssigning(null); setAssignRole(""); setAssignExpiry(""); load();
     } catch (err) {
       alert(err.response?.data?.message || "Assign failed");
     }
@@ -99,29 +134,24 @@ function UsersTab({ roles }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {/* Toolbar */}
-      <div className="flex gap-3 items-center">
+      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
         <input
           type="text"
-          placeholder="Search users..."
+          placeholder="Search users…"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="flex-1 border rounded-lg px-3 py-2 text-sm"
+          style={{ ...S.input, flex: 1, width: "auto" }}
         />
-        <button
-          onClick={() => setShowCreate(true)}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700"
-        >
-          + Add User
-        </button>
+        <button onClick={() => setShowCreate(true)} style={S.btn.primary}>+ Add User</button>
       </div>
 
-      {/* Create modal */}
+      {/* Create user modal */}
       {showCreate && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-96 shadow-xl space-y-4">
-            <h3 className="font-semibold text-lg">Create User</h3>
+        <Modal onClose={() => setShowCreate(false)}>
+          <h3 style={{ fontWeight: 700, fontSize: 17, margin: "0 0 16px" }}>Create User</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {["name","email","password"].map(f => (
               <input
                 key={f}
@@ -129,28 +159,28 @@ function UsersTab({ roles }) {
                 placeholder={f.charAt(0).toUpperCase() + f.slice(1)}
                 value={createForm[f]}
                 onChange={e => setCreateForm(p => ({ ...p, [f]: e.target.value }))}
-                className="w-full border rounded-lg px-3 py-2 text-sm"
+                style={S.input}
               />
             ))}
-            <div className="flex gap-2 justify-end">
-              <button onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm border rounded-lg">Cancel</button>
-              <button onClick={createUser} className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg">Create</button>
-            </div>
           </div>
-        </div>
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
+            <button onClick={() => setShowCreate(false)} style={S.btn.ghost}>Cancel</button>
+            <button onClick={createUser} style={S.btn.primary}>Create</button>
+          </div>
+        </Modal>
       )}
 
       {/* Assign role modal */}
       {assigning && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-80 shadow-xl space-y-4">
-            <h3 className="font-semibold text-lg">Assign Role</h3>
+        <Modal onClose={() => setAssigning(null)} width={340}>
+          <h3 style={{ fontWeight: 700, fontSize: 17, margin: "0 0 16px" }}>Assign Role</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <select
               value={assignRole}
               onChange={e => setAssignRole(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 text-sm"
+              style={S.input}
             >
-              <option value="">Select role...</option>
+              <option value="">Select role…</option>
               {roles.map(r => (
                 <option key={r.id} value={r.id}>{r.display_name}</option>
               ))}
@@ -160,72 +190,61 @@ function UsersTab({ roles }) {
               placeholder="Expires at (optional)"
               value={assignExpiry}
               onChange={e => setAssignExpiry(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 text-sm"
+              style={S.input}
             />
-            <div className="flex gap-2 justify-end">
-              <button onClick={() => setAssigning(null)} className="px-4 py-2 text-sm border rounded-lg">Cancel</button>
-              <button onClick={assignRoleToUser} className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg">Assign</button>
-            </div>
           </div>
-        </div>
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
+            <button onClick={() => setAssigning(null)} style={S.btn.ghost}>Cancel</button>
+            <button onClick={assignRoleToUser} style={S.btn.primary}>Assign</button>
+          </div>
+        </Modal>
       )}
 
-      {/* Table */}
+      {/* Users table */}
       {loading ? (
-        <div className="text-center text-gray-400 py-12">Loading users...</div>
+        <div style={{ textAlign: "center", color: "#9ca3af", padding: "48px 0" }}>Loading users…</div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
-              <tr>
+        <div style={{ overflowX: "auto", borderRadius: 8, border: "1px solid #e5e7eb" }}>
+          <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ background: "#f9fafb" }}>
                 {["User","Roles","Status","Actions"].map(h => (
-                  <th key={h} className="text-left px-4 py-3">{h}</th>
+                  <th key={h} style={{ textAlign: "left", padding: "10px 14px", fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.04em", borderBottom: "1px solid #e5e7eb" }}>{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filtered.map(u => (
-                <tr key={u.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-gray-900">{u.name}</div>
-                    <div className="text-gray-400 text-xs">{u.email}</div>
-                    {u.job_title && <div className="text-gray-400 text-xs">{u.job_title}</div>}
+            <tbody>
+              {filtered.map((u, i) => (
+                <tr key={u.id} style={{ borderBottom: i < filtered.length - 1 ? "1px solid #f3f4f6" : "none" }}>
+                  <td style={{ padding: "10px 14px" }}>
+                    <div style={{ fontWeight: 600, color: "#111827" }}>{u.name}</div>
+                    <div style={{ fontSize: 11, color: "#9ca3af" }}>{u.email}</div>
+                    {u.job_title && <div style={{ fontSize: 11, color: "#9ca3af" }}>{u.job_title}</div>}
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
+                  <td style={{ padding: "10px 14px" }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                       {(u.roles || []).map(r => (
                         <span
                           key={r.id}
-                          className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full text-white"
-                          style={{ backgroundColor: r.color || "#6366f1" }}
+                          style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, padding: "2px 6px", borderRadius: 99, color: "#fff", background: r.color || "#4f46e5" }}
                         >
                           {r.display_name}
                           <button
                             onClick={() => removeRole(u.id, r.id)}
-                            className="opacity-70 hover:opacity-100 text-white leading-none"
+                            style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", lineHeight: 1, padding: 0, opacity: 0.8, fontSize: 12 }}
                           >×</button>
                         </span>
                       ))}
-                      <button
-                        onClick={() => setAssigning(u.id)}
-                        className="text-xs text-indigo-600 hover:underline"
-                      >+ assign</button>
+                      <button onClick={() => setAssigning(u.id)} style={S.btn.link}>+ assign</button>
                     </div>
                   </td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      u.status === "active"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-red-100 text-red-600"
-                    }`}>
+                  <td style={{ padding: "10px 14px" }}>
+                    <span style={u.status === "active" ? S.badge.green : S.badge.red}>
                       {u.status || "active"}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={() => toggleStatus(u)}
-                      className="text-xs text-gray-500 hover:text-gray-800 underline"
-                    >
+                  <td style={{ padding: "10px 14px" }}>
+                    <button onClick={() => toggleStatus(u)} style={S.btn.linkGray}>
                       {u.status === "active" ? "Deactivate" : "Activate"}
                     </button>
                   </td>
@@ -243,8 +262,8 @@ function UsersTab({ roles }) {
 function RolesTab({ roles, catalog, reload }) {
   const { token } = useAuth();
   const headers = { Authorization: `Bearer ${token}` };
-  const [editingRole, setEditingRole] = useState(null); // full role with permissions
-  const [editPerms, setEditPerms]     = useState({});   // permKey → scope
+  const [editingRole, setEditingRole] = useState(null);
+  const [editPerms, setEditPerms]     = useState({});
   const [showCreate, setShowCreate]   = useState(false);
   const [createForm, setCreateForm]   = useState({ display_name: "", description: "", color: "#6366f1" });
   const [cloneSource, setCloneSource] = useState(null);
@@ -281,7 +300,8 @@ function RolesTab({ roles, catalog, reload }) {
   async function createRole() {
     if (!createForm.display_name) return;
     try {
-      await axios.post(`${API}/api/roles`, createForm, { headers });
+      const name = createForm.display_name.toLowerCase().replace(/[^a-z0-9_]/g, "_");
+      await axios.post(`${API}/api/roles`, { ...createForm, name }, { headers });
       setShowCreate(false);
       setCreateForm({ display_name: "", description: "", color: "#6366f1" });
       reload();
@@ -294,9 +314,7 @@ function RolesTab({ roles, catalog, reload }) {
     if (!cloneName || !cloneSource) return;
     try {
       await axios.post(`${API}/api/roles/${cloneSource.id}/clone`, { display_name: cloneName }, { headers });
-      setCloneSource(null);
-      setCloneName("");
-      reload();
+      setCloneSource(null); setCloneName(""); reload();
     } catch (err) {
       alert(err.response?.data?.message || "Clone failed");
     }
@@ -315,11 +333,7 @@ function RolesTab({ roles, catalog, reload }) {
   function togglePerm(key) {
     setEditPerms(prev => {
       const next = { ...prev };
-      if (next[key]) {
-        delete next[key];
-      } else {
-        next[key] = "self";
-      }
+      if (next[key]) { delete next[key]; } else { next[key] = "self"; }
       return next;
     });
   }
@@ -329,112 +343,108 @@ function RolesTab({ roles, catalog, reload }) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex gap-2">
-        <button
-          onClick={() => setShowCreate(true)}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700"
-        >
-          + Create Role
-        </button>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div>
+        <button onClick={() => setShowCreate(true)} style={S.btn.primary}>+ Create Role</button>
       </div>
 
       {/* Create modal */}
       {showCreate && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-96 shadow-xl space-y-4">
-            <h3 className="font-semibold text-lg">Create Custom Role</h3>
+        <Modal onClose={() => setShowCreate(false)}>
+          <h3 style={{ fontWeight: 700, fontSize: 17, margin: "0 0 16px" }}>Create Custom Role</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <input
               placeholder="Display name"
               value={createForm.display_name}
               onChange={e => setCreateForm(p => ({ ...p, display_name: e.target.value }))}
-              className="w-full border rounded-lg px-3 py-2 text-sm"
+              style={S.input}
             />
             <textarea
               placeholder="Description (optional)"
               value={createForm.description}
               onChange={e => setCreateForm(p => ({ ...p, description: e.target.value }))}
               rows={2}
-              className="w-full border rounded-lg px-3 py-2 text-sm"
+              style={{ ...S.input, resize: "vertical" }}
             />
-            <div className="flex items-center gap-3">
-              <label className="text-sm text-gray-600">Color</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <label style={{ fontSize: 13, color: "#374151" }}>Color</label>
               <input
                 type="color"
                 value={createForm.color}
                 onChange={e => setCreateForm(p => ({ ...p, color: e.target.value }))}
-                className="w-10 h-8 rounded cursor-pointer"
+                style={{ width: 40, height: 32, borderRadius: 6, cursor: "pointer", border: "1px solid #e5e7eb", padding: 2 }}
               />
             </div>
-            <div className="flex gap-2 justify-end">
-              <button onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm border rounded-lg">Cancel</button>
-              <button onClick={createRole} className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg">Create</button>
-            </div>
           </div>
-        </div>
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
+            <button onClick={() => setShowCreate(false)} style={S.btn.ghost}>Cancel</button>
+            <button onClick={createRole} style={S.btn.primary}>Create</button>
+          </div>
+        </Modal>
       )}
 
       {/* Clone modal */}
       {cloneSource && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-80 shadow-xl space-y-4">
-            <h3 className="font-semibold text-lg">Clone "{cloneSource.display_name}"</h3>
-            <input
-              placeholder="New role name"
-              value={cloneName}
-              onChange={e => setCloneName(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 text-sm"
-            />
-            <div className="flex gap-2 justify-end">
-              <button onClick={() => setCloneSource(null)} className="px-4 py-2 text-sm border rounded-lg">Cancel</button>
-              <button onClick={cloneRole} className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg">Clone</button>
-            </div>
+        <Modal onClose={() => setCloneSource(null)} width={340}>
+          <h3 style={{ fontWeight: 700, fontSize: 17, margin: "0 0 16px" }}>Clone "{cloneSource.display_name}"</h3>
+          <input
+            placeholder="New role name"
+            value={cloneName}
+            onChange={e => setCloneName(e.target.value)}
+            style={{ ...S.input, marginBottom: 16 }}
+          />
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <button onClick={() => setCloneSource(null)} style={S.btn.ghost}>Cancel</button>
+            <button onClick={cloneRole} style={S.btn.primary}>Clone</button>
           </div>
-        </div>
+        </Modal>
       )}
 
-      {/* Permission matrix editor */}
+      {/* Permission matrix editor (full-screen modal) */}
       {editingRole && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b">
-              <h3 className="font-semibold text-lg">
-                Permissions for <span style={{ color: editingRole.color }}>{editingRole.display_name}</span>
+        <div style={S.overlay}>
+          <div style={{
+            background: "#fff", borderRadius: 14, boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+            width: "min(860px, 94vw)", maxHeight: "88vh", display: "flex", flexDirection: "column",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 24px", borderBottom: "1px solid #e5e7eb" }}>
+              <h3 style={{ fontWeight: 700, fontSize: 17, margin: 0 }}>
+                Permissions for{" "}
+                <span style={{ color: editingRole.color }}>{editingRole.display_name}</span>
               </h3>
-              <button onClick={() => setEditingRole(null)} className="text-gray-400 hover:text-gray-700 text-xl">×</button>
+              <button onClick={() => setEditingRole(null)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#9ca3af" }}>×</button>
             </div>
-            <div className="overflow-auto flex-1 p-4 space-y-6">
+
+            <div style={{ overflow: "auto", flex: 1, padding: 20, display: "flex", flexDirection: "column", gap: 24 }}>
               {modules.map(mod => {
                 const perms = catalog.filter(p => p.module === mod);
+                const moduleLabel = mod === "sidebar_access" ? "Sidebar Views" : mod.replace(/_/g, " ");
                 return (
                   <div key={mod}>
-                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                      {mod.replace(/_/g, " ")}
-                    </div>
-                    <div className="space-y-1">
+                    <div style={S.section}>{moduleLabel}</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                       {perms.map(p => {
                         const granted = p.key in editPerms;
                         const scope   = editPerms[p.key] || "self";
                         return (
-                          <div key={p.key} className="flex items-center gap-4 py-1.5 px-2 rounded hover:bg-gray-50">
+                          <div key={p.key} style={{ display: "flex", alignItems: "center", gap: 12, padding: "6px 8px", borderRadius: 6 }}>
                             <input
                               type="checkbox"
                               checked={granted}
                               onChange={() => togglePerm(p.key)}
-                              className="rounded"
+                              style={{ cursor: "pointer", width: 14, height: 14, flexShrink: 0 }}
                             />
-                            <span className="text-sm flex-1 text-gray-700">{p.label}</span>
+                            <span style={{ fontSize: 13, flex: 1, color: "#374151" }}>{p.label}</span>
                             {granted && (
-                              <div className="flex gap-1">
+                              <div style={{ display: "flex", gap: 4 }}>
                                 {SCOPE_ORDER.map(s => (
                                   <button
                                     key={s}
                                     onClick={() => setScope(p.key, s)}
-                                    className={`text-xs px-2 py-0.5 rounded border transition ${
-                                      scope === s
-                                        ? "bg-indigo-600 text-white border-indigo-600"
-                                        : "text-gray-500 border-gray-200 hover:border-indigo-400"
-                                    }`}
+                                    style={scope === s
+                                      ? { fontSize: 11, padding: "2px 7px", borderRadius: 4, border: "1px solid #4f46e5", background: "#4f46e5", color: "#fff", cursor: "pointer" }
+                                      : { fontSize: 11, padding: "2px 7px", borderRadius: 4, border: "1px solid #e5e7eb", background: "#fff", color: "#6b7280", cursor: "pointer" }
+                                    }
                                   >
                                     {SCOPE_LABELS[s]}
                                   </button>
@@ -449,14 +459,15 @@ function RolesTab({ roles, catalog, reload }) {
                 );
               })}
             </div>
-            <div className="px-6 py-4 border-t flex justify-end gap-2">
-              <button onClick={() => setEditingRole(null)} className="px-4 py-2 text-sm border rounded-lg">Cancel</button>
+
+            <div style={{ padding: "14px 24px", borderTop: "1px solid #e5e7eb", display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button onClick={() => setEditingRole(null)} style={S.btn.ghost}>Cancel</button>
               <button
                 onClick={savePermissions}
                 disabled={saving}
-                className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                style={{ ...S.btn.primary, opacity: saving ? 0.6 : 1 }}
               >
-                {saving ? "Saving..." : "Save Permissions"}
+                {saving ? "Saving…" : "Save Permissions"}
               </button>
             </div>
           </div>
@@ -464,50 +475,35 @@ function RolesTab({ roles, catalog, reload }) {
       )}
 
       {/* Roles grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 14 }}>
         {roles.map(role => (
-          <div key={role.id} className="border rounded-xl p-4 space-y-3 hover:shadow-sm">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: role.color }} />
+          <div key={role.id} style={S.card}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ width: 12, height: 12, borderRadius: "50%", background: role.color, flexShrink: 0 }} />
                 <div>
-                  <div className="font-medium text-gray-900 text-sm">{role.display_name}</div>
-                  {role.is_system && (
-                    <span className="text-xs text-gray-400">System</span>
-                  )}
+                  <div style={{ fontWeight: 600, fontSize: 13, color: "#111827" }}>{role.display_name}</div>
+                  {role.is_system && <div style={{ fontSize: 11, color: "#9ca3af" }}>System</div>}
                 </div>
               </div>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => openEdit(role)}
-                  className="text-xs text-indigo-600 hover:underline"
-                >
-                  Edit
-                </button>
-                <span className="text-gray-300">|</span>
-                <button
-                  onClick={() => { setCloneSource(role); setCloneName(`${role.display_name} Copy`); }}
-                  className="text-xs text-gray-500 hover:underline"
-                >
-                  Clone
-                </button>
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <button onClick={() => openEdit(role)} style={S.btn.link}>Edit</button>
+                <span style={{ color: "#e5e7eb", fontSize: 12 }}>|</span>
+                <button onClick={() => { setCloneSource(role); setCloneName(`${role.display_name} Copy`); }} style={S.btn.linkGray}>Clone</button>
                 {!role.is_system && (
                   <>
-                    <span className="text-gray-300">|</span>
-                    <button
-                      onClick={() => deleteRole(role)}
-                      className="text-xs text-red-500 hover:underline"
-                    >
-                      Delete
-                    </button>
+                    <span style={{ color: "#e5e7eb", fontSize: 12 }}>|</span>
+                    <button onClick={() => deleteRole(role)} style={S.btn.linkRed}>Delete</button>
                   </>
                 )}
               </div>
             </div>
             {role.description && (
-              <p className="text-xs text-gray-500 line-clamp-2">{role.description}</p>
+              <p style={{ fontSize: 12, color: "#6b7280", margin: "0 0 8px", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                {role.description}
+              </p>
             )}
-            <div className="flex gap-4 text-xs text-gray-500">
+            <div style={{ display: "flex", gap: 14, fontSize: 12, color: "#6b7280" }}>
               <span>{role.assigned_users ?? 0} users</span>
               <span>{role.permission_count ?? 0} permissions</span>
             </div>
@@ -521,7 +517,7 @@ function RolesTab({ roles, catalog, reload }) {
 // ── Audit Log Tab ─────────────────────────────────────────────────────────────
 function AuditTab() {
   const { token } = useAuth();
-  const [logs, setLogs]   = useState([]);
+  const [logs, setLogs]       = useState([]);
   const [loading, setLoading] = useState(true);
   const headers = { Authorization: `Bearer ${token}` };
 
@@ -536,40 +532,28 @@ function AuditTab() {
     })();
   }, [token]);
 
-  const ACTION_COLORS = {
-    role_created: "bg-green-100 text-green-700",
-    role_deleted: "bg-red-100 text-red-600",
-    role_assigned: "bg-blue-100 text-blue-700",
-    role_removed: "bg-orange-100 text-orange-700",
-    override_set: "bg-purple-100 text-purple-700",
-    role_permissions_updated: "bg-indigo-100 text-indigo-700",
-    user_created: "bg-teal-100 text-teal-700",
-    role_cloned: "bg-sky-100 text-sky-700",
-    role_updated: "bg-yellow-100 text-yellow-700",
-  };
-
   return (
     <div>
       {loading ? (
-        <div className="text-center text-gray-400 py-12">Loading audit log...</div>
+        <div style={{ textAlign: "center", color: "#9ca3af", padding: "48px 0" }}>Loading audit log…</div>
       ) : logs.length === 0 ? (
-        <div className="text-center text-gray-400 py-12">No audit events yet.</div>
+        <div style={{ textAlign: "center", color: "#9ca3af", padding: "48px 0" }}>No audit events yet.</div>
       ) : (
-        <div className="space-y-2">
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {logs.map(log => (
-            <div key={log.id} className="flex items-start gap-3 p-3 rounded-lg border hover:bg-gray-50">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-medium text-sm text-gray-800">{log.actor_name}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ACTION_COLORS[log.action] || "bg-gray-100 text-gray-600"}`}>
+            <div key={log.id} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: 12, borderRadius: 8, border: "1px solid #f3f4f6" }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <span style={{ fontWeight: 600, fontSize: 13, color: "#111827" }}>{log.actor_name}</span>
+                  <span style={ACTION_BADGE[log.action] || S.badge.blue}>
                     {log.action.replace(/_/g, " ")}
                   </span>
                   {log.target_user_name && (
-                    <span className="text-sm text-gray-600">→ {log.target_user_name}</span>
+                    <span style={{ fontSize: 13, color: "#374151" }}>→ {log.target_user_name}</span>
                   )}
                 </div>
-                <div className="text-xs text-gray-400 mt-0.5">
-                  {log.entity_type && <span className="mr-2">{log.entity_type} #{log.entity_id}</span>}
+                <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>
+                  {log.entity_type && <span style={{ marginRight: 8 }}>{log.entity_type} #{log.entity_id}</span>}
                   {new Date(log.created_at).toLocaleString()}
                 </div>
               </div>
@@ -585,14 +569,14 @@ function AuditTab() {
 function DepartmentsTeamsTab() {
   const { token } = useAuth();
   const headers = { Authorization: `Bearer ${token}` };
-  const [depts, setDepts]         = useState([]);
-  const [teams, setTeams]         = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [subTab, setSubTab]       = useState("departments");
+  const [depts, setDepts]           = useState([]);
+  const [teams, setTeams]           = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [subTab, setSubTab]         = useState("departments");
   const [showDeptForm, setShowDeptForm] = useState(false);
   const [showTeamForm, setShowTeamForm] = useState(false);
-  const [deptForm, setDeptForm]   = useState({ name: "" });
-  const [teamForm, setTeamForm]   = useState({ name: "", department_id: "" });
+  const [deptForm, setDeptForm]     = useState({ name: "" });
+  const [teamForm, setTeamForm]     = useState({ name: "", department_id: "" });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -601,8 +585,7 @@ function DepartmentsTeamsTab() {
         axios.get(`${API}/api/user-mgmt/departments`, { headers }),
         axios.get(`${API}/api/user-mgmt/teams`, { headers }),
       ]);
-      setDepts(dRes.data);
-      setTeams(tRes.data);
+      setDepts(dRes.data); setTeams(tRes.data);
     } catch {}
     finally { setLoading(false); }
   }, [token]);
@@ -612,7 +595,6 @@ function DepartmentsTeamsTab() {
   async function createDept() {
     if (!deptForm.name) return;
     try {
-      const wsId = null; // workspace-agnostic for now; adjust when workspace context is available
       await axios.post(`${API}/api/user-mgmt/departments`, { workspace_id: 1, name: deptForm.name }, { headers });
       setShowDeptForm(false); setDeptForm({ name: "" }); load();
     } catch (err) { alert(err.response?.data?.message || "Failed"); }
@@ -626,20 +608,21 @@ function DepartmentsTeamsTab() {
     } catch (err) { alert(err.response?.data?.message || "Failed"); }
   }
 
-  const cardStyle = { border: "1px solid #e5e7eb", borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" };
-  const pillStyle = { fontSize: 11, background: "#f1f5f9", color: "#64748b", borderRadius: 99, padding: "2px 8px" };
-
   return (
-    <div className="space-y-4">
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       {/* Sub-tabs */}
-      <div className="flex gap-2">
+      <div style={{ display: "flex", gap: 8 }}>
         {[["departments","Departments"],["teams","Teams"]].map(([id, label]) => (
           <button
             key={id}
             onClick={() => setSubTab(id)}
-            className={`px-4 py-1.5 text-sm rounded-full border transition ${
-              subTab === id ? "bg-indigo-600 text-white border-indigo-600" : "text-gray-600 border-gray-200 hover:border-indigo-400"
-            }`}
+            style={{
+              padding: "6px 16px", fontSize: 13, borderRadius: 99, cursor: "pointer",
+              background: subTab === id ? "#4f46e5" : "#fff",
+              color: subTab === id ? "#fff" : "#374151",
+              border: subTab === id ? "1px solid #4f46e5" : "1px solid #e5e7eb",
+              fontWeight: subTab === id ? 600 : 400,
+            }}
           >
             {label}
           </button>
@@ -647,73 +630,73 @@ function DepartmentsTeamsTab() {
       </div>
 
       {loading ? (
-        <div className="text-center text-gray-400 py-10">Loading...</div>
+        <div style={{ textAlign: "center", color: "#9ca3af", padding: "40px 0" }}>Loading…</div>
       ) : subTab === "departments" ? (
-        <div className="space-y-3">
-          <button onClick={() => setShowDeptForm(true)} className="text-sm bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
-            + New Department
-          </button>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <button onClick={() => setShowDeptForm(true)} style={S.btn.primary}>+ New Department</button>
           {showDeptForm && (
-            <div className="flex gap-2 items-center">
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <input
                 placeholder="Department name"
                 value={deptForm.name}
                 onChange={e => setDeptForm({ name: e.target.value })}
-                className="border rounded-lg px-3 py-2 text-sm flex-1"
+                style={{ ...S.input, flex: 1, width: "auto" }}
               />
-              <button onClick={createDept} className="px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg">Create</button>
-              <button onClick={() => setShowDeptForm(false)} className="px-3 py-2 text-sm border rounded-lg text-gray-600">Cancel</button>
+              <button onClick={createDept} style={S.btn.primary}>Create</button>
+              <button onClick={() => setShowDeptForm(false)} style={S.btn.ghost}>Cancel</button>
             </div>
           )}
           {depts.length === 0 ? (
-            <div className="text-center text-gray-400 py-8">No departments yet.</div>
+            <div style={{ textAlign: "center", color: "#9ca3af", padding: "32px 0" }}>No departments yet.</div>
           ) : (
             depts.map(d => (
-              <div key={d.id} style={cardStyle}>
+              <div key={d.id} style={{ ...S.card, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
-                  <div className="font-medium text-gray-900 text-sm">{d.name}</div>
-                  {d.head_name && <div className="text-xs text-gray-500">Head: {d.head_name}</div>}
+                  <div style={{ fontWeight: 600, fontSize: 13, color: "#111827" }}>{d.name}</div>
+                  {d.head_name && <div style={{ fontSize: 12, color: "#6b7280" }}>Head: {d.head_name}</div>}
                 </div>
-                <span style={pillStyle}>{d.member_count ?? 0} members</span>
+                <span style={{ fontSize: 11, background: "#f1f5f9", color: "#64748b", borderRadius: 99, padding: "2px 8px" }}>
+                  {d.member_count ?? 0} members
+                </span>
               </div>
             ))
           )}
         </div>
       ) : (
-        <div className="space-y-3">
-          <button onClick={() => setShowTeamForm(true)} className="text-sm bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
-            + New Team
-          </button>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <button onClick={() => setShowTeamForm(true)} style={S.btn.primary}>+ New Team</button>
           {showTeamForm && (
-            <div className="flex gap-2 items-center flex-wrap">
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
               <input
                 placeholder="Team name"
                 value={teamForm.name}
                 onChange={e => setTeamForm(p => ({ ...p, name: e.target.value }))}
-                className="border rounded-lg px-3 py-2 text-sm"
+                style={{ ...S.input, width: 180 }}
               />
               <select
                 value={teamForm.department_id}
                 onChange={e => setTeamForm(p => ({ ...p, department_id: e.target.value }))}
-                className="border rounded-lg px-3 py-2 text-sm"
+                style={{ ...S.input, width: "auto" }}
               >
                 <option value="">No department</option>
                 {depts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
-              <button onClick={createTeam} className="px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg">Create</button>
-              <button onClick={() => setShowTeamForm(false)} className="px-3 py-2 text-sm border rounded-lg text-gray-600">Cancel</button>
+              <button onClick={createTeam} style={S.btn.primary}>Create</button>
+              <button onClick={() => setShowTeamForm(false)} style={S.btn.ghost}>Cancel</button>
             </div>
           )}
           {teams.length === 0 ? (
-            <div className="text-center text-gray-400 py-8">No teams yet.</div>
+            <div style={{ textAlign: "center", color: "#9ca3af", padding: "32px 0" }}>No teams yet.</div>
           ) : (
             teams.map(t => (
-              <div key={t.id} style={cardStyle}>
+              <div key={t.id} style={{ ...S.card, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
-                  <div className="font-medium text-gray-900 text-sm">{t.name}</div>
-                  <div className="text-xs text-gray-500">{t.department_name || "No department"}</div>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: "#111827" }}>{t.name}</div>
+                  <div style={{ fontSize: 12, color: "#6b7280" }}>{t.department_name || "No department"}</div>
                 </div>
-                <span style={pillStyle}>{t.member_count ?? 0} members</span>
+                <span style={{ fontSize: 11, background: "#f1f5f9", color: "#64748b", borderRadius: 99, padding: "2px 8px" }}>
+                  {t.member_count ?? 0} members
+                </span>
               </div>
             ))
           )}
@@ -725,7 +708,7 @@ function DepartmentsTeamsTab() {
 
 // ── Root Component ────────────────────────────────────────────────────────────
 export default function AccessControlPanel({ hideHeader = false }) {
-  const { token } = useAuth();
+  const { token, refreshSidebarViews } = useAuth();
   const [tab, setTab]         = useState("users");
   const [roles, setRoles]     = useState([]);
   const [catalog, setCatalog] = useState([]);
@@ -744,46 +727,53 @@ export default function AccessControlPanel({ hideHeader = false }) {
 
   useEffect(() => { loadRoles(); }, [loadRoles]);
 
+  // Refresh sidebar permissions after role changes propagate
+  const handleRolesReload = useCallback(() => {
+    loadRoles();
+    refreshSidebarViews?.();
+  }, [loadRoles, refreshSidebarViews]);
+
   const TABS = [
-    { id: "users",   label: "Users" },
-    { id: "roles",   label: "Roles & Permissions" },
-    { id: "depts",   label: "Departments & Teams" },
-    { id: "audit",   label: "Audit Log" },
+    { id: "users",  label: "Users" },
+    { id: "roles",  label: "Roles & Permissions" },
+    { id: "depts",  label: "Departments & Teams" },
+    { id: "audit",  label: "Audit Log" },
   ];
 
   return (
-    <div className={hideHeader ? "space-y-4" : "p-6 max-w-7xl mx-auto space-y-6"}>
+    <div style={hideHeader ? {} : { padding: 24, maxWidth: 900 }}>
       {!hideHeader && (
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Access Control</h1>
-          <p className="text-sm text-gray-500 mt-1">
+        <div style={{ marginBottom: 20 }}>
+          <h1 style={{ fontWeight: 800, fontSize: 22, color: "#111827", margin: 0 }}>Access Control</h1>
+          <p style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>
             Manage users, roles, and permissions for your workspace.
           </p>
         </div>
       )}
 
       {/* Tab bar */}
-      <div className="flex border-b gap-1">
+      <div style={{ display: "flex", borderBottom: "1px solid #e5e7eb", gap: 0, marginBottom: 20 }}>
         {TABS.map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition -mb-px ${
-              tab === t.id
-                ? "border-indigo-600 text-indigo-600"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
+            style={{
+              padding: "10px 18px", fontSize: 13, fontWeight: tab === t.id ? 600 : 400,
+              background: "none", border: "none", cursor: "pointer",
+              borderBottom: tab === t.id ? "2px solid #4f46e5" : "2px solid transparent",
+              color: tab === t.id ? "#4f46e5" : "#6b7280",
+              marginBottom: -1,
+            }}
           >
             {t.label}
           </button>
         ))}
       </div>
 
-      {/* Tab content */}
-      {tab === "users" && <UsersTab roles={roles} />}
-      {tab === "roles" && <RolesTab roles={roles} catalog={catalog} reload={loadRoles} />}
-      {tab === "depts" && <DepartmentsTeamsTab />}
-      {tab === "audit" && <AuditTab />}
+      {tab === "users"  && <UsersTab roles={roles} />}
+      {tab === "roles"  && <RolesTab roles={roles} catalog={catalog} reload={handleRolesReload} />}
+      {tab === "depts"  && <DepartmentsTeamsTab />}
+      {tab === "audit"  && <AuditTab />}
     </div>
   );
 }

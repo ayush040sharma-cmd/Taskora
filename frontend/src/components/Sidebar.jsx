@@ -74,7 +74,7 @@ export default function Sidebar({
   onOpenPalette,
   onOpenSettings,
 }) {
-  const { user, logout } = useAuth();
+  const { user, logout, sidebarViews } = useAuth();
   const navigate = useNavigate();
 
   return (
@@ -108,7 +108,7 @@ export default function Sidebar({
 
       <div className="sidebar-nav-scroll">
         {SECTIONS.map(section => {
-          const visibleViews = section.views.filter(v => canViewSidebar(v.id, user?.role));
+          const visibleViews = section.views.filter(v => canViewSidebar(v.id, user?.role, sidebarViews));
           if (visibleViews.length === 0) return null;
           return (
             <div key={section.label}>

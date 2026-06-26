@@ -5,6 +5,7 @@ const jwt         = require("jsonwebtoken");
 const rateLimit   = require("express-rate-limit");
 const pool        = require("../db");
 const auth        = require("../middleware/auth");
+const { resolvePermissions } = require("../middleware/permission");
 const bruteForce  = require("../middleware/bruteForce");
 const { validate, schemas } = require("../utils/validate");
 const { setAuthCookie, clearAuthCookie } = require("../utils/cookies");
@@ -200,6 +201,20 @@ router.get("/me", auth, async (req, res) => {
     res.json({ ...user, plan: user.plan || "free", is_admin: user.is_admin ?? false });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+// GET /api/auth/me/sidebar-views — sidebar view IDs granted via custom roles
+router.get("/me/sidebar-views", auth, async (req, res) => {
+  try {
+    const perms = await resolvePermissions(req.user.id, null);
+    const views = [];
+    for (const [key] of perms) {
+      if (key.startsWith("sidebar:")) views.push(key.slice("sidebar:".length));
+    }
+    res.json({ views });
+  } catch {
+    res.json({ views: [] });
   }
 });
 

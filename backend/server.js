@@ -234,9 +234,30 @@ process.on("SIGTERM", () => {
   });
 });
 
+// ── Seed sidebar permissions into permissions_catalog (idempotent) ────────────
+async function seedSidebarPermissions() {
+  const pool = require("./db");
+  try {
+    await pool.query(`
+      INSERT INTO permissions_catalog (key, module, action, label) VALUES
+        ('sidebar:manager',    'sidebar_access', 'view', 'Manager Dashboard'),
+        ('sidebar:workload',   'sidebar_access', 'view', 'Team Workload'),
+        ('sidebar:members',    'sidebar_access', 'view', 'Members'),
+        ('sidebar:approvals',  'sidebar_access', 'view', 'Approvals'),
+        ('sidebar:ai-risk',    'sidebar_access', 'view', 'AI Risk Heatmap'),
+        ('sidebar:analytics',  'sidebar_access', 'view', 'Analytics'),
+        ('sidebar:simulation', 'sidebar_access', 'view', 'What-If Simulation')
+      ON CONFLICT (key) DO NOTHING
+    `);
+  } catch (e) {
+    logger.warn(`Sidebar permission seed skipped: ${e.message}`);
+  }
+}
+
 // ── Start ─────────────────────────────────────────────────────────────────────
 httpServer.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`, { port: PORT, env: process.env.NODE_ENV || "development" });
+  seedSidebarPermissions();
   try {
     const { startAgents } = require("./services/agentRunner");
     startAgents();

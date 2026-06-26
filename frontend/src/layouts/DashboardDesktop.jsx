@@ -18,6 +18,7 @@ export default function DashboardDesktop({
   onViewChange,
   onOpenPalette,
   onCreateTask,
+  onOpenSettings,
   user,
   children,
 }) {
@@ -38,6 +39,7 @@ export default function DashboardDesktop({
         activeView={activeView}
         onViewChange={onViewChange}
         onOpenPalette={onOpenPalette}
+        onOpenSettings={onOpenSettings}
       />
 
       <div className="main-area">
@@ -46,6 +48,7 @@ export default function DashboardDesktop({
           workspaceId={currentWorkspace?.id}
           onCreateTask={onCreateTask}
           onMenuToggle={onSidebarToggle}
+          onOpenSettings={onOpenSettings}
           user={user}
         />
         <div className="board-content">

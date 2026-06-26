@@ -40,8 +40,8 @@ const PLATFORM_PERMISSIONS = {
 };
 
 // Sidebar views restricted by minimum role
-const MANAGER_ONLY_VIEWS = new Set(["manager", "workload", "analytics", "simulation", "enterprise-approvals"]);
-const ADMIN_ONLY_VIEWS   = new Set(["access-control"]);
+const MANAGER_ONLY_VIEWS = new Set(["manager", "workload", "analytics", "simulation"]);
+const ADMIN_ONLY_VIEWS   = new Set([]);
 
 const ROLE_LEVELS = { team_member: 1, manager: 2, super_boss: 3 };
 
@@ -73,4 +73,16 @@ export function canAccess(_feature, _plan = "free", _isAdmin = false) {
 
 export function requiredPlan(_feature) {
   return "free";
+}
+
+/**
+ * Returns which settings sections are visible for a given platform role.
+ * Sections: general | notifications | regional | security | workspace | demo
+ *           project | workflow | integrations | user-mgmt
+ */
+export function canAccessSettingsSection(sectionId, role = "team_member") {
+  const level = ROLE_LEVELS[role] || 0;
+  if (sectionId === "user-mgmt") return level >= ROLE_LEVELS.super_boss;
+  if (["project", "workflow", "integrations"].includes(sectionId)) return level >= ROLE_LEVELS.manager;
+  return true; // personal + workspace sections always accessible
 }

@@ -41,14 +41,6 @@ const SECTIONS = [
       { id: "integrations", icon: "🔗", label: "Integrations" },
     ],
   },
-  {
-    label: "ADMIN",
-    views: [
-      { id: "enterprise-approvals", icon: "📨", label: "Approval Center" },
-      { id: "access-control",       icon: "🔐", label: "Access Control" },
-      { id: "notifications",        icon: "🔔", label: "Notifications" },
-    ],
-  },
 ];
 
 function getInitials(name = "") {
@@ -80,6 +72,7 @@ export default function Sidebar({
   activeView,
   onViewChange,
   onOpenPalette,
+  onOpenSettings,
 }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -183,16 +176,28 @@ export default function Sidebar({
             <div className="sidebar-user-email">{user?.email}</div>
           </div>
         </div>
-        <button
-          className="sidebar-logout"
-          title="Sign out"
-          onClick={() => { logout(); navigate("/"); }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-            <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
-          </svg>
-        </button>
+        <div style={{ display: "flex", gap: 4 }}>
+          <button
+            className="sidebar-logout"
+            title="Settings"
+            onClick={() => { onOpenSettings?.(); onClose?.(); }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </button>
+          <button
+            className="sidebar-logout"
+            title="Sign out"
+            onClick={() => { logout(); navigate("/"); }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </aside>
   );

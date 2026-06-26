@@ -581,8 +581,150 @@ function AuditTab() {
   );
 }
 
+// ── Departments & Teams Tab ───────────────────────────────────────────────────
+function DepartmentsTeamsTab() {
+  const { token } = useAuth();
+  const headers = { Authorization: `Bearer ${token}` };
+  const [depts, setDepts]         = useState([]);
+  const [teams, setTeams]         = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [subTab, setSubTab]       = useState("departments");
+  const [showDeptForm, setShowDeptForm] = useState(false);
+  const [showTeamForm, setShowTeamForm] = useState(false);
+  const [deptForm, setDeptForm]   = useState({ name: "" });
+  const [teamForm, setTeamForm]   = useState({ name: "", department_id: "" });
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [dRes, tRes] = await Promise.all([
+        axios.get(`${API}/api/user-mgmt/departments`, { headers }),
+        axios.get(`${API}/api/user-mgmt/teams`, { headers }),
+      ]);
+      setDepts(dRes.data);
+      setTeams(tRes.data);
+    } catch {}
+    finally { setLoading(false); }
+  }, [token]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function createDept() {
+    if (!deptForm.name) return;
+    try {
+      const wsId = null; // workspace-agnostic for now; adjust when workspace context is available
+      await axios.post(`${API}/api/user-mgmt/departments`, { workspace_id: 1, name: deptForm.name }, { headers });
+      setShowDeptForm(false); setDeptForm({ name: "" }); load();
+    } catch (err) { alert(err.response?.data?.message || "Failed"); }
+  }
+
+  async function createTeam() {
+    if (!teamForm.name) return;
+    try {
+      await axios.post(`${API}/api/user-mgmt/teams`, { workspace_id: 1, name: teamForm.name, department_id: teamForm.department_id || undefined }, { headers });
+      setShowTeamForm(false); setTeamForm({ name: "", department_id: "" }); load();
+    } catch (err) { alert(err.response?.data?.message || "Failed"); }
+  }
+
+  const cardStyle = { border: "1px solid #e5e7eb", borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" };
+  const pillStyle = { fontSize: 11, background: "#f1f5f9", color: "#64748b", borderRadius: 99, padding: "2px 8px" };
+
+  return (
+    <div className="space-y-4">
+      {/* Sub-tabs */}
+      <div className="flex gap-2">
+        {[["departments","Departments"],["teams","Teams"]].map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setSubTab(id)}
+            className={`px-4 py-1.5 text-sm rounded-full border transition ${
+              subTab === id ? "bg-indigo-600 text-white border-indigo-600" : "text-gray-600 border-gray-200 hover:border-indigo-400"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="text-center text-gray-400 py-10">Loading...</div>
+      ) : subTab === "departments" ? (
+        <div className="space-y-3">
+          <button onClick={() => setShowDeptForm(true)} className="text-sm bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
+            + New Department
+          </button>
+          {showDeptForm && (
+            <div className="flex gap-2 items-center">
+              <input
+                placeholder="Department name"
+                value={deptForm.name}
+                onChange={e => setDeptForm({ name: e.target.value })}
+                className="border rounded-lg px-3 py-2 text-sm flex-1"
+              />
+              <button onClick={createDept} className="px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg">Create</button>
+              <button onClick={() => setShowDeptForm(false)} className="px-3 py-2 text-sm border rounded-lg text-gray-600">Cancel</button>
+            </div>
+          )}
+          {depts.length === 0 ? (
+            <div className="text-center text-gray-400 py-8">No departments yet.</div>
+          ) : (
+            depts.map(d => (
+              <div key={d.id} style={cardStyle}>
+                <div>
+                  <div className="font-medium text-gray-900 text-sm">{d.name}</div>
+                  {d.head_name && <div className="text-xs text-gray-500">Head: {d.head_name}</div>}
+                </div>
+                <span style={pillStyle}>{d.member_count ?? 0} members</span>
+              </div>
+            ))
+          )}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <button onClick={() => setShowTeamForm(true)} className="text-sm bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
+            + New Team
+          </button>
+          {showTeamForm && (
+            <div className="flex gap-2 items-center flex-wrap">
+              <input
+                placeholder="Team name"
+                value={teamForm.name}
+                onChange={e => setTeamForm(p => ({ ...p, name: e.target.value }))}
+                className="border rounded-lg px-3 py-2 text-sm"
+              />
+              <select
+                value={teamForm.department_id}
+                onChange={e => setTeamForm(p => ({ ...p, department_id: e.target.value }))}
+                className="border rounded-lg px-3 py-2 text-sm"
+              >
+                <option value="">No department</option>
+                {depts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
+              <button onClick={createTeam} className="px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg">Create</button>
+              <button onClick={() => setShowTeamForm(false)} className="px-3 py-2 text-sm border rounded-lg text-gray-600">Cancel</button>
+            </div>
+          )}
+          {teams.length === 0 ? (
+            <div className="text-center text-gray-400 py-8">No teams yet.</div>
+          ) : (
+            teams.map(t => (
+              <div key={t.id} style={cardStyle}>
+                <div>
+                  <div className="font-medium text-gray-900 text-sm">{t.name}</div>
+                  <div className="text-xs text-gray-500">{t.department_name || "No department"}</div>
+                </div>
+                <span style={pillStyle}>{t.member_count ?? 0} members</span>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Root Component ────────────────────────────────────────────────────────────
-export default function AccessControlPanel() {
+export default function AccessControlPanel({ hideHeader = false }) {
   const { token } = useAuth();
   const [tab, setTab]         = useState("users");
   const [roles, setRoles]     = useState([]);
@@ -605,17 +747,20 @@ export default function AccessControlPanel() {
   const TABS = [
     { id: "users",   label: "Users" },
     { id: "roles",   label: "Roles & Permissions" },
+    { id: "depts",   label: "Departments & Teams" },
     { id: "audit",   label: "Audit Log" },
   ];
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Access Control</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Manage users, roles, and permissions for your workspace.
-        </p>
-      </div>
+    <div className={hideHeader ? "space-y-4" : "p-6 max-w-7xl mx-auto space-y-6"}>
+      {!hideHeader && (
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Access Control</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Manage users, roles, and permissions for your workspace.
+          </p>
+        </div>
+      )}
 
       {/* Tab bar */}
       <div className="flex border-b gap-1">
@@ -637,6 +782,7 @@ export default function AccessControlPanel() {
       {/* Tab content */}
       {tab === "users" && <UsersTab roles={roles} />}
       {tab === "roles" && <RolesTab roles={roles} catalog={catalog} reload={loadRoles} />}
+      {tab === "depts" && <DepartmentsTeamsTab />}
       {tab === "audit" && <AuditTab />}
     </div>
   );

@@ -38,9 +38,8 @@ import SecurityDashboard from "../components/SecurityDashboard";
 import DependencyGraph from "../components/DependencyGraph";
 import CollaborationScore from "../components/CollaborationScore";
 import OnboardingChecklist from "../components/onboarding/OnboardingChecklist";
-import AccessControlPanel from "../components/AccessControlPanel";
-import EnterpriseApprovalCenter from "../components/EnterpriseApprovalCenter";
 import NotificationCenter from "../components/NotificationCenter";
+import SettingsPage from "./SettingsPage";
 
 
 // ── Undo Toast ────────────────────────────────────────────────────
@@ -873,17 +872,10 @@ export default function Dashboard() {
             </ErrorBoundary>
           )}
 
-          {/* ── Enterprise Approval Center ── */}
-          {view === "enterprise-approvals" && (
-            <ErrorBoundary inline viewName="Approval Center">
-              <EnterpriseApprovalCenter />
-            </ErrorBoundary>
-          )}
-
-          {/* ── Access Control ── */}
-          {view === "access-control" && (
-            <ErrorBoundary inline viewName="Access Control">
-              <AccessControlPanel />
+          {/* ── Settings ── */}
+          {view === "settings" && (
+            <ErrorBoundary inline viewName="Settings">
+              <SettingsPage currentWorkspaceId={currentWorkspace?.id} />
             </ErrorBoundary>
           )}
 
@@ -1002,6 +994,7 @@ export default function Dashboard() {
         onViewChange={setView}
         onOpenPalette={() => setCmdOpen(true)}
         onCreateTask={() => openCreateTask("todo")}
+        onOpenSettings={() => setView("settings")}
         user={user}
       >
         {viewContent}

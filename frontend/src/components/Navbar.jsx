@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import ProfileModal from "./ProfileModal";
-import AccountSettingsModal from "./AccountSettingsModal";
 import NotificationBell from "./NotificationBell";
 import { useTheme } from "../hooks/useTheme";
 import api from "../api/api";
@@ -39,13 +38,12 @@ const IconLogout = () => (
   </svg>
 );
 
-export default function Navbar({ workspaceName, workspaceId, onCreateTask, onMenuToggle, user }) {
+export default function Navbar({ workspaceName, workspaceId, onCreateTask, onMenuToggle, onOpenSettings, user }) {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const { isDark, toggle: toggleTheme } = useTheme();
   const [open, setOpen] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [myStatus, setMyStatus] = useState(null); // null | "on_leave" | "travel"
   const ref = useRef(null);
 
@@ -168,9 +166,9 @@ export default function Navbar({ workspaceName, workspaceId, onCreateTask, onMen
                   <IconUser />
                   <span>Profile</span>
                 </button>
-                <button className="profile-menu-item" onClick={() => { setOpen(false); setShowSettings(true); }}>
+                <button className="profile-menu-item" onClick={() => { setOpen(false); onOpenSettings?.(); }}>
                   <IconSettings />
-                  <span>Account settings</span>
+                  <span>Settings</span>
                 </button>
               </div>
 
@@ -188,8 +186,7 @@ export default function Navbar({ workspaceName, workspaceId, onCreateTask, onMen
       </div>
     </header>
 
-    {showProfile  && <ProfileModal        onClose={() => setShowProfile(false)} />}
-    {showSettings && <AccountSettingsModal onClose={() => setShowSettings(false)} currentWorkspaceId={workspaceId} />}
+    {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
   </>
   );
 }

@@ -1,5 +1,6 @@
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { canViewSidebar } from "../utils/canAccess";
 
 // ── All views organized by section ─────────────────────────────────────────────
 const SECTIONS = [
@@ -104,25 +105,28 @@ export default function Sidebar({
         <kbd>⌘K</kbd>
       </button>
 
-      {/* All sections — no locks, no "More" dropdown */}
       <div className="sidebar-nav-scroll">
-        {SECTIONS.map(section => (
-          <div key={section.label}>
-            <div className="sidebar-section-label">{section.label}</div>
-            <nav className="sidebar-nav">
-              {section.views.map(v => (
-                <button
-                  key={v.id}
-                  className={`sidebar-nav-item ${activeView === v.id ? "active" : ""}`}
-                  onClick={() => { onViewChange?.(v.id); onClose?.(); }}
-                >
-                  <span className="sidebar-nav-icon">{v.icon}</span>
-                  <span>{v.label}</span>
-                </button>
-              ))}
-            </nav>
-          </div>
-        ))}
+        {SECTIONS.map(section => {
+          const visibleViews = section.views.filter(v => canViewSidebar(v.id, user?.role));
+          if (visibleViews.length === 0) return null;
+          return (
+            <div key={section.label}>
+              <div className="sidebar-section-label">{section.label}</div>
+              <nav className="sidebar-nav">
+                {visibleViews.map(v => (
+                  <button
+                    key={v.id}
+                    className={`sidebar-nav-item ${activeView === v.id ? "active" : ""}`}
+                    onClick={() => { onViewChange?.(v.id); onClose?.(); }}
+                  >
+                    <span className="sidebar-nav-icon">{v.icon}</span>
+                    <span>{v.label}</span>
+                  </button>
+                ))}
+              </nav>
+            </div>
+          );
+        })}
       </div>
 
       {/* Workspaces */}

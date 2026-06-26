@@ -16,6 +16,8 @@ import JoinWorkspace from "./pages/JoinWorkspace";
 import RoleSelection from "./pages/onboarding/RoleSelection";
 import Pricing from "./pages/Pricing";
 import Payment from "./pages/Payment";
+import Unauthorized from "./pages/Unauthorized";
+import RoleRoute from "./components/RoleRoute";
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth();
@@ -82,6 +84,9 @@ function AppRoutes() {
 
       {/* Protected app routes */}
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+
+      {/* Access denied */}
+      <Route path="/unauthorized" element={<Unauthorized />} />
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />

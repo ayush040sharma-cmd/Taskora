@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import api from "../api/api";
 
-const STATUS_COLOR  = { todo: "#94a3b8", inprogress: "#6366f1", in_progress: "#6366f1", done: "#10b981", review: "#f59e0b" };
+const STATUS_COLOR  = { todo: "#94a3b8", inprogress: "#3B82F6", in_progress: "#3B82F6", done: "#10b981", review: "#f59e0b" };
 const PRIORITY_COLOR = { critical: "#dc2626", high: "#ef4444", medium: "#f59e0b", low: "#10b981" };
 const ROW_H   = 36;
 const LABEL_W = 220;
@@ -166,9 +166,9 @@ export default function GanttChart({ workspaceId }) {
           <line
             x1={todayX + DAY_W / 2} y1={0}
             x2={todayX + DAY_W / 2} y2={svgHeight}
-            stroke="#6366f1" strokeWidth={1.5} strokeDasharray="4 3"
+            stroke="#3B82F6" strokeWidth={1.5} strokeDasharray="4 3"
           />
-          <text x={todayX + DAY_W / 2 + 3} y={14} fill="#6366f1" fontSize={10} fontWeight={600}>
+          <text x={todayX + DAY_W / 2 + 3} y={14} fill="#3B82F6" fontSize={10} fontWeight={600}>
             Today
           </text>
 
@@ -339,7 +339,7 @@ export default function GanttChart({ workspaceId }) {
           <span style={{ background: "#fca5a5" }} className="gantt-legend-dot" />
           overdue
         </span>
-        <span className="gantt-legend-item" style={{ color: "#6366f1" }}>
+        <span className="gantt-legend-item" style={{ color: "#3B82F6" }}>
           ┆ today
         </span>
       </div>

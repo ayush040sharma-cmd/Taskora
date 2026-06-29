@@ -30,7 +30,7 @@ export default class ErrorBoundary extends React.Component {
           </div>
           <button
             onClick={() => this.setState({ hasError: false, error: null })}
-            style={{ padding: "8px 18px", borderRadius: 8, background: "#6366f1", color: "#fff", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600 }}
+            style={{ padding: "8px 18px", borderRadius: 8, background: "var(--tk-accent, #3B82F6)", color: "#fff", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600 }}
           >
             Try again
           </button>
@@ -164,33 +164,33 @@ const S = {
   actions: { display: "flex", gap: 12, marginBottom: 20 },
   primaryBtn: {
     flex: 1, padding: "12px",
-    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+    background: "var(--tk-accent, #3B82F6)",
     color: "#fff", border: "none", borderRadius: 10,
     fontSize: 14, fontWeight: 700, cursor: "pointer",
   },
   secondaryBtn: {
     flex: 1, padding: "12px",
-    background: "none", color: "#6366f1",
-    border: "1.5px solid #6366f1", borderRadius: 10,
+    background: "none", color: "var(--tk-accent, #3B82F6)",
+    border: "1.5px solid var(--tk-accent, #3B82F6)", borderRadius: 10,
     fontSize: 14, fontWeight: 600, cursor: "pointer",
   },
   support: { borderTop: "1px solid var(--border, #334155)", paddingTop: 16 },
   supportText: { fontSize: 13, color: "#94a3b8", margin: "0 0 4px" },
-  supportLink: { color: "#6366f1", fontWeight: 600, textDecoration: "none" },
+  supportLink: { color: "var(--tk-accent, #3B82F6)", fontWeight: 600, textDecoration: "none" },
   logoRow: {
     display: "flex", alignItems: "center", gap: 8,
     position: "relative", zIndex: 1,
   },
   logoMark: {
     width: 28, height: 28, borderRadius: 8,
-    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+    background: "var(--tk-accent, #3B82F6)",
     display: "flex", alignItems: "center", justifyContent: "center",
     color: "#fff", fontWeight: 800, fontSize: 14,
   },
   logoText: { fontSize: 16, fontWeight: 800, color: "rgba(255,255,255,0.9)" },
   logoBadge: {
-    fontSize: 10, fontWeight: 700, color: "#6366f1",
-    background: "rgba(99,102,241,0.15)",
+    fontSize: 10, fontWeight: 700, color: "var(--tk-accent, #3B82F6)",
+    background: "rgba(59,130,246,0.15)",
     borderRadius: 4, padding: "2px 5px",
   },
 };

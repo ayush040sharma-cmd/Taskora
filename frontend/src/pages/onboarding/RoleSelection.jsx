@@ -94,7 +94,7 @@ export default function RoleSelection() {
           }}>
             <div style={{
               width: 36, height: 36, borderRadius: 10,
-              background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+              background: "var(--tk-accent, #3B82F6)",
               display: "flex", alignItems: "center", justifyContent: "center",
             }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -116,7 +116,7 @@ export default function RoleSelection() {
             <div style={{
               width: step === 1 ? "50%" : "100%",
               height: "100%",
-              background: "linear-gradient(90deg, #6366f1, #8b5cf6)",
+              background: "var(--tk-accent, #3B82F6)",
               borderRadius: 4,
               transition: "width 0.3s ease",
             }} />
@@ -139,10 +139,10 @@ export default function RoleSelection() {
                   onClick={() => setSelectedRole(role.id)}
                   style={{
                     background: selectedRole === role.id
-                      ? "rgba(99,102,241,0.15)"
+                      ? "rgba(59,130,246,0.15)"
                       : "rgba(255,255,255,0.04)",
                     border: selectedRole === role.id
-                      ? "1.5px solid #6366f1"
+                      ? "1.5px solid var(--tk-accent, #3B82F6)"
                       : "1.5px solid rgba(255,255,255,0.08)",
                     borderRadius: 14,
                     padding: "20px 24px",
@@ -164,12 +164,12 @@ export default function RoleSelection() {
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                       {role.highlights.map(h => (
                         <span key={h} style={{
-                          background: "rgba(99,102,241,0.12)",
+                          background: "rgba(59,130,246,0.12)",
                           color: "#a5b4fc",
                           fontSize: 12,
                           padding: "3px 10px",
                           borderRadius: 20,
-                          border: "1px solid rgba(99,102,241,0.2)",
+                          border: "1px solid rgba(59,130,246,0.2)",
                         }}>{h}</span>
                       ))}
                     </div>
@@ -178,7 +178,7 @@ export default function RoleSelection() {
                     width: 20, height: 20, borderRadius: "50%", flexShrink: 0, marginTop: 4,
                     border: selectedRole === role.id ? "none" : "2px solid #334155",
                     background: selectedRole === role.id
-                      ? "linear-gradient(135deg, #6366f1, #8b5cf6)"
+                      ? "var(--tk-accent, #3B82F6)"
                       : "transparent",
                     display: "flex", alignItems: "center", justifyContent: "center",
                   }}>
@@ -210,10 +210,10 @@ export default function RoleSelection() {
                   onClick={() => setSelectedSize(s.id)}
                   style={{
                     background: selectedSize === s.id
-                      ? "rgba(99,102,241,0.15)"
+                      ? "rgba(59,130,246,0.15)"
                       : "rgba(255,255,255,0.04)",
                     border: selectedSize === s.id
-                      ? "1.5px solid #6366f1"
+                      ? "1.5px solid var(--tk-accent, #3B82F6)"
                       : "1.5px solid rgba(255,255,255,0.08)",
                     borderRadius: 12,
                     padding: "16px 20px",
@@ -253,8 +253,8 @@ export default function RoleSelection() {
             marginTop: 28,
             padding: "14px",
             background: saving || (step === 1 && !selectedRole)
-              ? "rgba(99,102,241,0.3)"
-              : "linear-gradient(135deg, #6366f1, #8b5cf6)",
+              ? "rgba(59,130,246,0.3)"
+              : "var(--tk-accent, #3B82F6)",
             color: "#fff",
             border: "none",
             borderRadius: 12,

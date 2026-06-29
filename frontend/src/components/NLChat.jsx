@@ -13,7 +13,7 @@ const SUGGESTIONS = [
   "Show unassigned tasks",
 ];
 
-const STATUS_COLOR = { todo: "#94a3b8", inprogress: "#6366f1", in_progress: "#6366f1", done: "#10b981", review: "#f59e0b" };
+const STATUS_COLOR = { todo: "#94a3b8", inprogress: "#3B82F6", in_progress: "#3B82F6", done: "#10b981", review: "#f59e0b" };
 const PRIORITY_DOT = { critical: "🔴", high: "🟠", medium: "🟡", low: "🟢" };
 
 function TaskResult({ task }) {
@@ -63,7 +63,7 @@ function SummaryResult({ data }) {
   return (
     <div className="nlc-summary">
       {[
-        { label: "Open",        val: data.open,       color: "#6366f1" },
+        { label: "Open",        val: data.open,       color: "var(--tk-accent, #3B82F6)" },
         { label: "Done",        val: data.done,       color: "#10b981" },
         { label: "Overdue",     val: data.overdue,    color: "#dc2626" },
         { label: "High Pri",    val: data.high_pri,   color: "#f59e0b" },

@@ -31,13 +31,13 @@ function SeverityBadge({ severity = "medium" }) {
 function StatCard({ icon, label, value, sub, color = "#ef4444" }) {
   return (
     <div style={{
-      background: "#1e293b", borderRadius: 12, padding: "18px 20px",
-      border: "1px solid #334155", minHeight: 100,
+      background: "var(--card-bg)", borderRadius: 12, padding: "18px 20px",
+      border: "1px solid var(--border)", minHeight: 100,
     }}>
       <div style={{ fontSize: 22, marginBottom: 8 }}>{icon}</div>
-      <div style={{ color: "#94a3b8", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</div>
-      <div style={{ color: "#f1f5f9", fontSize: 26, fontWeight: 800, lineHeight: 1.2, marginTop: 2 }}>{value}</div>
-      {sub && <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>{sub}</div>}
+      <div style={{ color: "var(--text-secondary)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</div>
+      <div style={{ color: "var(--text-primary)", fontSize: 26, fontWeight: 800, lineHeight: 1.2, marginTop: 2 }}>{value}</div>
+      {sub && <div style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 4 }}>{sub}</div>}
     </div>
   );
 }
@@ -69,7 +69,7 @@ export default function BlockedDashboard({ workspaceId, onTaskClick }) {
 
   if (loading) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 300, color: "#64748b" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 300, color: "var(--text-secondary)" }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 36, marginBottom: 12 }}>🚫</div>
           <div>Loading blocked tasks…</div>
@@ -107,25 +107,25 @@ export default function BlockedDashboard({ workspaceId, onTaskClick }) {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 28 }}>
           {data?.most_blocking_user && (
             <div style={{
-              background: "#1e293b", borderRadius: 12, padding: "16px 20px",
-              border: "1px solid #334155",
+              background: "var(--card-bg)", borderRadius: 12, padding: "16px 20px",
+              border: "1px solid var(--border)",
             }}>
-              <div style={{ color: "#94a3b8", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>
+              <div style={{ color: "var(--text-secondary)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>
                 Most Blocking Person
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{
-                  width: 40, height: 40, borderRadius: "50%", background: "#6366f1",
+                  width: 40, height: 40, borderRadius: "50%", background: "var(--tk-accent, #3B82F6)",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   color: "#fff", fontWeight: 700, fontSize: 16,
                 }}>
                   {(data.most_blocking_user.name || "?")[0].toUpperCase()}
                 </div>
                 <div>
-                  <div style={{ color: "#e2e8f0", fontWeight: 600, fontSize: 15 }}>
+                  <div style={{ color: "var(--text-primary)", fontWeight: 600, fontSize: 15 }}>
                     {data.most_blocking_user.name}
                   </div>
-                  <div style={{ color: "#64748b", fontSize: 12 }}>
+                  <div style={{ color: "var(--text-secondary)", fontSize: 12 }}>
                     Blocking {data.most_blocking_user.block_count} task{data.most_blocking_user.block_count !== 1 ? "s" : ""}
                   </div>
                 </div>
@@ -135,13 +135,13 @@ export default function BlockedDashboard({ workspaceId, onTaskClick }) {
 
           {data?.most_common_reason && (
             <div style={{
-              background: "#1e293b", borderRadius: 12, padding: "16px 20px",
-              border: "1px solid #334155",
+              background: "var(--card-bg)", borderRadius: 12, padding: "16px 20px",
+              border: "1px solid var(--border)",
             }}>
-              <div style={{ color: "#94a3b8", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>
+              <div style={{ color: "var(--text-secondary)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>
                 Most Common Block Reason
               </div>
-              <div style={{ color: "#e2e8f0", fontSize: 15, fontWeight: 600 }}>
+              <div style={{ color: "var(--text-primary)", fontSize: 15, fontWeight: 600 }}>
                 "{data.most_common_reason}"
               </div>
             </div>
@@ -151,8 +151,8 @@ export default function BlockedDashboard({ workspaceId, onTaskClick }) {
 
       {/* Severity breakdown */}
       {sevBreakdown.length > 0 && (
-        <div style={{ background: "#1e293b", borderRadius: 12, padding: "16px 20px", border: "1px solid #334155", marginBottom: 24 }}>
-          <div style={{ color: "#94a3b8", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 14 }}>
+        <div style={{ background: "var(--card-bg)", borderRadius: 12, padding: "16px 20px", border: "1px solid var(--border)", marginBottom: 24 }}>
+          <div style={{ color: "var(--text-secondary)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 14 }}>
             Blocked by Severity
           </div>
           <div style={{ display: "flex", gap: 12 }}>
@@ -173,7 +173,7 @@ export default function BlockedDashboard({ workspaceId, onTaskClick }) {
                     }} />
                   </div>
                   <SeverityBadge severity={sev} />
-                  <div style={{ color: "#94a3b8", fontSize: 16, fontWeight: 700, marginTop: 6 }}>{count}</div>
+                  <div style={{ color: "var(--text-secondary)", fontSize: 16, fontWeight: 700, marginTop: 6 }}>{count}</div>
                 </div>
               );
             })}
@@ -183,7 +183,7 @@ export default function BlockedDashboard({ workspaceId, onTaskClick }) {
 
       {/* Blocked tasks table */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-        <h3 style={{ color: "#f1f5f9", fontSize: 16, fontWeight: 700, margin: 0 }}>
+        <h3 style={{ color: "var(--text-primary)", fontSize: 16, fontWeight: 700, margin: 0 }}>
           Blocked Tasks ({tasks.length})
         </h3>
         <div style={{ display: "flex", gap: 6 }}>
@@ -192,9 +192,9 @@ export default function BlockedDashboard({ workspaceId, onTaskClick }) {
               key={f}
               onClick={() => setFilter(f)}
               style={{
-                background: filter === f ? "#6366f1" : "#334155",
+                background: filter === f ? "var(--tk-accent, #3B82F6)" : "var(--border)",
                 border: "none", borderRadius: 6, padding: "4px 12px",
-                color: filter === f ? "#fff" : "#94a3b8",
+                color: filter === f ? "#fff" : "var(--text-secondary)",
                 fontSize: 12, fontWeight: 600, cursor: "pointer",
                 textTransform: "capitalize",
               }}
@@ -207,26 +207,26 @@ export default function BlockedDashboard({ workspaceId, onTaskClick }) {
 
       {filteredTasks.length === 0 ? (
         <div style={{
-          background: "#1e293b", borderRadius: 12, padding: "48px 20px",
-          border: "1px solid #334155", textAlign: "center",
+          background: "var(--card-bg)", borderRadius: 12, padding: "48px 20px",
+          border: "1px solid var(--border)", textAlign: "center",
         }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
-          <div style={{ color: "#e2e8f0", fontSize: 18, fontWeight: 700 }}>
+          <div style={{ color: "var(--text-primary)", fontSize: 18, fontWeight: 700 }}>
             {tasks.length === 0 ? "No blocked tasks!" : "No tasks match this filter"}
           </div>
-          <div style={{ color: "#64748b", fontSize: 14, marginTop: 8 }}>
+          <div style={{ color: "var(--text-secondary)", fontSize: 14, marginTop: 8 }}>
             {tasks.length === 0 ? "All your tasks are moving forward." : "Try a different severity filter."}
           </div>
         </div>
       ) : (
-        <div style={{ background: "#0f172a", borderRadius: 12, border: "1px solid #334155", overflow: "hidden" }}>
+        <div style={{ background: "var(--main-bg)", borderRadius: 12, border: "1px solid var(--border)", overflow: "hidden" }}>
           <div style={{
             display: "grid",
             gridTemplateColumns: "2fr 1.5fr 1fr 1fr 1fr",
             padding: "10px 16px",
-            background: "#1e293b",
-            borderBottom: "1px solid #334155",
-            color: "#64748b", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5,
+            background: "var(--card-bg)",
+            borderBottom: "1px solid var(--border)",
+            color: "var(--text-secondary)", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5,
           }}>
             <div>Task</div>
             <div>Blocked By / Reason</div>
@@ -242,17 +242,17 @@ export default function BlockedDashboard({ workspaceId, onTaskClick }) {
                 display: "grid",
                 gridTemplateColumns: "2fr 1.5fr 1fr 1fr 1fr",
                 padding: "14px 16px",
-                borderBottom: i < filteredTasks.length - 1 ? "1px solid #1e293b" : "none",
+                borderBottom: i < filteredTasks.length - 1 ? "1px solid var(--card-bg)" : "none",
                 cursor: onTaskClick ? "pointer" : "default",
                 transition: "background 0.15s",
               }}
-              onMouseEnter={e => { e.currentTarget.style.background = "#1e293b44"; }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(30,41,59,0.27)"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             >
               <div>
-                <div style={{ color: "#e2e8f0", fontWeight: 500, fontSize: 13, marginBottom: 3 }}>{task.title}</div>
+                <div style={{ color: "var(--text-primary)", fontWeight: 500, fontSize: 13, marginBottom: 3 }}>{task.title}</div>
                 {task.assignee_name && (
-                  <div style={{ color: "#64748b", fontSize: 11 }}>→ {task.assignee_name}</div>
+                  <div style={{ color: "var(--text-secondary)", fontSize: 11 }}>→ {task.assignee_name}</div>
                 )}
               </div>
               <div>
@@ -262,28 +262,28 @@ export default function BlockedDashboard({ workspaceId, onTaskClick }) {
                   </div>
                 )}
                 {task.blocked_reason && (
-                  <div style={{ color: "#94a3b8", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <div style={{ color: "var(--text-secondary)", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {task.blocked_reason}
                   </div>
                 )}
                 {!task.blocked_by_task_title && !task.blocked_reason && (
-                  <span style={{ color: "#475569", fontSize: 12 }}>No reason given</span>
+                  <span style={{ color: "var(--text-secondary)", fontSize: 12 }}>No reason given</span>
                 )}
               </div>
               <div>
                 <SeverityBadge severity={task.blocked_severity || "medium"} />
               </div>
-              <div style={{ color: "#94a3b8", fontSize: 12 }}>
+              <div style={{ color: "var(--text-secondary)", fontSize: 12 }}>
                 {task.date_blocked
                   ? new Date(task.date_blocked).toLocaleDateString("en-US", { month: "short", day: "numeric" })
                   : "—"}
                 {task.hours_blocked > 0 && (
-                  <div style={{ color: "#64748b", fontSize: 11, marginTop: 2 }}>
+                  <div style={{ color: "var(--text-secondary)", fontSize: 11, marginTop: 2 }}>
                     {formatDuration(task.hours_blocked)}
                   </div>
                 )}
               </div>
-              <div style={{ color: "#94a3b8", fontSize: 12 }}>
+              <div style={{ color: "var(--text-secondary)", fontSize: 12 }}>
                 {task.blocked_expected_resolution
                   ? new Date(task.blocked_expected_resolution).toLocaleDateString("en-US", { month: "short", day: "numeric" })
                   : "—"}

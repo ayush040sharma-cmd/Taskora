@@ -35,7 +35,7 @@ export default function Unauthorized() {
         style={{
           marginTop: 8,
           padding: "10px 24px",
-          background: "#6366f1",
+          background: "var(--tk-accent, #3B82F6)",
           color: "#fff",
           border: "none",
           borderRadius: 8,

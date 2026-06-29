@@ -534,19 +534,18 @@ export default function Dashboard() {
   if (wakeStatus === "waking" && !workspaces.length) {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: 16, padding: 24, background: "var(--main-bg)" }}>
-        <div style={{ width: 56, height: 56, borderRadius: "50%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, animation: "spin 2s linear infinite" }}>
+        <div style={{ width: 56, height: 56, borderRadius: "50%", background: "var(--tk-accent, #3B82F6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, animation: "spin 2s linear infinite" }}>
           ⚡
         </div>
-        <h2 style={{ color: "var(--text-primary)", fontSize: 18, fontWeight: 700, margin: 0 }}>Waking up the server…</h2>
+        <h2 style={{ color: "var(--text-primary)", fontSize: 18, fontWeight: 700, margin: 0 }}>Just a moment…</h2>
         <p style={{ color: "var(--text-secondary)", fontSize: 14, textAlign: "center", maxWidth: 340, margin: 0 }}>
-          The backend is starting up — this takes about 30 seconds on the free plan. Hang tight!
+          Getting things ready. This usually takes about 30 seconds on the first load.
         </p>
         <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
           {[0,1,2,3,4,5,6,7].map(i => (
-            <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: i < wakeAttempt ? "#6366f1" : "var(--border)", transition: "background 0.3s" }} />
+            <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: i < wakeAttempt ? "var(--tk-accent, #3B82F6)" : "var(--border)", transition: "background 0.3s" }} />
           ))}
         </div>
-        <p style={{ color: "var(--text-secondary)", fontSize: 12 }}>Attempt {wakeAttempt + 1} of 8</p>
       </div>
     );
   }
@@ -555,9 +554,9 @@ export default function Dashboard() {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: 16, padding: 24, background: "var(--main-bg)" }}>
         <div style={{ fontSize: 44 }}>😴</div>
-        <h2 style={{ color: "var(--text-primary)", fontSize: 18, fontWeight: 700 }}>Server didn't wake up in time</h2>
+        <h2 style={{ color: "var(--text-primary)", fontSize: 18, fontWeight: 700 }}>Taking longer than expected</h2>
         <p style={{ color: "var(--text-secondary)", fontSize: 14, textAlign: "center", maxWidth: 340 }}>
-          Render's free tier took too long to respond. Click retry — it usually works on the second attempt.
+          We're having trouble connecting. Please refresh the page or try again.
         </p>
         <button className="btn-primary" onClick={() => { setWakeStatus(null); loadWorkspaces(0); }} style={{ marginTop: 8 }}>
           Try again
@@ -848,7 +847,7 @@ export default function Dashboard() {
                 <div className="board-title-area"><h1>Analytics</h1><p>Task throughput, velocity, and team performance</p></div>
               </div>
               <ErrorBoundary inline viewName="Analytics">
-                <AnalyticsDashboard workspaceId={currentWorkspace?.id} onNavigate={setView} tasks={allTasks} />
+                <AnalyticsDashboard workspaceId={currentWorkspace?.id} onNavigate={setView} onOpenDetail={setDetailTask} tasks={allTasks} />
               </ErrorBoundary>
             </>
           )}

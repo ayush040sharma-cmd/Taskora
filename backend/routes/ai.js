@@ -12,9 +12,11 @@ const express = require("express");
 const router  = express.Router();
 const pool    = require("../db");
 const auth    = require("../middleware/auth");
+const { requireMinRole } = require("../middleware/rbac");
 const ai      = require("../services/aiEngine");
 
 // ── POST /api/ai/predict/:taskId ──────────────────────────────────────────────
+// Single-task risk prediction — open to all roles (any user can check their own task)
 router.post("/predict/:taskId", auth, async (req, res) => {
   const start = Date.now();
   try {
@@ -107,7 +109,8 @@ router.post("/predict/:taskId", auth, async (req, res) => {
 });
 
 // ── POST /api/ai/analyze/:workspaceId ─────────────────────────────────────────
-router.post("/analyze/:workspaceId", auth, async (req, res) => {
+// Batch workspace analysis — manager+ only (mirrors ai-risk MANAGER_ONLY_VIEW)
+router.post("/analyze/:workspaceId", auth, requireMinRole("manager"), async (req, res) => {
   const start = Date.now();
   try {
     // Verify access (owner or workspace member)
@@ -190,7 +193,8 @@ router.post("/analyze/:workspaceId", auth, async (req, res) => {
 });
 
 // ── GET /api/ai/health/:workspaceId ──────────────────────────────────────────
-router.get("/health/:workspaceId", auth, async (req, res) => {
+// Workspace health score — manager+ only
+router.get("/health/:workspaceId", auth, requireMinRole("manager"), async (req, res) => {
   try {
     const ws = await pool.query(
       `SELECT w.id FROM workspaces w
@@ -217,7 +221,8 @@ router.get("/health/:workspaceId", auth, async (req, res) => {
 });
 
 // ── GET /api/ai/alerts/:workspaceId ──────────────────────────────────────────
-router.get("/alerts/:workspaceId", auth, async (req, res) => {
+// Prescriptive alerts — manager+ only
+router.get("/alerts/:workspaceId", auth, requireMinRole("manager"), async (req, res) => {
   try {
     const ws = await pool.query(
       `SELECT w.id FROM workspaces w

@@ -10,10 +10,12 @@ const express = require("express");
 const router  = express.Router();
 const pool    = require("../db");
 const auth    = require("../middleware/auth");
+const { requireMinRole } = require("../middleware/rbac");
 const wl      = require("../services/workloadEngine");
 
 // ── GET /api/workload ─────────────────────────────────────────────────────────
-router.get("/", auth, async (req, res) => {
+// Team workload dashboard — manager+ only (mirrors MANAGER_ONLY_VIEWS frontend gate)
+router.get("/", auth, requireMinRole("manager"), async (req, res) => {
   const { workspace_id } = req.query;
   if (!workspace_id) return res.status(400).json({ message: "workspace_id required" });
 

@@ -44,7 +44,7 @@ export default function UpgradeGate({ feature, children, style = {} }) {
         >
           <div style={{
             background: "rgba(15,23,42,0.9)",
-            border: "1.5px solid rgba(99,102,241,0.3)",
+            border: "1.5px solid rgba(59,130,246,0.3)",
             borderRadius: 12,
             padding: "14px 20px",
             textAlign: "center",
@@ -56,7 +56,7 @@ export default function UpgradeGate({ feature, children, style = {} }) {
             <div style={{ color: "#f1f5f9", fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
               {PLAN_LABELS[needed]} feature
             </div>
-            <div style={{ color: "#6366f1", fontSize: 12, fontWeight: 600 }}>
+            <div style={{ color: "var(--tk-accent, #3B82F6)", fontSize: 12, fontWeight: 600 }}>
               Unlock with {PLAN_LABELS[needed]} →
             </div>
           </div>

@@ -75,15 +75,12 @@ export default function Login() {
 
   const [forgotLoading, setForgotLoading] = useState(false);
 
-  const [devResetLink, setDevResetLink] = useState("");
-
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     if (!forgotEmail.trim()) return;
     setForgotLoading(true);
     try {
-      const { data } = await api.post("/auth/forgot-password", { email: forgotEmail.trim() });
-      if (data.dev_reset_link) setDevResetLink(data.dev_reset_link);
+      await api.post("/auth/forgot-password", { email: forgotEmail.trim() });
     } catch {
       // Always show success to prevent email enumeration
     } finally {
@@ -169,7 +166,7 @@ export default function Login() {
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               required
               autoFocus
-              onFocus={e => { e.target.style.borderColor = "#6366f1"; e.target.style.boxShadow = "0 0 0 3px rgba(99,102,241,0.12)"; }}
+              onFocus={e => { e.target.style.borderColor = "var(--tk-accent, #3B82F6)"; e.target.style.boxShadow = "0 0 0 3px rgba(59,130,246,0.12)"; }}
               onBlur={e => { e.target.style.borderColor = "#e2e8f0"; e.target.style.boxShadow = "none"; }}
             />
           </div>
@@ -189,7 +186,7 @@ export default function Login() {
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 required
-                onFocus={e => { e.target.style.borderColor = "#6366f1"; e.target.style.boxShadow = "0 0 0 3px rgba(99,102,241,0.12)"; }}
+                onFocus={e => { e.target.style.borderColor = "var(--tk-accent, #3B82F6)"; e.target.style.boxShadow = "0 0 0 3px rgba(59,130,246,0.12)"; }}
                 onBlur={e => { e.target.style.borderColor = "#e2e8f0"; e.target.style.boxShadow = "none"; }}
               />
               <button type="button" style={styles.eyeBtn} onClick={() => setShowPass(v => !v)}>
@@ -254,13 +251,7 @@ export default function Login() {
                 <div style={{ fontSize: 13, color: "#64748b", lineHeight: 1.6 }}>
                   If an account exists for <strong>{forgotEmail}</strong>, we've sent a password reset link.
                 </div>
-                {devResetLink && (
-                  <div style={{ marginTop: 14, padding: "10px 14px", background: "#fef9c3", border: "1px solid #fde047", borderRadius: 8, fontSize: 12 }}>
-                    <div style={{ fontWeight: 700, color: "#854d0e", marginBottom: 4 }}>Dev mode — no email configured:</div>
-                    <a href={devResetLink} style={{ color: "#1d4ed8", wordBreak: "break-all" }}>{devResetLink}</a>
-                  </div>
-                )}
-                <button style={{ ...styles.submitBtn, marginTop: 20 }} onClick={() => { setShowForgot(false); setForgotSent(false); setForgotEmail(""); setDevResetLink(""); }}>
+                <button style={{ ...styles.submitBtn, marginTop: 20 }} onClick={() => { setShowForgot(false); setForgotSent(false); setForgotEmail(""); }}>
                   Back to sign in
                 </button>
               </div>
@@ -279,7 +270,7 @@ export default function Login() {
                     onChange={e => setForgotEmail(e.target.value)}
                     required
                     autoFocus
-                    onFocus={e => { e.target.style.borderColor = "#6366f1"; e.target.style.boxShadow = "0 0 0 3px rgba(99,102,241,0.12)"; }}
+                    onFocus={e => { e.target.style.borderColor = "var(--tk-accent, #3B82F6)"; e.target.style.boxShadow = "0 0 0 3px rgba(59,130,246,0.12)"; }}
                     onBlur={e => { e.target.style.borderColor = "#e2e8f0"; e.target.style.boxShadow = "none"; }}
                   />
                 </div>
@@ -303,7 +294,7 @@ const styles = {
     padding: "24px", position: "relative", overflow: "hidden",
     flexDirection: "column", gap: "24px",
   },
-  blob1: { position: "absolute", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(99,102,241,0.3) 0%, transparent 70%)", top: "-100px", left: "-100px", pointerEvents: "none" },
+  blob1: { position: "absolute", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(59,130,246,0.3) 0%, transparent 70%)", top: "-100px", left: "-100px", pointerEvents: "none" },
   blob2: { position: "absolute", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(168,85,247,0.2) 0%, transparent 70%)", bottom: "-80px", right: "-80px", pointerEvents: "none" },
   card: {
     background: "#ffffff", borderRadius: 20, padding: "40px 44px",
@@ -312,9 +303,9 @@ const styles = {
     position: "relative", zIndex: 1,
   },
   logoRow: { display: "flex", alignItems: "center", gap: 10, marginBottom: 28 },
-  logoMark: { width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, #6366f1, #8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  logoMark: { width: 36, height: 36, borderRadius: 10, background: "var(--tk-accent, #3B82F6)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   logoText: { fontSize: 20, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.5px", flex: 1 },
-  logoBadge: { fontSize: 10, fontWeight: 700, color: "#6366f1", background: "rgba(99,102,241,0.1)", borderRadius: 4, padding: "2px 5px" },
+  logoBadge: { fontSize: 10, fontWeight: 700, color: "var(--tk-accent, #3B82F6)", background: "rgba(59,130,246,0.1)", borderRadius: 4, padding: "2px 5px" },
   heading: { fontSize: 26, fontWeight: 800, color: "#0f172a", margin: "0 0 6px", letterSpacing: "-0.5px" },
   subtext: { fontSize: 14, color: "#64748b", margin: "0 0 20px" },
   infoBox: { display: "flex", alignItems: "center", gap: 8, background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1d4ed8", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 500, marginBottom: 18 },
@@ -342,15 +333,15 @@ const styles = {
   input: { width: "100%", padding: "11px 14px", border: "1.5px solid #e2e8f0", borderRadius: 10, fontSize: 14, color: "#0f172a", background: "#f8fafc", outline: "none", transition: "border-color 0.15s", boxSizing: "border-box", fontFamily: "inherit" },
   passWrap: { position: "relative" },
   eyeBtn: { position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4, display: "flex", alignItems: "center" },
-  submitBtn: { width: "100%", padding: "13px", background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", marginTop: 4, letterSpacing: "0.2px", transition: "opacity 0.15s" },
+  submitBtn: { width: "100%", padding: "13px", background: "var(--tk-accent, #3B82F6)", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", marginTop: 4, letterSpacing: "0.2px", transition: "opacity 0.15s" },
   btnInner: { display: "flex", alignItems: "center", justifyContent: "center", gap: 8 },
   spinner: { animation: "spin 0.7s linear infinite" },
   divider: { textAlign: "center", margin: "20px 0 14px", fontSize: 13, color: "#64748b" },
-  switchLink: { display: "block", textAlign: "center", padding: "11px", border: "1.5px solid #e2e8f0", borderRadius: 10, fontSize: 14, fontWeight: 600, color: "#6366f1", textDecoration: "none" },
+  switchLink: { display: "block", textAlign: "center", padding: "11px", border: "1.5px solid #e2e8f0", borderRadius: 10, fontSize: 14, fontWeight: 600, color: "var(--tk-accent, #3B82F6)", textDecoration: "none" },
   helpRow: { display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 16 },
   helpLink: { fontSize: 12, color: "#64748b", textDecoration: "none" },
   helpDot: { fontSize: 12, color: "#94a3b8" },
-  forgotLink: { background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#6366f1", fontWeight: 600, padding: 0 },
+  forgotLink: { background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "var(--tk-accent, #3B82F6)", fontWeight: 600, padding: 0 },
   pills: { display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", position: "relative", zIndex: 1 },
   pill: { background: "rgba(255,255,255,0.08)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 99, padding: "6px 14px", fontSize: 12, color: "rgba(255,255,255,0.75)", fontWeight: 500 },
   modalOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 },

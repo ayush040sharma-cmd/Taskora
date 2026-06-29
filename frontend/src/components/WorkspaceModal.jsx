@@ -81,8 +81,8 @@ export default function WorkspaceModal({ onClose, onSubmit }) {
         ) : (
           <form onSubmit={handleSubmit}>
             <div className="modal-body">
-              <p style={{ color: "#94a3b8", fontSize: 13, margin: "0 0 16px" }}>
-                Pre-fill <strong style={{ color: "#e2e8f0" }}>{name}</strong> with starter tasks and teams,
+              <p style={{ color: "var(--text-secondary)", fontSize: 13, margin: "0 0 16px" }}>
+                Pre-fill <strong style={{ color: "var(--text-primary)" }}>{name}</strong> with starter tasks and teams,
                 or start blank.
               </p>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10 }}>
@@ -91,15 +91,15 @@ export default function WorkspaceModal({ onClose, onSubmit }) {
                     key={String(t.id)}
                     onClick={() => setTemplate(t.id)}
                     style={{
-                      border: `1px solid ${template === t.id ? "#6366f1" : "#334155"}`,
+                      border: `1px solid ${template === t.id ? "var(--tk-accent, #3B82F6)" : "var(--border)"}`,
                       borderRadius: 10, padding: "12px 14px", cursor: "pointer",
-                      background: template === t.id ? "#6366f111" : "#1e293b",
+                      background: template === t.id ? "rgba(59,130,246,0.07)" : "var(--card-bg)",
                       transition: "all 0.15s",
                     }}
                   >
                     <div style={{ fontSize: 20, marginBottom: 4 }}>{t.icon}</div>
-                    <div style={{ color: "#e2e8f0", fontWeight: 700, fontSize: 13 }}>{t.label}</div>
-                    <div style={{ color: "#64748b", fontSize: 11, marginTop: 2 }}>{t.desc}</div>
+                    <div style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 13 }}>{t.label}</div>
+                    <div style={{ color: "var(--text-secondary)", fontSize: 11, marginTop: 2 }}>{t.desc}</div>
                   </div>
                 ))}
               </div>

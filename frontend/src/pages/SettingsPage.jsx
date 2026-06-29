@@ -44,7 +44,7 @@ function Toggle({ on, onChange }) {
       onClick={() => onChange(!on)}
       style={{
         position: "relative", width: 44, height: 24, borderRadius: 99, flexShrink: 0,
-        background: on ? "#6366f1" : "#cbd5e1", border: "none", cursor: "pointer",
+        background: on ? "var(--tk-accent, #3B82F6)" : "#cbd5e1", border: "none", cursor: "pointer",
         transition: "background 0.2s",
       }}
     >
@@ -62,7 +62,7 @@ function SaveRow({ onSave, saved, label = "Save" }) {
     <div style={{ marginTop: 20, display: "flex", gap: 10, alignItems: "center" }}>
       <button
         onClick={onSave}
-        style={{ background: "#6366f1", color: "#fff", border: "none", borderRadius: 8, padding: "9px 18px", fontWeight: 600, fontSize: 13, cursor: "pointer" }}
+        style={{ background: "var(--tk-accent, #3B82F6)", color: "#fff", border: "none", borderRadius: 8, padding: "9px 18px", fontWeight: 600, fontSize: 13, cursor: "pointer" }}
       >
         {label}
       </button>
@@ -244,7 +244,7 @@ function SecuritySection() {
     return s;
   };
   const STRENGTH_LABEL = ["","Weak","Fair","Good","Strong"];
-  const STRENGTH_COLOR = ["","#ef4444","#f59e0b","#6366f1","#10b981"];
+  const STRENGTH_COLOR = ["","#ef4444","#f59e0b","var(--tk-accent, #3B82F6)","#10b981"];
   const pw = form.new_password;
   const s  = strengthScore(pw);
 
@@ -314,7 +314,7 @@ function SecuritySection() {
           <button
             type="submit"
             disabled={saving}
-            style={{ background: saving ? "#e2e8f0" : "#6366f1", color: saving ? "#888" : "#fff", border: "none", borderRadius: 8, padding: "9px 18px", fontWeight: 600, fontSize: 13, cursor: saving ? "not-allowed" : "pointer" }}
+            style={{ background: saving ? "#e2e8f0" : "var(--tk-accent, #3B82F6)", color: saving ? "#888" : "#fff", border: "none", borderRadius: 8, padding: "9px 18px", fontWeight: 600, fontSize: 13, cursor: saving ? "not-allowed" : "pointer" }}
           >
             {saving ? "Updating…" : "Update password"}
           </button>
@@ -361,7 +361,7 @@ function DemoSection({ workspaceId }) {
       <button
         onClick={handleSeed}
         disabled={seeding}
-        style={{ background: seeding ? "#e2e8f0" : "#6366f1", color: seeding ? "#888" : "#fff", border: "none", borderRadius: 8, padding: "9px 18px", fontWeight: 600, fontSize: 13, cursor: seeding ? "not-allowed" : "pointer" }}
+        style={{ background: seeding ? "#e2e8f0" : "var(--tk-accent, #3B82F6)", color: seeding ? "#888" : "#fff", border: "none", borderRadius: 8, padding: "9px 18px", fontWeight: 600, fontSize: 13, cursor: seeding ? "not-allowed" : "pointer" }}
       >
         {seeding ? "⏳ Loading demo data…" : "🚀 Load demo data"}
       </button>
@@ -372,7 +372,7 @@ function DemoSection({ workspaceId }) {
 // ── Section: Project Settings ────────────────────────────────────────────────
 const DEFAULT_STATUSES = [
   { id: 1, label: "Backlog",     color: "#94a3b8" },
-  { id: 2, label: "To Do",       color: "#6366f1" },
+  { id: 2, label: "To Do",       color: "var(--tk-accent, #3B82F6)" },
   { id: 3, label: "In Progress", color: "#f59e0b" },
   { id: 4, label: "Review",      color: "#8b5cf6" },
   { id: 5, label: "Done",        color: "#10b981" },
@@ -382,7 +382,7 @@ const DEFAULT_PRIORITIES = [
   { label: "Critical", color: "#ef4444" },
   { label: "High",     color: "#f97316" },
   { label: "Medium",   color: "#f59e0b" },
-  { label: "Low",      color: "#6366f1" },
+  { label: "Low",      color: "var(--tk-accent, #3B82F6)" },
 ];
 
 function ProjectSection() {
@@ -489,7 +489,7 @@ function SettingsNav({ sections, active, onSelect }) {
                   width: "100%", textAlign: "left", padding: "8px 16px",
                   background: active === s.id ? "var(--card-bg)" : "transparent",
                   border: "none", cursor: "pointer",
-                  borderLeft: active === s.id ? "3px solid var(--primary, #6366f1)" : "3px solid transparent",
+                  borderLeft: active === s.id ? "3px solid var(--tk-accent, #3B82F6)" : "3px solid transparent",
                   color: active === s.id ? "var(--text-primary)" : "var(--text-secondary)",
                   fontWeight: active === s.id ? 600 : 400,
                   fontSize: 13, display: "flex", alignItems: "center", gap: 8,

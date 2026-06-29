@@ -106,7 +106,7 @@ export default function Pricing() {
           </button>
           <h1 style={{ fontSize: 40, fontWeight: 800, margin: "0 0 12px" }}>
             Simple,{" "}
-            <span style={{ background: "linear-gradient(90deg,#6366f1,#8b5cf6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            <span style={{ background: "linear-gradient(90deg,#3B82F6,#60a5fa)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
               transparent
             </span>{" "}
             pricing
@@ -121,8 +121,8 @@ export default function Pricing() {
               alignItems: "center",
               gap: 8,
               marginTop: 18,
-              background: "rgba(99,102,241,0.1)",
-              border: "1px solid rgba(99,102,241,0.2)",
+              background: "rgba(59,130,246,0.1)",
+              border: "1px solid rgba(59,130,246,0.2)",
               borderRadius: 20,
               padding: "6px 16px",
               fontSize: 13,

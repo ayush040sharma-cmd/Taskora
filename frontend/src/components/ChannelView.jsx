@@ -30,7 +30,7 @@ function timeAgo(dateStr) {
 }
 
 function Avatar({ name, size = 32 }) {
-  const COLORS = ["#6366f1","#8b5cf6","#06b6d4","#10b981","#f59e0b","#ef4444"];
+  const COLORS = ["#3B82F6","#8b5cf6","#06b6d4","#10b981","#f59e0b","#ef4444"];
   const bg = COLORS[(name?.charCodeAt(0) || 0) % COLORS.length];
   return (
     <div style={{

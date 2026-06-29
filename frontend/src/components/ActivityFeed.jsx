@@ -5,9 +5,9 @@ import api from "../api/api";
 const ACTION_MAP = {
   task_created:    { icon: "✚", label: (m) => `created "${m.task_title}"`,                        color: "#10b981", bg: "#f0fdf4" },
   task_completed:  { icon: "✓", label: (m) => `completed "${m.task_title}"`,                       color: "#10b981", bg: "#f0fdf4" },
-  task_moved:      { icon: "→", label: (m) => `moved "${m.task_title}" to ${STATUS_LABEL[m.to] || m.to}`, color: "#6366f1", bg: "#eef2ff" },
-  task_assigned:    { icon: "👤", label: (m) => `assigned "${m.task_title}"`,                        color: "#6366f1", bg: "#eef2ff" },
-  task_renamed:     { icon: "✏", label: (m) => `renamed task to "${m.task_title}"`,                  color: "#6366f1", bg: "#eef2ff" },
+  task_moved:      { icon: "→", label: (m) => `moved "${m.task_title}" to ${STATUS_LABEL[m.to] || m.to}`, color: "#3B82F6", bg: "rgba(59,130,246,0.08)" },
+  task_assigned:    { icon: "👤", label: (m) => `assigned "${m.task_title}"`,                        color: "#3B82F6", bg: "rgba(59,130,246,0.08)" },
+  task_renamed:     { icon: "✏", label: (m) => `renamed task to "${m.task_title}"`,                  color: "#3B82F6", bg: "rgba(59,130,246,0.08)" },
   task_deleted:     { icon: "✕", label: (m) => `deleted "${m.task_title}"`,                          color: "#ef4444", bg: "#fef2f2" },
   leave_started:    { icon: "🏖", label: ()  => "started leave",                                     color: "#f59e0b", bg: "#fffbeb" },
   leave_ended:      { icon: "👋", label: ()  => "returned from leave",                               color: "#10b981", bg: "#f0fdf4" },

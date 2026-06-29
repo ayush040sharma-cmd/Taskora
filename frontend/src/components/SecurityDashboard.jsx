@@ -36,7 +36,7 @@ function SevBadge({ severity }) {
   );
 }
 
-function StatCard({ label, value, color = "#6366f1", sub }) {
+function StatCard({ label, value, color = "var(--tk-accent, #3B82F6)", sub }) {
   return (
     <div style={{
       background: "var(--card-bg)", border: "1px solid var(--border)", borderRadius: 12,
@@ -154,7 +154,7 @@ export default function SecurityDashboard() {
 
       {/* Stats row */}
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 24 }}>
-        <StatCard label="Total Events"   value={events.length}         color="#6366f1" />
+        <StatCard label="Total Events"   value={events.length}         color="var(--tk-accent, #3B82F6)" />
         <StatCard label="Last 24h"       value={stats?.last_24h || 0}  color="#0ea5e9" />
         <StatCard label="Critical"       value={critCount}              color="#dc2626" />
         <StatCard label="High"           value={highCount}              color="#ea580c" />
@@ -190,7 +190,7 @@ export default function SecurityDashboard() {
           <button key={t} onClick={() => setTab(t)} style={{
             padding: "7px 18px", borderRadius: 8, border: "none", cursor: "pointer",
             fontSize: 13, fontWeight: 600,
-            background: tab === t ? "#6366f1" : "var(--column-bg)",
+            background: tab === t ? "var(--tk-accent, #3B82F6)" : "var(--column-bg)",
             color:      tab === t ? "#fff"    : "var(--text-secondary)",
           }}>
             {t === "events" ? `Events (${events.length})` : `Blocked IPs (${blockedIPs.length})`}

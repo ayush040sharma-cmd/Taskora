@@ -8,9 +8,9 @@ const SCOPE_ORDER  = ["self","team","department","project","org"];
 // ── Shared style tokens ──────────────────────────────────────────────────────
 const S = {
   btn: {
-    primary: { background: "#4f46e5", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" },
+    primary: { background: "var(--tk-accent, #3B82F6)", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" },
     ghost:   { background: "var(--card-bg)", color: "var(--text-primary)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 16px", fontSize: 13, cursor: "pointer" },
-    link:    { background: "none", border: "none", color: "#4f46e5", fontSize: 12, cursor: "pointer", textDecoration: "underline", padding: 0 },
+    link:    { background: "none", border: "none", color: "var(--tk-accent, #3B82F6)", fontSize: 12, cursor: "pointer", textDecoration: "underline", padding: 0 },
     linkGray:{ background: "none", border: "none", color: "#6b7280", fontSize: 12, cursor: "pointer", textDecoration: "underline", padding: 0 },
     linkRed: { background: "none", border: "none", color: "#ef4444", fontSize: 12, cursor: "pointer", textDecoration: "underline", padding: 0 },
   },
@@ -230,7 +230,7 @@ function UsersTab({ roles }) {
                       {(u.roles || []).map(r => (
                         <span
                           key={r.id}
-                          style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, padding: "2px 6px", borderRadius: 99, color: "#fff", background: r.color || "#4f46e5" }}
+                          style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, padding: "2px 6px", borderRadius: 99, color: "#fff", background: r.color || "var(--tk-accent, #3B82F6)" }}
                         >
                           {r.display_name}
                           <button
@@ -267,7 +267,7 @@ function RolesTab({ roles, catalog, reload }) {
   const [editingRole, setEditingRole]       = useState(null);
   const [editPerms, setEditPerms]           = useState({});
   const [showCreate, setShowCreate]         = useState(false);
-  const [createForm, setCreateForm]         = useState({ display_name: "", description: "", color: "#6366f1" });
+  const [createForm, setCreateForm]         = useState({ display_name: "", description: "", color: "#3B82F6" });
   const [cloneSource, setCloneSource]       = useState(null);
   const [cloneName, setCloneName]           = useState("");
   const [saving, setSaving]                 = useState(false);
@@ -306,7 +306,7 @@ function RolesTab({ roles, catalog, reload }) {
       const name = createForm.display_name.toLowerCase().replace(/[^a-z0-9_]/g, "_");
       await api.post(`/roles`, { ...createForm, name });
       setShowCreate(false);
-      setCreateForm({ display_name: "", description: "", color: "#6366f1" });
+      setCreateForm({ display_name: "", description: "", color: "#3B82F6" });
       reload();
     } catch (err) {
       console.error("Create role failed:", err.response?.data?.message || err.message);
@@ -446,7 +446,7 @@ function RolesTab({ roles, catalog, reload }) {
                                     key={s}
                                     onClick={() => setScope(p.key, s)}
                                     style={scope === s
-                                      ? { fontSize: 11, padding: "2px 7px", borderRadius: 4, border: "1px solid #4f46e5", background: "#4f46e5", color: "#fff", cursor: "pointer" }
+                                      ? { fontSize: 11, padding: "2px 7px", borderRadius: 4, border: "1px solid var(--tk-accent, #3B82F6)", background: "var(--tk-accent, #3B82F6)", color: "#fff", cursor: "pointer" }
                                       : { fontSize: 11, padding: "2px 7px", borderRadius: 4, border: "1px solid var(--border)", background: "var(--column-bg)", color: "var(--text-secondary)", cursor: "pointer" }
                                     }
                                   >
@@ -625,9 +625,9 @@ function DepartmentsTeamsTab() {
             onClick={() => setSubTab(id)}
             style={{
               padding: "6px 16px", fontSize: 13, borderRadius: 99, cursor: "pointer",
-              background: subTab === id ? "#4f46e5" : "var(--column-bg)",
+              background: subTab === id ? "var(--tk-accent, #3B82F6)" : "var(--column-bg)",
               color: subTab === id ? "#fff" : "var(--text-primary)",
-              border: subTab === id ? "1px solid #4f46e5" : "1px solid var(--border)",
+              border: subTab === id ? "1px solid var(--tk-accent, #3B82F6)" : "1px solid var(--border)",
               fontWeight: subTab === id ? 600 : 400,
             }}
           >
@@ -766,8 +766,8 @@ export default function AccessControlPanel({ hideHeader = false }) {
             style={{
               padding: "10px 18px", fontSize: 13, fontWeight: tab === t.id ? 600 : 400,
               background: "none", border: "none", cursor: "pointer",
-              borderBottom: tab === t.id ? "2px solid #4f46e5" : "2px solid transparent",
-              color: tab === t.id ? "#4f46e5" : "#6b7280",
+              borderBottom: tab === t.id ? "2px solid var(--tk-accent, #3B82F6)" : "2px solid transparent",
+              color: tab === t.id ? "var(--tk-accent, #3B82F6)" : "#6b7280",
               marginBottom: -1,
             }}
           >

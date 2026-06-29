@@ -88,7 +88,7 @@ export default function ResetPassword() {
                     onChange={e => setPassword(e.target.value)}
                     required
                     autoFocus
-                    onFocus={e => e.target.style.borderColor = "#6366f1"}
+                    onFocus={e => e.target.style.borderColor = "var(--tk-accent, #3B82F6)"}
                     onBlur={e => e.target.style.borderColor = "#e2e8f0"}
                   />
                   <button type="button" style={styles.eyeBtn} onClick={() => setShowPass(v => !v)}>
@@ -120,7 +120,7 @@ export default function ResetPassword() {
                   value={confirm}
                   onChange={e => setConfirm(e.target.value)}
                   required
-                  onFocus={e => e.target.style.borderColor = "#6366f1"}
+                  onFocus={e => e.target.style.borderColor = "var(--tk-accent, #3B82F6)"}
                   onBlur={e => e.target.style.borderColor = confirm && confirm !== password ? "#fca5a5" : "#e2e8f0"}
                 />
               </div>
@@ -146,13 +146,13 @@ export default function ResetPassword() {
 
 const styles = {
   root: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)", padding: "24px", position: "relative", overflow: "hidden" },
-  blob1: { position: "absolute", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(99,102,241,0.3) 0%, transparent 70%)", top: "-100px", left: "-100px", pointerEvents: "none" },
+  blob1: { position: "absolute", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(59,130,246,0.3) 0%, transparent 70%)", top: "-100px", left: "-100px", pointerEvents: "none" },
   blob2: { position: "absolute", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(168,85,247,0.2) 0%, transparent 70%)", bottom: "-80px", right: "-80px", pointerEvents: "none" },
   card: { background: "#fff", borderRadius: 20, padding: "40px 44px", width: "100%", maxWidth: 420, boxShadow: "0 25px 60px rgba(0,0,0,0.4)", position: "relative", zIndex: 1 },
   logoRow: { display: "flex", alignItems: "center", gap: 10, marginBottom: 28 },
-  logoMark: { width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, #6366f1, #8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  logoMark: { width: 36, height: 36, borderRadius: 10, background: "var(--tk-accent, #3B82F6)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   logoText: { fontSize: 20, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.5px", flex: 1 },
-  logoBadge: { fontSize: 10, fontWeight: 700, color: "#6366f1", background: "rgba(99,102,241,0.1)", borderRadius: 4, padding: "2px 5px" },
+  logoBadge: { fontSize: 10, fontWeight: 700, color: "var(--tk-accent, #3B82F6)", background: "rgba(59,130,246,0.1)", borderRadius: 4, padding: "2px 5px" },
   heading: { fontSize: 26, fontWeight: 800, color: "#0f172a", margin: "0 0 6px", letterSpacing: "-0.5px" },
   subtext: { fontSize: 14, color: "#64748b", margin: "0 0 20px" },
   errorBox: { display: "flex", alignItems: "center", gap: 8, background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 500, marginBottom: 18 },
@@ -163,7 +163,7 @@ const styles = {
   passWrap: { position: "relative" },
   eyeBtn: { position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4, display: "flex", alignItems: "center" },
   hints: { display: "flex", gap: 12, fontSize: 12, flexWrap: "wrap", marginTop: 4 },
-  submitBtn: { display: "block", textAlign: "center", width: "100%", padding: "13px", background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", marginTop: 4, letterSpacing: "0.2px", textDecoration: "none", boxSizing: "border-box" },
+  submitBtn: { display: "block", textAlign: "center", width: "100%", padding: "13px", background: "var(--tk-accent, #3B82F6)", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", marginTop: 4, letterSpacing: "0.2px", textDecoration: "none", boxSizing: "border-box" },
   backRow: { textAlign: "center", marginTop: 20 },
-  backLink: { fontSize: 13, color: "#6366f1", textDecoration: "none", fontWeight: 600 },
+  backLink: { fontSize: 13, color: "var(--tk-accent, #3B82F6)", textDecoration: "none", fontWeight: 600 },
 };

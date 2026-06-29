@@ -36,8 +36,13 @@ router.get("/status", (req, res) => res.json({ ok: true, ts: Date.now() }));
 router.post("/register", authLimiter, validate(schemas.register), async (req, res) => {
   const { name, email, password, role } = req.body;
 
-  // Every new registrant becomes super_boss — they created their own org so they own it
-  const safeRole = "super_boss";
+  // Map the frontend role selection to a platform role.
+  // Workspace creators get "manager" so they can manage their own workspace.
+  // "super_boss" is reserved for explicit admin promotion and never granted at registration.
+  const ROLE_MAP = { manager: "manager", member: "team_member" };
+  const safeRole = ROLE_MAP[role] || "manager";
+  // Preserve the stated preference for onboarding personalisation
+  const onboardingRole = role === "member" ? "member" : "manager";
 
   try {
     const existing = await pool.query("SELECT id FROM users WHERE email = $1", [email]);
@@ -49,10 +54,10 @@ router.post("/register", authLimiter, validate(schemas.register), async (req, re
     const password_hash = await bcrypt.hash(password, salt);
 
     const userResult = await pool.query(
-      `INSERT INTO users (name, email, password_hash, role)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO users (name, email, password_hash, role, onboarding_role)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING id, name, email, role, onboarding_role, onboarding_complete, plan, team_size, is_admin`,
-      [name, email, password_hash, safeRole]
+      [name, email, password_hash, safeRole, onboardingRole]
     );
     const user = userResult.rows[0];
 
@@ -354,16 +359,14 @@ router.post("/forgot-password", authLimiter, validate(schemas.forgotPassword), a
   } catch (err) {
     logger.error(`Forgot password error: ${err.message}`);
   }
-  // In development (no email service), return the reset link directly so it's usable
-  if (!process.env.RESEND_API_KEY) {
+  // In local dev (no email service + not production), log the link to the server console only.
+  // Never include it in the API response — the frontend must never render reset tokens.
+  if (!process.env.RESEND_API_KEY && process.env.NODE_ENV !== "production") {
     try {
       const r = await pool.query("SELECT reset_token FROM users WHERE email = $1", [req.body.email]);
       if (r.rows[0]?.reset_token) {
         const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-        return res.json({
-          message: "If that email exists, a reset link has been sent.",
-          dev_reset_link: `${frontendUrl}/reset-password?token=${r.rows[0].reset_token}`,
-        });
+        logger.warn(`DEV reset link (server only): ${frontendUrl}/reset-password?token=${r.rows[0].reset_token}`);
       }
     } catch {}
   }
@@ -394,55 +397,69 @@ router.post("/reset-password", authLimiter, validate(schemas.resetPassword), asy
   }
 });
 
-// POST /api/auth/demo — instant demo login (creates/resets demo account)
+// POST /api/auth/demo — creates a fresh isolated demo session per request.
+// Each caller gets their own ephemeral user + workspace so concurrent demo users
+// never share data or real-time socket events.
 router.post("/demo", demoLimiter, async (req, res) => {
-  const DEMO_EMAIL = "demo@taskora.app";
-  const DEMO_NAME  = "Demo User";
+  const crypto = require("crypto");
 
   try {
-    let user;
-    const existing = await pool.query("SELECT id, name, email, role FROM users WHERE email = $1", [DEMO_EMAIL]);
+    // Purge expired ephemeral demo accounts (TTL = 2h, matching the JWT expiry).
+    // Delete workspaces first so tasks cascade, then delete the users.
+    await pool.query(
+      `DELETE FROM workspaces
+       WHERE user_id IN (
+         SELECT id FROM users
+         WHERE email LIKE 'demo\\_%@demo.taskora.internal' ESCAPE '\\'
+           AND created_at < NOW() - INTERVAL '2 hours'
+       )`
+    ).catch(() => {});
+    await pool.query(
+      `DELETE FROM users
+       WHERE email LIKE 'demo\\_%@demo.taskora.internal' ESCAPE '\\'
+         AND created_at < NOW() - INTERVAL '2 hours'`
+    ).catch(() => {});
 
-    if (existing.rows.length > 0) {
-      user = existing.rows[0];
-      await pool.query("UPDATE users SET last_login_at = NOW() WHERE id = $1", [user.id]).catch(() => {});
-    } else {
-      const hash = await bcrypt.hash("demo-password-not-for-login-" + Date.now(), 10);
-      const result = await pool.query(
-        "INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role",
-        [DEMO_NAME, DEMO_EMAIL, hash, "manager"]
-      );
-      user = result.rows[0];
+    // Create a unique ephemeral identity for this session
+    const uid  = crypto.randomBytes(6).toString("hex");
+    const demoEmail = `demo_${uid}@demo.taskora.internal`;
+    const demoName  = "Demo User";
 
-      // Create demo workspace
-      const ws = await pool.query(
-        "INSERT INTO workspaces (name, user_id) VALUES ($1, $2) RETURNING id",
-        ["Taskora Demo Workspace", user.id]
-      );
-      const workspaceId = ws.rows[0].id;
+    const hash = await bcrypt.hash(`demo-${uid}-not-for-login`, 10);
+    const result = await pool.query(
+      "INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role",
+      [demoName, demoEmail, hash, "manager"]
+    );
+    const user = result.rows[0];
 
-      // Seed demo tasks with correct schema column names
-      const demoTasks = [
-        { title: "Design new landing page",    type: "task",    status: "done",        priority: "high",   est: 16, pos: 1 },
-        { title: "Fix checkout flow bug",      type: "bug",     status: "done",        priority: "high",   est: 8,  pos: 2 },
-        { title: "Sprint planning — Q3",       type: "story",   status: "done",        priority: "medium", est: 4,  pos: 3 },
-        { title: "Q3 feature roadmap doc",     type: "story",   status: "inprogress", priority: "high",   est: 40, pos: 1 },
-        { title: "API rate limiting setup",    type: "upgrade", status: "inprogress", priority: "medium", est: 24, pos: 2 },
-        { title: "Mobile responsive audit",    type: "task",    status: "review",      priority: "medium", est: 16, pos: 1 },
-        { title: "Write integration docs",     type: "task",    status: "todo",        priority: "low",    est: 16, pos: 1 },
-        { title: "Add Slack notifications",    type: "upgrade", status: "todo",        priority: "medium", est: 32, pos: 2 },
-        { title: "Enterprise RFP — Acme Corp", type: "rfp",     status: "todo",        priority: "high",   est: 40, pos: 3 },
-        { title: "User onboarding flow v2",    type: "story",   status: "todo",        priority: "low",    est: 24, pos: 4 },
-      ];
+    // Create a private demo workspace for this session
+    const ws = await pool.query(
+      "INSERT INTO workspaces (name, user_id) VALUES ($1, $2) RETURNING id",
+      ["Taskora Demo Workspace", user.id]
+    );
+    const workspaceId = ws.rows[0].id;
 
-      for (const t of demoTasks) {
-        await pool.query(
-          `INSERT INTO tasks
-             (title, type, status, priority, workspace_id, assigned_user_id, estimated_hours, actual_hours, position)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-          [t.title, t.type, t.status, t.priority, workspaceId, user.id, t.est, 0, t.pos]
-        ).catch(() => {});  // skip if any error (idempotent re-seed guard)
-      }
+    // Seed realistic demo tasks
+    const demoTasks = [
+      { title: "Design new landing page",    type: "task",    status: "done",       priority: "high",   est: 16, pos: 1 },
+      { title: "Fix checkout flow bug",      type: "bug",     status: "done",       priority: "high",   est: 8,  pos: 2 },
+      { title: "Sprint planning — Q3",       type: "story",   status: "done",       priority: "medium", est: 4,  pos: 3 },
+      { title: "Q3 feature roadmap doc",     type: "story",   status: "inprogress", priority: "high",   est: 40, pos: 1 },
+      { title: "API rate limiting setup",    type: "upgrade", status: "inprogress", priority: "medium", est: 24, pos: 2 },
+      { title: "Mobile responsive audit",    type: "task",    status: "review",     priority: "medium", est: 16, pos: 1 },
+      { title: "Write integration docs",     type: "task",    status: "todo",       priority: "low",    est: 16, pos: 1 },
+      { title: "Add Slack notifications",    type: "upgrade", status: "todo",       priority: "medium", est: 32, pos: 2 },
+      { title: "Enterprise RFP — Acme Corp", type: "rfp",    status: "todo",       priority: "high",   est: 40, pos: 3 },
+      { title: "User onboarding flow v2",    type: "story",   status: "todo",       priority: "low",    est: 24, pos: 4 },
+    ];
+
+    for (const t of demoTasks) {
+      await pool.query(
+        `INSERT INTO tasks
+           (title, type, status, priority, workspace_id, assigned_user_id, estimated_hours, actual_hours, position)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+        [t.title, t.type, t.status, t.priority, workspaceId, user.id, t.est, 0, t.pos]
+      ).catch(() => {});
     }
 
     const token = jwt.sign(
@@ -458,7 +475,7 @@ router.post("/demo", demoLimiter, async (req, res) => {
       isDemo: true,
     });
   } catch (err) {
-    console.error("Demo login error:", err);
+    logger.error(`Demo login error: ${err.message}`);
     res.status(500).json({ message: "Could not start demo session." });
   }
 });

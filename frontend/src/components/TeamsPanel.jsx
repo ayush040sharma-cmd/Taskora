@@ -39,8 +39,8 @@ function IconPicker({ value, onChange }) {
           onClick={() => onChange(ic)}
           style={{
             width: 36, height: 36, borderRadius: 8, fontSize: 18,
-            background: value === ic ? "#334155" : "#1e293b",
-            border: value === ic ? "1px solid #6366f1" : "1px solid #334155",
+            background: value === ic ? "var(--border)" : "var(--card-bg)",
+            border: value === ic ? "1px solid var(--tk-accent, #3B82F6)" : "1px solid var(--border)",
             cursor: "pointer",
           }}
         >
@@ -55,7 +55,7 @@ function IconPicker({ value, onChange }) {
 function TeamModal({ team, workspaceId, onClose, onSaved }) {
   const [name, setName]           = useState(team?.name || "");
   const [description, setDesc]    = useState(team?.description || "");
-  const [color, setColor]         = useState(team?.color || "#6366f1");
+  const [color, setColor]         = useState(team?.color || "#3B82F6");
   const [icon, setIcon]           = useState(team?.icon || "👥");
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState(null);
@@ -86,10 +86,10 @@ function TeamModal({ team, workspaceId, onClose, onSaved }) {
       display: "flex", alignItems: "center", justifyContent: "center",
     }} onClick={onClose}>
       <form onSubmit={save} onClick={e => e.stopPropagation()} style={{
-        background: "#1e293b", borderRadius: 16, padding: 28, width: 440,
-        maxWidth: "95vw", border: "1px solid #334155", display: "flex", flexDirection: "column", gap: 16,
+        background: "var(--card-bg)", borderRadius: 16, padding: 28, width: 440,
+        maxWidth: "95vw", border: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 16,
       }}>
-        <h3 style={{ color: "#f1f5f9", margin: 0, fontSize: 18 }}>
+        <h3 style={{ color: "var(--text-primary)", margin: 0, fontSize: 18 }}>
           {team?.id ? "Edit team" : "Create team"}
         </h3>
 
@@ -100,48 +100,48 @@ function TeamModal({ team, workspaceId, onClose, onSaved }) {
         )}
 
         <div>
-          <label style={{ color: "#94a3b8", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>Team name *</label>
+          <label style={{ color: "var(--text-secondary)", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>Team name *</label>
           <input
             value={name}
             onChange={e => setName(e.target.value)}
             placeholder="e.g. Engineering, QA, Marketing"
             style={{
-              width: "100%", background: "#0f172a", border: "1px solid #334155",
-              borderRadius: 8, padding: "10px 12px", color: "#f1f5f9", fontSize: 14, boxSizing: "border-box",
+              width: "100%", background: "var(--main-bg)", border: "1px solid var(--border)",
+              borderRadius: 8, padding: "10px 12px", color: "var(--text-primary)", fontSize: 14, boxSizing: "border-box",
             }}
             autoFocus
           />
         </div>
 
         <div>
-          <label style={{ color: "#94a3b8", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>Description</label>
+          <label style={{ color: "var(--text-secondary)", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>Description</label>
           <textarea
             value={description}
             onChange={e => setDesc(e.target.value)}
             placeholder="What does this team do?"
             rows={2}
             style={{
-              width: "100%", background: "#0f172a", border: "1px solid #334155",
-              borderRadius: 8, padding: "10px 12px", color: "#f1f5f9", fontSize: 14,
+              width: "100%", background: "var(--main-bg)", border: "1px solid var(--border)",
+              borderRadius: 8, padding: "10px 12px", color: "var(--text-primary)", fontSize: 14,
               resize: "none", boxSizing: "border-box",
             }}
           />
         </div>
 
         <div>
-          <label style={{ color: "#94a3b8", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 8 }}>Color</label>
+          <label style={{ color: "var(--text-secondary)", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 8 }}>Color</label>
           <ColorPicker value={color} onChange={setColor} />
         </div>
 
         <div>
-          <label style={{ color: "#94a3b8", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 8 }}>Icon</label>
+          <label style={{ color: "var(--text-secondary)", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 8 }}>Icon</label>
           <IconPicker value={icon} onChange={setIcon} />
         </div>
 
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
           <button type="button" onClick={onClose} style={{
-            background: "#334155", border: "none", borderRadius: 8, padding: "10px 20px",
-            color: "#94a3b8", fontSize: 14, cursor: "pointer",
+            background: "var(--border)", border: "none", borderRadius: 8, padding: "10px 20px",
+            color: "var(--text-secondary)", fontSize: 14, cursor: "pointer",
           }}>Cancel</button>
           <button type="submit" disabled={saving} style={{
             background: color, border: "none", borderRadius: 8, padding: "10px 20px",
@@ -218,16 +218,16 @@ function TeamMembersModal({ team, workspaceMembers, onClose, onUpdated }) {
       display: "flex", alignItems: "center", justifyContent: "center",
     }} onClick={onClose}>
       <div onClick={e => e.stopPropagation()} style={{
-        background: "#1e293b", borderRadius: 16, padding: 28, width: 480,
-        maxWidth: "95vw", border: "1px solid #334155", maxHeight: "80vh",
+        background: "var(--card-bg)", borderRadius: 16, padding: 28, width: 480,
+        maxWidth: "95vw", border: "1px solid var(--border)", maxHeight: "80vh",
         display: "flex", flexDirection: "column", gap: 16,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 24 }}>{team.icon || "👥"}</span>
-          <h3 style={{ color: "#f1f5f9", margin: 0, fontSize: 18 }}>{team.name} — Members</h3>
+          <h3 style={{ color: "var(--text-primary)", margin: 0, fontSize: 18 }}>{team.name} — Members</h3>
           <button onClick={onClose} style={{
             marginLeft: "auto", background: "none", border: "none",
-            color: "#64748b", fontSize: 18, cursor: "pointer",
+            color: "var(--text-secondary)", fontSize: 18, cursor: "pointer",
           }}>✕</button>
         </div>
 
@@ -244,8 +244,8 @@ function TeamMembersModal({ team, workspaceMembers, onClose, onUpdated }) {
               value={addingId}
               onChange={e => setAddingId(e.target.value)}
               style={{
-                flex: 1, background: "#0f172a", border: "1px solid #334155",
-                borderRadius: 8, padding: "8px 12px", color: "#f1f5f9", fontSize: 14,
+                flex: 1, background: "var(--main-bg)", border: "1px solid var(--border)",
+                borderRadius: 8, padding: "8px 12px", color: "var(--text-primary)", fontSize: 14,
               }}
             >
               <option value="">Select workspace member…</option>
@@ -257,7 +257,7 @@ function TeamMembersModal({ team, workspaceMembers, onClose, onUpdated }) {
               onClick={addMember}
               disabled={!addingId || saving}
               style={{
-                background: team.color || "#6366f1", border: "none", borderRadius: 8,
+                background: team.color || "var(--tk-accent, #3B82F6)", border: "none", borderRadius: 8,
                 padding: "8px 16px", color: "#fff", fontWeight: 700, cursor: "pointer",
                 opacity: (!addingId || saving) ? 0.5 : 1,
               }}
@@ -270,33 +270,34 @@ function TeamMembersModal({ team, workspaceMembers, onClose, onUpdated }) {
         {/* Member list */}
         <div style={{ overflowY: "auto", flex: 1 }}>
           {loading ? (
-            <div style={{ textAlign: "center", color: "#64748b", padding: 24 }}>Loading…</div>
+            <div style={{ textAlign: "center", color: "var(--text-secondary)", padding: 24 }}>Loading…</div>
           ) : members.length === 0 ? (
-            <div style={{ textAlign: "center", color: "#64748b", padding: 24 }}>No members yet</div>
+            <div style={{ textAlign: "center", color: "var(--text-secondary)", padding: 24 }}>No members yet</div>
           ) : (
             members.map(m => (
               <div key={m.user_id} style={{
                 display: "flex", alignItems: "center", gap: 12,
-                padding: "12px 0", borderBottom: "1px solid #1e293b",
+                padding: "12px 0", borderBottom: "1px solid var(--card-bg)",
               }}>
                 <div style={{
                   width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
-                  background: team.color || "#6366f1",
+                  background: team.color || "var(--tk-accent, #3B82F6)",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   color: "#fff", fontWeight: 700, fontSize: 14,
                 }}>
                   {(m.name || "?")[0].toUpperCase()}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ color: "#e2e8f0", fontWeight: 500, fontSize: 14 }}>{m.name}</div>
-                  <div style={{ color: "#64748b", fontSize: 12 }}>{m.email}</div>
+                  <div style={{ color: "var(--text-primary)", fontWeight: 500, fontSize: 14 }}>{m.name}</div>
+                  <div style={{ color: "var(--text-secondary)", fontSize: 12 }}>{m.email}</div>
                 </div>
                 <button
                   onClick={() => toggleRole(m.user_id, m.role)}
                   style={{
-                    background: m.role === "lead" ? "#6366f122" : "#334155",
-                    border: m.role === "lead" ? "1px solid #6366f1" : "1px solid transparent",
-                    borderRadius: 6, padding: "3px 10px", color: m.role === "lead" ? "#6366f1" : "#94a3b8",
+                    background: m.role === "lead" ? "var(--tk-accent, #3B82F6)22" : "var(--border)",
+                    border: m.role === "lead" ? "1px solid var(--tk-accent, #3B82F6)" : "1px solid transparent",
+                    borderRadius: 6, padding: "3px 10px",
+                    color: m.role === "lead" ? "var(--tk-accent, #3B82F6)" : "var(--text-secondary)",
                     fontSize: 11, fontWeight: 700, cursor: "pointer", textTransform: "uppercase",
                   }}
                 >
@@ -327,8 +328,8 @@ function TeamCard({ team, onEdit, onDelete, onManageMembers }) {
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
-        background: "#1e293b", borderRadius: 12, padding: 20,
-        border: `1px solid ${hover ? team.color : "#334155"}`,
+        background: "var(--card-bg)", borderRadius: 12, padding: 20,
+        border: `1px solid ${hover ? team.color : "var(--border)"}`,
         transition: "border-color 0.2s, transform 0.15s",
         transform: hover ? "translateY(-2px)" : "none",
         cursor: "default",
@@ -344,9 +345,9 @@ function TeamCard({ team, onEdit, onDelete, onManageMembers }) {
           {team.icon || "👥"}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ color: "#f1f5f9", fontWeight: 700, fontSize: 15 }}>{team.name}</div>
+          <div style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>{team.name}</div>
           {team.description && (
-            <div style={{ color: "#64748b", fontSize: 12, marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <div style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {team.description}
             </div>
           )}
@@ -364,14 +365,14 @@ function TeamCard({ team, onEdit, onDelete, onManageMembers }) {
 
       <div style={{ display: "flex", gap: 6, marginTop: 14, justifyContent: "flex-end" }}>
         <button onClick={() => onManageMembers(team)} style={{
-          background: "#334155", border: "none", borderRadius: 6,
-          padding: "5px 12px", color: "#94a3b8", fontSize: 12, cursor: "pointer",
+          background: "var(--border)", border: "none", borderRadius: 6,
+          padding: "5px 12px", color: "var(--text-secondary)", fontSize: 12, cursor: "pointer",
         }}>
           Members
         </button>
         <button onClick={() => onEdit(team)} style={{
-          background: "#334155", border: "none", borderRadius: 6,
-          padding: "5px 12px", color: "#94a3b8", fontSize: 12, cursor: "pointer",
+          background: "var(--border)", border: "none", borderRadius: 6,
+          padding: "5px 12px", color: "var(--text-secondary)", fontSize: 12, cursor: "pointer",
         }}>
           Edit
         </button>
@@ -461,15 +462,15 @@ export default function TeamsPanel({ workspaceId }) {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
         <div>
-          <h2 style={{ color: "#f1f5f9", fontSize: 22, fontWeight: 800, margin: 0 }}>Teams</h2>
-          <p style={{ color: "#64748b", fontSize: 14, margin: "4px 0 0" }}>
+          <h2 style={{ color: "var(--text-primary)", fontSize: 22, fontWeight: 800, margin: 0 }}>Teams</h2>
+          <p style={{ color: "var(--text-secondary)", fontSize: 14, margin: "4px 0 0" }}>
             Organize workspace members into functional teams
           </p>
         </div>
         <button
           onClick={() => setShowCreate(true)}
           style={{
-            background: "#6366f1", border: "none", borderRadius: 10,
+            background: "var(--tk-accent, #3B82F6)", border: "none", borderRadius: 10,
             padding: "10px 20px", color: "#fff", fontWeight: 700,
             fontSize: 14, cursor: "pointer",
           }}
@@ -480,21 +481,21 @@ export default function TeamsPanel({ workspaceId }) {
 
       {/* Team grid */}
       {loading ? (
-        <div style={{ textAlign: "center", color: "#64748b", padding: 60 }}>Loading teams…</div>
+        <div style={{ textAlign: "center", color: "var(--text-secondary)", padding: 60 }}>Loading teams…</div>
       ) : teams.length === 0 ? (
         <div style={{
           textAlign: "center", padding: "60px 20px",
-          background: "#1e293b", borderRadius: 16, border: "1px dashed #334155",
+          background: "var(--card-bg)", borderRadius: 16, border: "1px dashed var(--border)",
         }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>🏢</div>
-          <h3 style={{ color: "#e2e8f0", fontSize: 18, fontWeight: 700, margin: "0 0 8px" }}>No teams yet</h3>
-          <p style={{ color: "#64748b", margin: "0 0 24px" }}>
+          <h3 style={{ color: "var(--text-primary)", fontSize: 18, fontWeight: 700, margin: "0 0 8px" }}>No teams yet</h3>
+          <p style={{ color: "var(--text-secondary)", margin: "0 0 24px" }}>
             Create teams to organize your workspace members by function.
           </p>
           <button
             onClick={() => setShowCreate(true)}
             style={{
-              background: "#6366f1", border: "none", borderRadius: 10,
+              background: "var(--tk-accent, #3B82F6)", border: "none", borderRadius: 10,
               padding: "12px 24px", color: "#fff", fontWeight: 700,
               fontSize: 14, cursor: "pointer",
             }}
@@ -542,18 +543,18 @@ export default function TeamsPanel({ workspaceId }) {
           display: "flex", alignItems: "center", justifyContent: "center",
         }} onClick={() => setDeleteConfirm(null)}>
           <div onClick={e => e.stopPropagation()} style={{
-            background: "#1e293b", borderRadius: 16, padding: 28, width: 360,
+            background: "var(--card-bg)", borderRadius: 16, padding: 28, width: 360,
             border: "1px solid #7f1d1d",
           }}>
-            <h3 style={{ color: "#f1f5f9", margin: "0 0 12px" }}>Delete team?</h3>
-            <p style={{ color: "#94a3b8", margin: "0 0 20px", fontSize: 14 }}>
+            <h3 style={{ color: "var(--text-primary)", margin: "0 0 12px" }}>Delete team?</h3>
+            <p style={{ color: "var(--text-secondary)", margin: "0 0 20px", fontSize: 14 }}>
               Deleting <strong>{deleteConfirm.name}</strong> will remove all team assignments from tasks.
               This cannot be undone.
             </p>
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
               <button onClick={() => setDeleteConfirm(null)} style={{
-                background: "#334155", border: "none", borderRadius: 8,
-                padding: "10px 20px", color: "#94a3b8", cursor: "pointer",
+                background: "var(--border)", border: "none", borderRadius: 8,
+                padding: "10px 20px", color: "var(--text-secondary)", cursor: "pointer",
               }}>Cancel</button>
               <button onClick={confirmDelete} style={{
                 background: "#ef4444", border: "none", borderRadius: 8,

@@ -81,7 +81,7 @@ function ApprovalConfirmModal({ type, form, workspaceId, onSent, onCancel }) {
             disabled={sending}
             style={{
               padding: "10px 24px", borderRadius: 8, border: "none",
-              background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+              background: "var(--tk-accent, #3B82F6)",
               color: "#fff", fontWeight: 600, cursor: sending ? "not-allowed" : "pointer", fontSize: 14,
             }}
           >
@@ -261,7 +261,7 @@ export default function CapacityPanel({ workspaceId }) {
             <label className="cap-field-label">
               Total daily capacity
               {form.travel_mode && !form.on_leave && (
-                <span style={{ marginLeft: 6, fontSize: 11, color: "#6366f1", fontWeight: 600 }}>
+                <span style={{ marginLeft: 6, fontSize: 11, color: "var(--tk-accent, #3B82F6)", fontWeight: 600 }}>
                   (travel: {form.travel_hours || 4}h active)
                 </span>
               )}
@@ -311,7 +311,7 @@ export default function CapacityPanel({ workspaceId }) {
                   <div style={{
                     position: "absolute", top: 0, right: 0, bottom: 0,
                     width: `${Math.min(100, ((form.daily_hours - (form.travel_hours || 4)) / Math.max(form.daily_hours, 1)) * 100)}%`,
-                    background: "repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(99,102,241,0.15) 4px,rgba(99,102,241,0.15) 8px)",
+                    background: "repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(59,130,246,0.15) 4px,rgba(59,130,246,0.15) 8px)",
                     borderRadius: "0 4px 4px 0",
                   }} title={`${form.daily_hours - (form.travel_hours || 4)}h unavailable while travelling`} />
                 )}
@@ -373,7 +373,7 @@ export default function CapacityPanel({ workspaceId }) {
             <div className="cap-card-title">Travel Mode</div>
             <div className="cap-card-desc">
               Automatically reduces your daily capacity from <strong>{form.daily_hours}h → {form.travel_hours || 4}h</strong> while you're travelling
-              {isAnalyst && <span style={{ color: "#6366f1", marginLeft: 6, fontSize: 12 }}>· requires manager approval</span>}
+              {isAnalyst && <span style={{ color: "var(--tk-accent, #3B82F6)", marginLeft: 6, fontSize: 12 }}>· requires manager approval</span>}
             </div>
           </div>
           <label className="cap-toggle">
@@ -440,7 +440,7 @@ export default function CapacityPanel({ workspaceId }) {
             <div className="cap-card-title">Leave Management</div>
             <div className="cap-card-desc">
               When on leave, your capacity shows as 0 and no tasks can be assigned
-              {isAnalyst && <span style={{ color: "#6366f1", marginLeft: 6, fontSize: 12 }}>· requires manager approval</span>}
+              {isAnalyst && <span style={{ color: "var(--tk-accent, #3B82F6)", marginLeft: 6, fontSize: 12 }}>· requires manager approval</span>}
             </div>
           </div>
           <label className="cap-toggle">

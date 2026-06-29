@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import api from "../api/api";
 
 const TABS = [
@@ -18,21 +18,21 @@ function Steps({ step }) {
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{
               width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
-              background: step > i ? "#6366f1" : step === i ? "#6366f1" : "#334155",
+              background: step > i ? "var(--tk-accent, #3B82F6)" : step === i ? "var(--tk-accent, #3B82F6)" : "var(--border)",
               display: "flex", alignItems: "center", justifyContent: "center",
               color: "#fff", fontSize: 12, fontWeight: 700,
-              border: step === i ? "2px solid #818cf8" : "none",
+              border: step === i ? "2px solid var(--tk-accent-2, #06B6D4)" : "none",
             }}>
               {step > i ? "✓" : i + 1}
             </div>
-            <span style={{ color: step >= i ? "#e2e8f0" : "#64748b", fontSize: 13, fontWeight: step === i ? 700 : 400 }}>
+            <span style={{ color: step >= i ? "var(--text-primary)" : "var(--text-secondary)", fontSize: 13, fontWeight: step === i ? 700 : 400 }}>
               {s}
             </span>
           </div>
           {i < steps.length - 1 && (
             <div style={{
               flex: 1, height: 2, margin: "0 12px",
-              background: step > i ? "#6366f1" : "#334155",
+              background: step > i ? "var(--tk-accent, #3B82F6)" : "var(--border)",
               transition: "background 0.3s",
             }} />
           )}
@@ -61,10 +61,10 @@ function DropZone({ onFile, accept = ".xlsx,.xls,.csv" }) {
       onDrop={handleDrop}
       onClick={() => inputRef.current?.click()}
       style={{
-        border: `2px dashed ${dragging ? "#6366f1" : "#334155"}`,
+        border: `2px dashed ${dragging ? "var(--tk-accent, #3B82F6)" : "var(--border)"}`,
         borderRadius: 12, padding: "40px 20px", textAlign: "center",
         cursor: "pointer", transition: "border-color 0.2s, background 0.2s",
-        background: dragging ? "#6366f111" : "#0f172a",
+        background: dragging ? "rgba(59,130,246,0.07)" : "var(--main-bg)",
       }}
     >
       <input
@@ -75,15 +75,15 @@ function DropZone({ onFile, accept = ".xlsx,.xls,.csv" }) {
         onChange={e => e.target.files[0] && onFile(e.target.files[0])}
       />
       <div style={{ fontSize: 40, marginBottom: 12 }}>📂</div>
-      <div style={{ color: "#e2e8f0", fontSize: 15, fontWeight: 600, marginBottom: 8 }}>
+      <div style={{ color: "var(--text-primary)", fontSize: 15, fontWeight: 600, marginBottom: 8 }}>
         Drop your Excel or CSV file here
       </div>
-      <div style={{ color: "#64748b", fontSize: 13 }}>
+      <div style={{ color: "var(--text-secondary)", fontSize: 13 }}>
         Supports .xlsx, .xls, .csv · Max 10 MB
       </div>
       <div style={{ marginTop: 16 }}>
         <span style={{
-          background: "#6366f1", color: "#fff", padding: "8px 20px",
+          background: "var(--tk-accent, #3B82F6)", color: "#fff", padding: "8px 20px",
           borderRadius: 8, fontSize: 13, fontWeight: 600, display: "inline-block",
         }}>
           Browse files
@@ -96,7 +96,7 @@ function DropZone({ onFile, accept = ".xlsx,.xls,.csv" }) {
 // ── Preview table ─────────────────────────────────────────────────────────────
 function PreviewTable({ data, type }) {
   if (!data || data.length === 0) {
-    return <div style={{ color: "#64748b", textAlign: "center", padding: 24 }}>None</div>;
+    return <div style={{ color: "var(--text-secondary)", textAlign: "center", padding: 24 }}>None</div>;
   }
   const isError = type === "errors";
   return (
@@ -124,7 +124,7 @@ function PreviewTable({ data, type }) {
         </thead>
         <tbody>
           {data.map((r, i) => (
-            <tr key={i} style={{ background: i % 2 === 0 ? "#0f172a" : "transparent" }}>
+            <tr key={i} style={{ background: i % 2 === 0 ? "var(--main-bg)" : "transparent" }}>
               {isError ? (
                 <>
                   <td style={td}>{r.row}</td>
@@ -151,8 +151,8 @@ function PreviewTable({ data, type }) {
   );
 }
 
-const th = { padding: "8px 12px", textAlign: "left", color: "#64748b", fontWeight: 700, borderBottom: "1px solid #334155" };
-const td = { padding: "8px 12px", color: "#cbd5e1", borderBottom: "1px solid #1e293b" };
+const th = { padding: "8px 12px", textAlign: "left", color: "var(--text-secondary)", fontWeight: 700, borderBottom: "1px solid var(--border)" };
+const td = { padding: "8px 12px", color: "var(--text-secondary)", borderBottom: "1px solid var(--card-bg)" };
 
 // ── Import Tasks tab ──────────────────────────────────────────────────────────
 function ImportTasksTab({ workspaceId }) {
@@ -238,21 +238,21 @@ function ImportTasksTab({ workspaceId }) {
         <>
           <div style={{ marginBottom: 20 }}>
             <div style={{
-              background: "#1e293b", borderRadius: 10, padding: "14px 16px",
-              border: "1px solid #334155", display: "flex", alignItems: "center",
+              background: "var(--card-bg)", borderRadius: 10, padding: "14px 16px",
+              border: "1px solid var(--border)", display: "flex", alignItems: "center",
               justifyContent: "space-between", marginBottom: 16,
             }}>
               <div>
-                <div style={{ color: "#e2e8f0", fontWeight: 600, fontSize: 14 }}>Download template first</div>
-                <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>
+                <div style={{ color: "var(--text-primary)", fontWeight: 600, fontSize: 14 }}>Download template first</div>
+                <div style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 2 }}>
                   Use the official template to ensure columns match. Fill it in, then upload.
                 </div>
               </div>
               <button
                 onClick={downloadTemplate}
                 style={{
-                  background: "#334155", border: "none", borderRadius: 8,
-                  padding: "8px 16px", color: "#e2e8f0", fontSize: 13, fontWeight: 600,
+                  background: "var(--border)", border: "none", borderRadius: 8,
+                  padding: "8px 16px", color: "var(--text-primary)", fontSize: 13, fontWeight: 600,
                   cursor: "pointer", flexShrink: 0,
                 }}
               >
@@ -261,11 +261,11 @@ function ImportTasksTab({ workspaceId }) {
             </div>
             {uploading ? (
               <div style={{
-                border: "2px dashed #6366f1", borderRadius: 12, padding: "60px 20px",
-                textAlign: "center", background: "#6366f111",
+                border: "2px dashed var(--tk-accent, #3B82F6)", borderRadius: 12, padding: "60px 20px",
+                textAlign: "center", background: "rgba(59,130,246,0.07)",
               }}>
                 <div style={{ fontSize: 36, marginBottom: 12 }}>⏳</div>
-                <div style={{ color: "#e2e8f0", fontWeight: 600 }}>Parsing {file?.name}…</div>
+                <div style={{ color: "var(--text-primary)", fontWeight: 600 }}>Parsing {file?.name}…</div>
               </div>
             ) : (
               <DropZone onFile={handleFile} />
@@ -290,24 +290,24 @@ function ImportTasksTab({ workspaceId }) {
                 key={item.id}
                 onClick={() => setPreviewTab(item.id)}
                 style={{
-                  background: previewTab === item.id ? item.color + "22" : "#1e293b",
-                  border: `1px solid ${previewTab === item.id ? item.color : "#334155"}`,
+                  background: previewTab === item.id ? item.color + "22" : "var(--card-bg)",
+                  border: `1px solid ${previewTab === item.id ? item.color : "var(--border)"}`,
                   borderRadius: 10, padding: "14px 16px", cursor: "pointer",
                   transition: "all 0.15s",
                 }}
               >
                 <div style={{ color: item.color, fontSize: 24, fontWeight: 800 }}>{item.count}</div>
-                <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 4 }}>{item.label}</div>
+                <div style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 4 }}>{item.label}</div>
               </div>
             ))}
           </div>
 
           <div style={{
-            background: "#0f172a", borderRadius: 12, border: "1px solid #334155",
+            background: "var(--main-bg)", borderRadius: 12, border: "1px solid var(--border)",
             overflow: "hidden", marginBottom: 24, maxHeight: 340, overflowY: "auto",
           }}>
-            <div style={{ padding: "10px 12px", background: "#1e293b", borderBottom: "1px solid #334155" }}>
-              <span style={{ color: "#94a3b8", fontSize: 11, fontWeight: 700, textTransform: "uppercase" }}>
+            <div style={{ padding: "10px 12px", background: "var(--card-bg)", borderBottom: "1px solid var(--border)" }}>
+              <span style={{ color: "var(--text-secondary)", fontSize: 11, fontWeight: 700, textTransform: "uppercase" }}>
                 {previewTab === "created" ? "Tasks to create" :
                  previewTab === "updated" ? "Tasks to update" :
                  previewTab === "skipped" ? "Rows to skip" : "Validation errors"}
@@ -331,8 +331,8 @@ function ImportTasksTab({ workspaceId }) {
 
           <div style={{ display: "flex", gap: 10 }}>
             <button onClick={reset} style={{
-              background: "#334155", border: "none", borderRadius: 8,
-              padding: "10px 20px", color: "#94a3b8", fontSize: 14, cursor: "pointer",
+              background: "var(--border)", border: "none", borderRadius: 8,
+              padding: "10px 20px", color: "var(--text-secondary)", fontSize: 14, cursor: "pointer",
             }}>
               ← Upload different file
             </button>
@@ -340,7 +340,7 @@ function ImportTasksTab({ workspaceId }) {
               onClick={confirmImport}
               disabled={confirming || (preview.summary.to_create + preview.summary.to_update === 0)}
               style={{
-                background: "#6366f1", border: "none", borderRadius: 8,
+                background: "var(--tk-accent, #3B82F6)", border: "none", borderRadius: 8,
                 padding: "10px 20px", color: "#fff", fontSize: 14, fontWeight: 700,
                 cursor: "pointer", opacity: (confirming || preview.summary.to_create + preview.summary.to_update === 0) ? 0.5 : 1,
               }}
@@ -357,29 +357,29 @@ function ImportTasksTab({ workspaceId }) {
           <div style={{ fontSize: 56, marginBottom: 16 }}>
             {result.errors > 0 ? "⚠" : "✅"}
           </div>
-          <h3 style={{ color: "#f1f5f9", fontSize: 22, fontWeight: 800, margin: "0 0 8px" }}>
+          <h3 style={{ color: "var(--text-primary)", fontSize: 22, fontWeight: 800, margin: "0 0 8px" }}>
             Import {result.errors > 0 ? "completed with warnings" : "successful!"}
           </h3>
           <div style={{ display: "flex", gap: 24, justifyContent: "center", margin: "24px 0" }}>
             <div style={{ textAlign: "center" }}>
               <div style={{ color: "#22c55e", fontSize: 32, fontWeight: 800 }}>{result.created}</div>
-              <div style={{ color: "#64748b", fontSize: 13 }}>Tasks created</div>
+              <div style={{ color: "var(--text-secondary)", fontSize: 13 }}>Tasks created</div>
             </div>
             <div style={{ textAlign: "center" }}>
               <div style={{ color: "#3b82f6", fontSize: 32, fontWeight: 800 }}>{result.updated}</div>
-              <div style={{ color: "#64748b", fontSize: 13 }}>Tasks updated</div>
+              <div style={{ color: "var(--text-secondary)", fontSize: 13 }}>Tasks updated</div>
             </div>
             {result.errors > 0 && (
               <div style={{ textAlign: "center" }}>
                 <div style={{ color: "#ef4444", fontSize: 32, fontWeight: 800 }}>{result.errors}</div>
-                <div style={{ color: "#64748b", fontSize: 13 }}>Errors</div>
+                <div style={{ color: "var(--text-secondary)", fontSize: 13 }}>Errors</div>
               </div>
             )}
           </div>
           <button
             onClick={reset}
             style={{
-              background: "#6366f1", border: "none", borderRadius: 8,
+              background: "var(--tk-accent, #3B82F6)", border: "none", borderRadius: 8,
               padding: "12px 24px", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer",
             }}
           >
@@ -430,19 +430,19 @@ function StatusImportTab({ workspaceId }) {
   return (
     <div>
       <div style={{
-        background: "#1e293b", borderRadius: 10, padding: "14px 16px",
-        border: "1px solid #334155", display: "flex", alignItems: "center",
+        background: "var(--card-bg)", borderRadius: 10, padding: "14px 16px",
+        border: "1px solid var(--border)", display: "flex", alignItems: "center",
         justifyContent: "space-between", marginBottom: 20,
       }}>
         <div>
-          <div style={{ color: "#e2e8f0", fontWeight: 600, fontSize: 14 }}>Daily status template</div>
-          <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>
+          <div style={{ color: "var(--text-primary)", fontWeight: 600, fontSize: 14 }}>Daily status template</div>
+          <div style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 2 }}>
             Columns: task_id, status, progress_percent, comment
           </div>
         </div>
         <button onClick={downloadTemplate} style={{
-          background: "#334155", border: "none", borderRadius: 8,
-          padding: "8px 16px", color: "#e2e8f0", fontSize: 13, fontWeight: 600, cursor: "pointer",
+          background: "var(--border)", border: "none", borderRadius: 8,
+          padding: "8px 16px", color: "var(--text-primary)", fontSize: 13, fontWeight: 600, cursor: "pointer",
         }}>
           ⬇ Template
         </button>
@@ -457,9 +457,9 @@ function StatusImportTab({ workspaceId }) {
 
       {!result ? (
         uploading ? (
-          <div style={{ border: "2px dashed #6366f1", borderRadius: 12, padding: "60px 20px", textAlign: "center", background: "#6366f111" }}>
+          <div style={{ border: "2px dashed var(--tk-accent, #3B82F6)", borderRadius: 12, padding: "60px 20px", textAlign: "center", background: "rgba(59,130,246,0.07)" }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>⏳</div>
-            <div style={{ color: "#e2e8f0", fontWeight: 600 }}>Updating tasks from {file?.name}…</div>
+            <div style={{ color: "var(--text-primary)", fontWeight: 600 }}>Updating tasks from {file?.name}…</div>
           </div>
         ) : (
           <DropZone onFile={handleFile} />
@@ -467,23 +467,23 @@ function StatusImportTab({ workspaceId }) {
       ) : (
         <div style={{ textAlign: "center", padding: "40px 0" }}>
           <div style={{ fontSize: 56, marginBottom: 16 }}>{result.errors > 0 ? "⚠" : "✅"}</div>
-          <h3 style={{ color: "#f1f5f9", fontSize: 20, fontWeight: 800, margin: "0 0 16px" }}>
+          <h3 style={{ color: "var(--text-primary)", fontSize: 20, fontWeight: 800, margin: "0 0 16px" }}>
             Status import {result.errors > 0 ? "done with warnings" : "complete"}
           </h3>
           <div style={{ display: "flex", gap: 24, justifyContent: "center", margin: "0 0 24px" }}>
             <div style={{ textAlign: "center" }}>
               <div style={{ color: "#22c55e", fontSize: 28, fontWeight: 800 }}>{result.updated}</div>
-              <div style={{ color: "#64748b", fontSize: 13 }}>Tasks updated</div>
+              <div style={{ color: "var(--text-secondary)", fontSize: 13 }}>Tasks updated</div>
             </div>
             {result.errors > 0 && (
               <div style={{ textAlign: "center" }}>
                 <div style={{ color: "#ef4444", fontSize: 28, fontWeight: 800 }}>{result.errors}</div>
-                <div style={{ color: "#64748b", fontSize: 13 }}>Errors</div>
+                <div style={{ color: "var(--text-secondary)", fontSize: 13 }}>Errors</div>
               </div>
             )}
           </div>
           <button onClick={() => { setResult(null); setFile(null); }} style={{
-            background: "#6366f1", border: "none", borderRadius: 8,
+            background: "var(--tk-accent, #3B82F6)", border: "none", borderRadius: 8,
             padding: "10px 24px", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer",
           }}>
             Upload another
@@ -519,8 +519,8 @@ function ExportTab({ workspaceId }) {
   return (
     <div style={{ textAlign: "center", padding: "40px 0" }}>
       <div style={{ fontSize: 56, marginBottom: 20 }}>📊</div>
-      <h3 style={{ color: "#f1f5f9", fontSize: 20, fontWeight: 800, margin: "0 0 8px" }}>Export all workspace tasks</h3>
-      <p style={{ color: "#64748b", fontSize: 14, margin: "0 0 32px", maxWidth: 400, marginInline: "auto" }}>
+      <h3 style={{ color: "var(--text-primary)", fontSize: 20, fontWeight: 800, margin: "0 0 8px" }}>Export all workspace tasks</h3>
+      <p style={{ color: "var(--text-secondary)", fontSize: 14, margin: "0 0 32px", maxWidth: 400, marginInline: "auto" }}>
         Download all tasks as an Excel file with full details: status, priority, assignee, team, dates, and progress.
       </p>
       {error && (
@@ -533,7 +533,7 @@ function ExportTab({ workspaceId }) {
         onClick={exportTasks}
         disabled={downloading}
         style={{
-          background: downloading ? "#334155" : "#6366f1",
+          background: downloading ? "var(--border)" : "var(--tk-accent, #3B82F6)",
           border: "none", borderRadius: 10, padding: "14px 32px",
           color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer",
           opacity: downloading ? 0.7 : 1,
@@ -560,24 +560,22 @@ function HistoryTab({ workspaceId }) {
     setLoading(false);
   }, [workspaceId]);
 
-  useState(() => { load(); }, [load]);
-  // useEffect alternative: trigger on mount
-  if (typeof window !== "undefined" && !logs.length && !loading) load();
+  useEffect(() => { load(); }, [load]);
 
   const STATUS_COLOR = { completed: "#22c55e", partial: "#f59e0b", failed: "#ef4444" };
 
   return (
     <div>
       {loading ? (
-        <div style={{ textAlign: "center", color: "#64748b", padding: 40 }}>Loading history…</div>
+        <div style={{ textAlign: "center", color: "var(--text-secondary)", padding: 40 }}>Loading history…</div>
       ) : logs.length === 0 ? (
-        <div style={{ textAlign: "center", color: "#64748b", padding: 60 }}>No import history yet</div>
+        <div style={{ textAlign: "center", color: "var(--text-secondary)", padding: 60 }}>No import history yet</div>
       ) : (
-        <div style={{ background: "#0f172a", borderRadius: 12, border: "1px solid #334155", overflow: "hidden" }}>
+        <div style={{ background: "var(--main-bg)", borderRadius: 12, border: "1px solid var(--border)", overflow: "hidden" }}>
           <div style={{
             display: "grid", gridTemplateColumns: "2fr 1fr 3fr 1fr",
-            padding: "10px 16px", background: "#1e293b", borderBottom: "1px solid #334155",
-            color: "#64748b", fontSize: 11, fontWeight: 700, textTransform: "uppercase",
+            padding: "10px 16px", background: "var(--card-bg)", borderBottom: "1px solid var(--border)",
+            color: "var(--text-secondary)", fontSize: 11, fontWeight: 700, textTransform: "uppercase",
           }}>
             <div>File</div>
             <div>Type</div>
@@ -587,26 +585,26 @@ function HistoryTab({ workspaceId }) {
           {logs.map((log, i) => (
             <div key={log.id} style={{
               display: "grid", gridTemplateColumns: "2fr 1fr 3fr 1fr",
-              padding: "12px 16px", borderBottom: i < logs.length - 1 ? "1px solid #1e293b" : "none",
+              padding: "12px 16px", borderBottom: i < logs.length - 1 ? "1px solid var(--card-bg)" : "none",
             }}>
-              <div style={{ color: "#e2e8f0", fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div style={{ color: "var(--text-primary)", fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {log.filename || "—"}
               </div>
               <div>
                 <span style={{
-                  background: "#334155", color: "#94a3b8", fontSize: 11,
+                  background: "var(--border)", color: "var(--text-secondary)", fontSize: 11,
                   padding: "2px 8px", borderRadius: 4, textTransform: "uppercase",
                 }}>
                   {log.import_type}
                 </span>
               </div>
-              <div style={{ color: "#94a3b8", fontSize: 12 }}>
+              <div style={{ color: "var(--text-secondary)", fontSize: 12 }}>
                 <span style={{ color: "#22c55e" }}>+{log.created_count} created</span>
                 {log.updated_count > 0 && <span style={{ color: "#3b82f6", marginLeft: 10 }}>~{log.updated_count} updated</span>}
                 {log.error_count > 0 && <span style={{ color: "#ef4444", marginLeft: 10 }}>{log.error_count} errors</span>}
                 <span style={{ marginLeft: 10 }}>· total {log.total_rows}</span>
               </div>
-              <div style={{ color: "#64748b", fontSize: 12 }}>
+              <div style={{ color: "var(--text-secondary)", fontSize: 12 }}>
                 {new Date(log.created_at).toLocaleDateString()}
               </div>
             </div>
@@ -625,23 +623,23 @@ export default function ImportWizard({ workspaceId }) {
     <div style={{ paddingBottom: 40 }}>
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
-        <h2 style={{ color: "#f1f5f9", fontSize: 22, fontWeight: 800, margin: "0 0 4px" }}>Import / Export</h2>
-        <p style={{ color: "#64748b", fontSize: 14, margin: 0 }}>
+        <h2 style={{ color: "var(--text-primary)", fontSize: 22, fontWeight: 800, margin: "0 0 4px" }}>Import / Export</h2>
+        <p style={{ color: "var(--text-secondary)", fontSize: 14, margin: 0 }}>
           Bulk-manage tasks with Excel or CSV files
         </p>
       </div>
 
       {/* Tabs */}
-      <div style={{ display: "flex", gap: 4, marginBottom: 28, background: "#0f172a", borderRadius: 10, padding: 4, border: "1px solid #1e293b", width: "fit-content" }}>
+      <div style={{ display: "flex", gap: 4, marginBottom: 28, background: "var(--main-bg)", borderRadius: 10, padding: 4, border: "1px solid var(--card-bg)", width: "fit-content" }}>
         {TABS.map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
             style={{
-              background: tab === t.id ? "#1e293b" : "none",
-              border: tab === t.id ? "1px solid #334155" : "1px solid transparent",
+              background: tab === t.id ? "var(--card-bg)" : "none",
+              border: tab === t.id ? "1px solid var(--border)" : "1px solid transparent",
               borderRadius: 8, padding: "8px 16px",
-              color: tab === t.id ? "#e2e8f0" : "#64748b",
+              color: tab === t.id ? "var(--text-primary)" : "var(--text-secondary)",
               fontSize: 13, fontWeight: tab === t.id ? 700 : 400, cursor: "pointer",
               display: "flex", alignItems: "center", gap: 6,
             }}
@@ -652,7 +650,7 @@ export default function ImportWizard({ workspaceId }) {
       </div>
 
       {/* Tab content */}
-      <div style={{ background: "#1e293b", borderRadius: 16, padding: 28, border: "1px solid #334155" }}>
+      <div style={{ background: "var(--card-bg)", borderRadius: 16, padding: 28, border: "1px solid var(--border)" }}>
         {tab === "import"  && <ImportTasksTab workspaceId={workspaceId} />}
         {tab === "status"  && <StatusImportTab workspaceId={workspaceId} />}
         {tab === "export"  && <ExportTab workspaceId={workspaceId} />}

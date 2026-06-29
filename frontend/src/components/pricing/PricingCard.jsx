@@ -15,10 +15,10 @@ export default function PricingCard({
     <div style={{
       position: "relative",
       background: highlighted
-        ? "linear-gradient(160deg, rgba(99,102,241,0.12) 0%, rgba(139,92,246,0.08) 100%)"
+        ? "linear-gradient(160deg, rgba(59,130,246,0.12) 0%, rgba(139,92,246,0.08) 100%)"
         : "rgba(255,255,255,0.03)",
       border: highlighted
-        ? "1.5px solid rgba(99,102,241,0.5)"
+        ? "1.5px solid rgba(59,130,246,0.5)"
         : "1.5px solid rgba(255,255,255,0.07)",
       borderRadius: 18,
       padding: "28px 24px 24px",
@@ -34,7 +34,7 @@ export default function PricingCard({
           top: -13,
           left: "50%",
           transform: "translateX(-50%)",
-          background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+          background: "var(--tk-accent, #3B82F6)",
           color: "#fff",
           fontSize: 11,
           fontWeight: 700,
@@ -85,7 +85,7 @@ export default function PricingCard({
           background: current
             ? "rgba(255,255,255,0.06)"
             : highlighted
-            ? "linear-gradient(135deg, #6366f1, #8b5cf6)"
+            ? "var(--tk-accent, #3B82F6)"
             : "rgba(255,255,255,0.08)",
           color: current ? "#475569" : "#fff",
           transition: "opacity 0.15s",

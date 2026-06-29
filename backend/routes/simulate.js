@@ -9,11 +9,12 @@ const express = require("express");
 const router  = express.Router();
 const pool    = require("../db");
 const auth    = require("../middleware/auth");
+const { requireMinRole } = require("../middleware/rbac");
 const wl      = require("../services/workloadEngine");
 
 // ── POST /api/simulate/assign ────────────────────────────────────────────────
-// Body: { task_id, user_id, workspace_id, estimated_hours? }
-router.post("/assign", auth, async (req, res) => {
+// What-if simulation — manager+ only (mirrors MANAGER_ONLY_VIEWS simulation gate)
+router.post("/assign", auth, requireMinRole("manager"), async (req, res) => {
   const { task_id, user_id, workspace_id, estimated_hours } = req.body;
   if (!task_id || !user_id || !workspace_id) {
     return res.status(400).json({ message: "task_id, user_id, workspace_id required" });
@@ -58,8 +59,8 @@ router.post("/assign", auth, async (req, res) => {
 });
 
 // ── GET /api/simulate/suggest/:wsId/:taskId ───────────────────────────────────
-// Suggest best user(s) for a task based on availability + skills
-router.get("/suggest/:wsId/:taskId", auth, async (req, res) => {
+// AI suggestion for best assignee — manager+ only
+router.get("/suggest/:wsId/:taskId", auth, requireMinRole("manager"), async (req, res) => {
   const { wsId, taskId } = req.params;
   try {
     const taskR = await pool.query("SELECT * FROM tasks WHERE id=$1", [taskId]);

@@ -129,7 +129,7 @@ function ThroughputChart({ data }) {
   );
 }
 
-export default function AnalyticsDashboard({ workspaceId, onNavigate, tasks = [] }) {
+export default function AnalyticsDashboard({ workspaceId, onNavigate, onOpenDetail, tasks = [] }) {
   const [activeTab, setActiveTab] = useState("overview");
   const [data, setData]     = useState(null);
   const [loading, setLoading] = useState(true);
@@ -285,7 +285,7 @@ export default function AnalyticsDashboard({ workspaceId, onNavigate, tasks = []
 
       {/* Command Center tab */}
       {activeTab === "command-center" && (
-        <CommandCenter workspaceId={workspaceId} onNavigate={onNavigate} tasks={tasks} />
+        <CommandCenter workspaceId={workspaceId} onNavigate={onNavigate} onOpenDetail={onOpenDetail} tasks={tasks} />
       )}
 
       {/* Overview tab */}

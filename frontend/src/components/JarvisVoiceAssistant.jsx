@@ -37,7 +37,7 @@ const STATES = {
 
 const STATE_CONFIG = {
   [STATES.IDLE]:          { label: "Say 'Jarvis' to activate",  color: "#475569", glow: "none" },
-  [STATES.WAKE_DETECTED]: { label: "Listening...",               color: "#6366f1", glow: "0 0 40px rgba(99,102,241,0.6)" },
+  [STATES.WAKE_DETECTED]: { label: "Listening...",               color: "#3B82F6", glow: "0 0 40px rgba(59,130,246,0.6)" },
   [STATES.PROCESSING]:    { label: "Jarvis is thinking...",      color: "#f59e0b", glow: "0 0 40px rgba(245,158,11,0.6)" },
   [STATES.SPEAKING]:      { label: "Speaking...",                color: "#10b981", glow: "0 0 40px rgba(16,185,129,0.6)" },
   [STATES.ERROR]:         { label: "Error — try again",          color: "#ef4444", glow: "0 0 30px rgba(239,68,68,0.4)" },

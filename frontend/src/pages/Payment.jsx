@@ -10,7 +10,7 @@ const PLAN_DETAILS = {
     price: "₹699",
     amount: 699,
     description: "Unlimited projects, Gantt, Sprints, 500 AI requests/month",
-    color: "#6366f1",
+    color: "#3B82F6",
     features: ["Unlimited projects & tasks", "25 team members", "Gantt + Sprints", "Task approvals", "500 AI requests/month"],
   },
   enterprise: {
@@ -232,7 +232,7 @@ export default function Payment() {
                   style={{
                     width: "100%",
                     padding: "13px",
-                    background: loading ? "rgba(99,102,241,0.3)" : `linear-gradient(135deg, ${details.color}, #8b5cf6)`,
+                    background: loading ? "rgba(59,130,246,0.3)" : `linear-gradient(135deg, ${details.color}, #8b5cf6)`,
                     color: "#fff",
                     border: "none",
                     borderRadius: 10,

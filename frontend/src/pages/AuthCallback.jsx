@@ -70,7 +70,7 @@ const S = {
   spinner: {
     width: 40, height: 40, borderRadius: "50%",
     border: "3px solid #e2e8f0",
-    borderTopColor: "#6366f1",
+    borderTopColor: "var(--tk-accent, #3B82F6)",
     animation: "spin 0.7s linear infinite",
     margin: "0 auto 16px",
   },
@@ -79,7 +79,7 @@ const S = {
   sub: { fontSize: 14, color: "#64748b", margin: "0 0 24px" },
   btn: {
     padding: "12px 28px",
-    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+    background: "var(--tk-accent, #3B82F6)",
     color: "#fff", border: "none", borderRadius: 10,
     fontSize: 14, fontWeight: 700, cursor: "pointer",
   },

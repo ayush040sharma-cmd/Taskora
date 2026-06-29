@@ -175,7 +175,9 @@ app.use("/api/jarvis",        require("./routes/jarvis"));
 app.use("/api/firewall",      require("./routes/firewall"));
 app.use("/api/admin",         require("./routes/admin"));
 app.use("/api/payments",      require("./routes/payments"));
-app.use("/api/seed",          require("./routes/seed"));
+if (process.env.NODE_ENV !== "production") {
+  app.use("/api/seed", require("./routes/seed"));
+}
 app.use("/api/roles",         require("./routes/roles"));
 app.use("/api/user-mgmt",     require("./routes/user-management"));
 app.use("/api/approvals-engine", approvalEngine.router);

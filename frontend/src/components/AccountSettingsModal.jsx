@@ -80,7 +80,7 @@ export default function AccountSettingsModal({ onClose, currentWorkspaceId }) {
     return s;
   };
   const strengthLabel = ["", "Weak", "Fair", "Good", "Strong"];
-  const strengthColor = ["", "#ef4444", "#f59e0b", "#6366f1", "#10b981"];
+  const strengthColor = ["", "#ef4444", "#f59e0b", "var(--tk-accent, #3B82F6)", "#10b981"];
   const pw = form.new_password;
   const s = strength(pw);
 
@@ -178,7 +178,7 @@ export default function AccountSettingsModal({ onClose, currentWorkspaceId }) {
                   onClick={toggle}
                   style={{
                     position: "relative", width: 48, height: 26, borderRadius: 99,
-                    background: isDark ? "#6366f1" : "#cbd5e1",
+                    background: isDark ? "var(--tk-accent, #3B82F6)" : "#cbd5e1",
                     border: "none", cursor: "pointer", transition: "background 0.2s", flexShrink: 0,
                   }}
                   aria-label="Toggle theme"
@@ -216,7 +216,7 @@ export default function AccountSettingsModal({ onClose, currentWorkspaceId }) {
                     onClick={() => setNotifPrefs(p => ({ ...p, [key]: !p[key] }))}
                     style={{
                       position: "relative", width: 44, height: 24, borderRadius: 99, flexShrink: 0,
-                      background: notifPrefs[key] ? "#6366f1" : "#cbd5e1",
+                      background: notifPrefs[key] ? "var(--tk-accent, #3B82F6)" : "#cbd5e1",
                       border: "none", cursor: "pointer", transition: "background 0.2s",
                     }}
                   >
@@ -229,7 +229,7 @@ export default function AccountSettingsModal({ onClose, currentWorkspaceId }) {
                 </div>
               ))}
               <div style={{ marginTop: 16, display: "flex", gap: 10, alignItems: "center" }}>
-                <button onClick={saveNotifPrefs} style={{ background: "#6366f1", color: "#fff", border: "none", borderRadius: 8, padding: "9px 18px", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
+                <button onClick={saveNotifPrefs} style={{ background: "var(--tk-accent, #3B82F6)", color: "#fff", border: "none", borderRadius: 8, padding: "9px 18px", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
                   Save preferences
                 </button>
                 {notifSaved && <span style={{ fontSize: 13, color: "#10b981" }}>✓ Saved</span>}
@@ -257,7 +257,7 @@ export default function AccountSettingsModal({ onClose, currentWorkspaceId }) {
                 </select>
               </div>
               <div style={{ marginTop: 16, display: "flex", gap: 10, alignItems: "center" }}>
-                <button onClick={saveRegional} style={{ background: "#6366f1", color: "#fff", border: "none", borderRadius: 8, padding: "9px 18px", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
+                <button onClick={saveRegional} style={{ background: "var(--tk-accent, #3B82F6)", color: "#fff", border: "none", borderRadius: 8, padding: "9px 18px", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
                   Save
                 </button>
                 {regionalSaved && <span style={{ fontSize: 13, color: "#10b981" }}>✓ Saved</span>}
@@ -289,7 +289,7 @@ export default function AccountSettingsModal({ onClose, currentWorkspaceId }) {
                   onClick={() => setCompactMode(v => !v)}
                   style={{
                     position: "relative", width: 44, height: 24, borderRadius: 99, flexShrink: 0,
-                    background: compactMode ? "#6366f1" : "#cbd5e1",
+                    background: compactMode ? "var(--tk-accent, #3B82F6)" : "#cbd5e1",
                     border: "none", cursor: "pointer", transition: "background 0.2s",
                   }}
                 >
@@ -301,7 +301,7 @@ export default function AccountSettingsModal({ onClose, currentWorkspaceId }) {
                 </button>
               </div>
               <div style={{ marginTop: 16, display: "flex", gap: 10, alignItems: "center" }}>
-                <button onClick={savePrefs} style={{ background: "#6366f1", color: "#fff", border: "none", borderRadius: 8, padding: "9px 18px", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
+                <button onClick={savePrefs} style={{ background: "var(--tk-accent, #3B82F6)", color: "#fff", border: "none", borderRadius: 8, padding: "9px 18px", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
                   Save preferences
                 </button>
                 {prefSaved && <span style={{ fontSize: 13, color: "#10b981" }}>✓ Saved</span>}
@@ -397,7 +397,7 @@ export default function AccountSettingsModal({ onClose, currentWorkspaceId }) {
                 onClick={handleSeed}
                 disabled={seeding}
                 style={{
-                  background: seeding ? "#e2e8f0" : "#6366f1", color: seeding ? "#888" : "#fff",
+                  background: seeding ? "#e2e8f0" : "var(--tk-accent, #3B82F6)", color: seeding ? "#888" : "#fff",
                   border: "none", borderRadius: 8, padding: "9px 18px",
                   fontWeight: 600, fontSize: 13, cursor: seeding ? "not-allowed" : "pointer",
                 }}

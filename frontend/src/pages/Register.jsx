@@ -83,7 +83,7 @@ export default function Register() {
 
   const pwStrength = form.password.length === 0 ? null
     : form.password.length < 8  ? { label: "Weak",   color: "#ef4444" }
-    : form.password.length < 12 ? { label: "Good",   color: "#6366f1" }
+    : form.password.length < 12 ? { label: "Good",   color: "var(--tk-accent, #3B82F6)" }
     :                              { label: "Strong", color: "#10b981" };
 
   return (
@@ -101,12 +101,12 @@ export default function Register() {
             </svg>
           </div>
           <span style={S.logoText}>Taskora</span>
-          <span style={{fontSize:10,fontWeight:700,color:"#6366f1",background:"rgba(99,102,241,0.1)",borderRadius:4,padding:"2px 5px"}}>AI</span>
+          <span style={{fontSize:10,fontWeight:700,color:"var(--tk-accent, #3B82F6)",background:"rgba(59,130,246,0.1)",borderRadius:4,padding:"2px 5px"}}>AI</span>
           <div style={{flex:1}} />
           {/* Step indicator */}
           <div style={S.stepIndicator}>
-            <div style={{...S.stepDot, background: "#6366f1"}} />
-            <div style={{...S.stepDot, background: step === 2 ? "#6366f1" : "#e2e8f0"}} />
+            <div style={{...S.stepDot, background: "var(--tk-accent, #3B82F6)"}} />
+            <div style={{...S.stepDot, background: step === 2 ? "var(--tk-accent, #3B82F6)" : "#e2e8f0"}} />
           </div>
         </div>
 
@@ -156,7 +156,7 @@ export default function Register() {
                 <input type="text" style={S.input} placeholder="Alex Johnson"
                   value={form.name} onChange={e => setForm({...form, name: e.target.value})}
                   required autoFocus
-                  onFocus={e => { e.target.style.borderColor="#6366f1"; e.target.style.boxShadow="0 0 0 3px rgba(99,102,241,0.12)"; }}
+                  onFocus={e => { e.target.style.borderColor="var(--tk-accent, #3B82F6)"; e.target.style.boxShadow="0 0 0 3px rgba(59,130,246,0.12)"; }}
                   onBlur={e => { e.target.style.borderColor="#e2e8f0"; e.target.style.boxShadow="none"; }} />
               </div>
 
@@ -165,7 +165,7 @@ export default function Register() {
                 <input type="email" style={S.input} placeholder="you@company.com"
                   value={form.email} onChange={e => setForm({...form, email: e.target.value})}
                   required
-                  onFocus={e => { e.target.style.borderColor="#6366f1"; e.target.style.boxShadow="0 0 0 3px rgba(99,102,241,0.12)"; }}
+                  onFocus={e => { e.target.style.borderColor="var(--tk-accent, #3B82F6)"; e.target.style.boxShadow="0 0 0 3px rgba(59,130,246,0.12)"; }}
                   onBlur={e => { e.target.style.borderColor="#e2e8f0"; e.target.style.boxShadow="none"; }} />
               </div>
 
@@ -176,7 +176,7 @@ export default function Register() {
                     placeholder="Min. 8 characters"
                     value={form.password} onChange={e => setForm({...form, password: e.target.value})}
                     required
-                    onFocus={e => { e.target.style.borderColor="#6366f1"; e.target.style.boxShadow="0 0 0 3px rgba(99,102,241,0.12)"; }}
+                    onFocus={e => { e.target.style.borderColor="var(--tk-accent, #3B82F6)"; e.target.style.boxShadow="0 0 0 3px rgba(59,130,246,0.12)"; }}
                     onBlur={e => { e.target.style.borderColor="#e2e8f0"; e.target.style.boxShadow="none"; }} />
                   <button type="button" style={S.eyeBtn} onClick={() => setShowPass(v => !v)}>
                     {showPass
@@ -201,7 +201,7 @@ export default function Register() {
                   placeholder="Repeat password"
                   value={form.confirm} onChange={e => setForm({...form, confirm: e.target.value})}
                   required
-                  onFocus={e => { e.target.style.borderColor="#6366f1"; e.target.style.boxShadow="0 0 0 3px rgba(99,102,241,0.12)"; }}
+                  onFocus={e => { e.target.style.borderColor="var(--tk-accent, #3B82F6)"; e.target.style.boxShadow="0 0 0 3px rgba(59,130,246,0.12)"; }}
                   onBlur={e => { e.target.style.borderColor="#e2e8f0"; e.target.style.boxShadow="none"; }} />
               </div>
 
@@ -288,7 +288,7 @@ const S = {
     flexDirection:"column", gap:"24px",
   },
   blob1: { position:"absolute", width:500, height:500, borderRadius:"50%",
-    background:"radial-gradient(circle, rgba(99,102,241,0.3) 0%, transparent 70%)",
+    background:"radial-gradient(circle, rgba(59,130,246,0.3) 0%, transparent 70%)",
     top:"-100px", left:"-100px", pointerEvents:"none" },
   blob2: { position:"absolute", width:400, height:400, borderRadius:"50%",
     background:"radial-gradient(circle, rgba(168,85,247,0.2) 0%, transparent 70%)",
@@ -301,7 +301,7 @@ const S = {
   },
   logoRow: { display:"flex", alignItems:"center", gap:10, marginBottom:28 },
   logoMark: { width:36, height:36, borderRadius:10, flexShrink:0,
-    background:"linear-gradient(135deg, #6366f1, #8b5cf6)",
+    background:"var(--tk-accent, #3B82F6)",
     display:"flex", alignItems:"center", justifyContent:"center" },
   logoText: { fontSize:20, fontWeight:800, color:"#0f172a", letterSpacing:"-0.5px", flex:1 },
   stepIndicator: { display:"flex", gap:6, alignItems:"center" },
@@ -324,7 +324,7 @@ const S = {
   strengthRow: { display:"flex", alignItems:"center", gap:4, marginTop:4 },
   strengthBar: { flex:1, height:3, borderRadius:99, transition:"background 0.3s" },
   submitBtn: { width:"100%", padding:"13px",
-    background:"linear-gradient(135deg, #6366f1, #8b5cf6)",
+    background:"var(--tk-accent, #3B82F6)",
     color:"#fff", border:"none", borderRadius:10, fontSize:15,
     fontWeight:700, cursor:"pointer", marginTop:4, letterSpacing:"0.2px",
     transition:"opacity 0.15s" },
@@ -335,7 +335,7 @@ const S = {
   divider: { textAlign:"center", margin:"22px 0 16px", fontSize:13, color:"#64748b" },
   switchLink: { display:"block", textAlign:"center", padding:"11px",
     border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:14,
-    fontWeight:600, color:"#6366f1", textDecoration:"none" },
+    fontWeight:600, color:"var(--tk-accent, #3B82F6)", textDecoration:"none" },
   roleGrid: { display:"flex", flexDirection:"column", gap:10, marginBottom:20 },
   roleCard: {
     display:"flex", flexDirection:"column", alignItems:"flex-start",
@@ -344,7 +344,7 @@ const S = {
     textAlign:"left", position:"relative", transition:"all 0.15s",
   },
   roleCardActive: {
-    border:"2px solid #6366f1", background:"#eef2ff",
+    border:"2px solid var(--tk-accent, #3B82F6)", background:"rgba(59,130,246,0.07)",
   },
   roleIcon: { fontSize:24, marginBottom:4 },
   roleTitle: { fontSize:15, fontWeight:700, color:"#0f172a" },
@@ -352,7 +352,7 @@ const S = {
   roleCheck: {
     position:"absolute", top:12, right:14,
     width:22, height:22, borderRadius:"50%",
-    background:"#6366f1", color:"#fff",
+    background:"var(--tk-accent, #3B82F6)", color:"#fff",
     display:"flex", alignItems:"center", justifyContent:"center",
     fontSize:12, fontWeight:800,
   },

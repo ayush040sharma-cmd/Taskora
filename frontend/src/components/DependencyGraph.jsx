@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import api from "../api/api";
 import BlockedDashboard from "./BlockedDashboard";
 
-const STATUS_COLOR  = { todo: "#94a3b8", inprogress: "#6366f1", in_progress: "#6366f1", done: "#10b981", review: "#f59e0b" };
+const STATUS_COLOR  = { todo: "#94a3b8", inprogress: "#3B82F6", in_progress: "#3B82F6", done: "#10b981", review: "#f59e0b" };
 const RISK_COLOR    = (score) => score >= 75 ? "#dc2626" : score >= 50 ? "#ef4444" : score >= 25 ? "#f59e0b" : "#10b981";
 const PRIORITY_ICON = { critical: "🔴", high: "🟠", medium: "🟡", low: "🟢" };
 
@@ -89,7 +89,7 @@ function layoutGraph(nodes, edges) {
 }
 
 function GraphNode({ node, selected, onClick }) {
-  const borderColor = selected ? "#6366f1"
+  const borderColor = selected ? "var(--tk-accent, #3B82F6)"
     : node.risk_score >= 50 ? RISK_COLOR(node.risk_score)
     : STATUS_COLOR[node.status] || "#94a3b8";
 
@@ -104,10 +104,10 @@ function GraphNode({ node, selected, onClick }) {
         height={NODE_H}
         rx={8}
         ry={8}
-        fill={selected ? "#eef2ff" : "#fff"}
+        fill={selected ? "rgba(59,130,246,0.07)" : "#fff"}
         stroke={borderColor}
         strokeWidth={selected ? 2.5 : 1.5}
-        style={{ filter: selected ? "drop-shadow(0 2px 8px rgba(99,102,241,0.3))" : "none" }}
+        style={{ filter: selected ? "drop-shadow(0 2px 8px rgba(59,130,246,0.3))" : "none" }}
       />
       {/* Status indicator strip */}
       <rect
@@ -234,7 +234,7 @@ export default function DependencyGraph({ workspaceId, onTaskClick }) {
       <div className="dep-graph-toolbar">
         <span className="dep-graph-legend">
           <span className="dep-legend-item" style={{ background: "#94a3b8" }}>Todo</span>
-          <span className="dep-legend-item" style={{ background: "#6366f1" }}>In Progress</span>
+          <span className="dep-legend-item" style={{ background: "#3B82F6" }}>In Progress</span>
           <span className="dep-legend-item" style={{ background: "#10b981" }}>Done</span>
           <span className="dep-legend-item" style={{ background: "#ef4444" }}>At Risk</span>
         </span>
@@ -277,7 +277,7 @@ export default function DependencyGraph({ workspaceId, onTaskClick }) {
                   key={e.key}
                   d={e.d}
                   fill="none"
-                  stroke={e.toId === selected?.id || e.fromId === selected?.id ? "#6366f1" : "#cbd5e1"}
+                  stroke={e.toId === selected?.id || e.fromId === selected?.id ? "#3B82F6" : "#cbd5e1"}
                   strokeWidth={e.toId === selected?.id || e.fromId === selected?.id ? 2 : 1.5}
                   strokeDasharray={e.toId === selected?.id || e.fromId === selected?.id ? "none" : "4 3"}
                   markerEnd="url(#arrowhead)"

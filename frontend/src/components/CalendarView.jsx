@@ -63,7 +63,7 @@ function EventForm({ date, workspaceId, onSave, onClose }) {
         end_date:   form.end_date   || null,
         start_time: form.start_time || undefined,
         end_time:   form.end_time   || undefined,
-        color: TYPE_COLOR[form.type] || "#6366f1",
+        color: TYPE_COLOR[form.type] || "#3B82F6",
       });
       onSave(r.data);
     } catch (err) {
@@ -190,7 +190,7 @@ function DayPopover({ date, events, deadlines, onEventClick, onTaskClick, onClos
           <div
             key={ev.id}
             className="cal-popover-item"
-            style={{ borderLeft: `3px solid ${ev.color || TYPE_COLOR[ev.type] || "#6366f1"}`, cursor: "pointer" }}
+            style={{ borderLeft: `3px solid ${ev.color || TYPE_COLOR[ev.type] || "#3B82F6"}`, cursor: "pointer" }}
             onClick={() => { onEventClick(ev); onClose(); }}
           >
             <div className="cal-popover-title">{ev.title}</div>
@@ -399,9 +399,9 @@ export default function CalendarView({ workspaceId, tasks = [], onTaskClick }) {
                         <div
                           key={ev.id}
                           className="cal-ev-chip"
-                          style={{ background: (ev.color || TYPE_COLOR[ev.type] || "#6366f1") + "22",
-                                   borderLeft: `2px solid ${ev.color || TYPE_COLOR[ev.type] || "#6366f1"}`,
-                                   color: ev.color || TYPE_COLOR[ev.type] || "#6366f1" }}
+                          style={{ background: (ev.color || TYPE_COLOR[ev.type] || "#3B82F6") + "22",
+                                   borderLeft: `2px solid ${ev.color || TYPE_COLOR[ev.type] || "#3B82F6"}`,
+                                   color: ev.color || TYPE_COLOR[ev.type] || "#3B82F6" }}
                           title={ev.title}
                         >
                           {ev.title}
@@ -437,7 +437,7 @@ export default function CalendarView({ workspaceId, tasks = [], onTaskClick }) {
           <div
             key={ev.id}
             className="cal-sidebar-item"
-            style={{ borderLeft: `3px solid ${ev.color || TYPE_COLOR[ev.type] || "#6366f1"}` }}
+            style={{ borderLeft: `3px solid ${ev.color || TYPE_COLOR[ev.type] || "#3B82F6"}` }}
           >
             <div className="cal-sidebar-date">
               {new Date((ev.start_date || "").split("T")[0] + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}

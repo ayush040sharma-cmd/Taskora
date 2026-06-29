@@ -2,18 +2,18 @@ import { useState, useEffect, useCallback } from "react";
 import api from "../api/api";
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
-function StatCard({ icon, label, value, sub, color = "#6366f1", onClick, badge }) {
+function StatCard({ icon, label, value, sub, color = "var(--tk-accent, #3B82F6)", onClick, badge }) {
   return (
     <div
       onClick={onClick}
       style={{
-        background: "#1e293b", borderRadius: 12, padding: "18px 20px",
-        border: "1px solid #334155", cursor: onClick ? "pointer" : "default",
+        background: "var(--card-bg)", borderRadius: 12, padding: "18px 20px",
+        border: "1px solid var(--border)", cursor: onClick ? "pointer" : "default",
         transition: "border-color 0.2s, transform 0.15s",
         display: "flex", flexDirection: "column", gap: 8, minHeight: 110,
       }}
       onMouseEnter={e => { if (onClick) { e.currentTarget.style.borderColor = color; e.currentTarget.style.transform = "translateY(-2px)"; } }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = "#334155"; e.currentTarget.style.transform = "translateY(0)"; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.transform = "translateY(0)"; }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <span style={{ fontSize: 22 }}>{icon}</span>
@@ -25,9 +25,9 @@ function StatCard({ icon, label, value, sub, color = "#6366f1", onClick, badge }
         )}
       </div>
       <div>
-        <div style={{ color: "#94a3b8", fontSize: 12, fontWeight: 500, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</div>
-        <div style={{ color: "#f1f5f9", fontSize: 28, fontWeight: 800, lineHeight: 1.2, marginTop: 2 }}>{value}</div>
-        {sub && <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>{sub}</div>}
+        <div style={{ color: "var(--text-secondary)", fontSize: 12, fontWeight: 500, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</div>
+        <div style={{ color: "var(--text-primary)", fontSize: 28, fontWeight: 800, lineHeight: 1.2, marginTop: 2 }}>{value}</div>
+        {sub && <div style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 4 }}>{sub}</div>}
       </div>
     </div>
   );
@@ -37,10 +37,10 @@ function StatCard({ icon, label, value, sub, color = "#6366f1", onClick, badge }
 function SectionHeader({ title, action, onAction }) {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, marginTop: 28 }}>
-      <h3 style={{ color: "#94a3b8", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, margin: 0 }}>{title}</h3>
+      <h3 style={{ color: "var(--text-secondary)", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, margin: 0 }}>{title}</h3>
       {action && (
         <button onClick={onAction} style={{
-          background: "none", border: "none", color: "#6366f1", fontSize: 12,
+          background: "none", border: "none", color: "var(--tk-accent, #3B82F6)", fontSize: 12,
           cursor: "pointer", fontWeight: 600, padding: "2px 8px",
         }}>{action} →</button>
       )}
@@ -54,8 +54,8 @@ const PRIORITY_COLOR = { high: "#ef4444", critical: "#7f1d1d", medium: "#f59e0b"
 function PriorityBadge({ priority }) {
   return (
     <span style={{
-      background: (PRIORITY_COLOR[priority] || "#6366f1") + "22",
-      color: PRIORITY_COLOR[priority] || "#6366f1",
+      background: (PRIORITY_COLOR[priority] || "var(--tk-accent, #3B82F6)") + "22",
+      color: PRIORITY_COLOR[priority] || "var(--tk-accent, #3B82F6)",
       fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 4,
       textTransform: "uppercase",
     }}>{priority}</span>
@@ -77,24 +77,24 @@ function StatusBadge({ status }) {
 }
 
 // ── Task row ──────────────────────────────────────────────────────────────────
-function TaskRow({ task, onNavigate }) {
+function TaskRow({ task, onOpenDetail }) {
   return (
     <div
-      onClick={() => onNavigate("board")}
+      onClick={() => onOpenDetail(task)}
       style={{
         display: "flex", alignItems: "center", gap: 10, padding: "10px 14px",
-        borderBottom: "1px solid #1e293b", cursor: "pointer",
+        borderBottom: "1px solid var(--card-bg)", cursor: "pointer",
         transition: "background 0.15s",
       }}
-      onMouseEnter={e => e.currentTarget.style.background = "#1e293b44"}
+      onMouseEnter={e => e.currentTarget.style.background = "rgba(30,41,59,0.27)"}
       onMouseLeave={e => e.currentTarget.style.background = "transparent"}
     >
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div style={{ color: "var(--text-primary)", fontSize: 13, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {task.title}
         </div>
         {task.assignee_name && (
-          <div style={{ color: "#64748b", fontSize: 11, marginTop: 2 }}>{task.assignee_name}</div>
+          <div style={{ color: "var(--text-secondary)", fontSize: 11, marginTop: 2 }}>{task.assignee_name}</div>
         )}
       </div>
       <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
@@ -102,7 +102,7 @@ function TaskRow({ task, onNavigate }) {
         <StatusBadge status={task.status} />
       </div>
       {task.due_date && (
-        <div style={{ color: "#64748b", fontSize: 11, flexShrink: 0 }}>
+        <div style={{ color: "var(--text-secondary)", fontSize: 11, flexShrink: 0 }}>
           {new Date(task.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
         </div>
       )}
@@ -115,17 +115,17 @@ function WorkloadBar({ name, pct, color }) {
   return (
     <div style={{ marginBottom: 10 }}>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-        <span style={{ color: "#cbd5e1", fontSize: 12 }}>{name}</span>
-        <span style={{ color: "#94a3b8", fontSize: 12 }}>{pct}%</span>
+        <span style={{ color: "var(--text-secondary)", fontSize: 12 }}>{name}</span>
+        <span style={{ color: "var(--text-secondary)", fontSize: 12 }}>{pct}%</span>
       </div>
-      <div style={{ height: 6, background: "#334155", borderRadius: 3, overflow: "hidden" }}>
+      <div style={{ height: 6, background: "var(--border)", borderRadius: 3, overflow: "hidden" }}>
         <div style={{ height: "100%", width: `${Math.min(100, pct)}%`, background: color, borderRadius: 3, transition: "width 0.5s" }} />
       </div>
     </div>
   );
 }
 
-export default function CommandCenter({ workspaceId, onNavigate, tasks = [] }) {
+export default function CommandCenter({ workspaceId, onNavigate, onOpenDetail, tasks = [] }) {
   const [analytics, setAnalytics]       = useState(null);
   const [blockedData, setBlockedData]   = useState(null);
   const [workload, setWorkload]         = useState(null);
@@ -182,7 +182,7 @@ export default function CommandCenter({ workspaceId, onNavigate, tasks = [] }) {
 
   if (loading) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 300, color: "#64748b" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 300, color: "var(--text-secondary)" }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 32, marginBottom: 12 }}>🚀</div>
           <div>Loading command center…</div>
@@ -207,7 +207,7 @@ export default function CommandCenter({ workspaceId, onNavigate, tasks = [] }) {
           color="#f59e0b" onClick={() => onNavigate("board")} />
         <StatCard icon="📅" label="Due This Week" value={upcoming.length}
           sub="Upcoming deadlines"
-          color="#6366f1" onClick={() => onNavigate("calendar")} />
+          color="var(--tk-accent, #3B82F6)" onClick={() => onNavigate("calendar")} />
         <StatCard icon="✔" label="Pending Approvals" value={approvals.length}
           sub="Awaiting your review"
           color="#8b5cf6" onClick={() => onNavigate("approvals")} badge={approvals.length > 0 ? "Pending" : null} />
@@ -223,18 +223,18 @@ export default function CommandCenter({ workspaceId, onNavigate, tasks = [] }) {
         <div>
           {/* High priority tasks */}
           <SectionHeader title="High Priority Tasks" action="View Board" onAction={() => onNavigate("board")} />
-          <div style={{ background: "#0f172a", borderRadius: 12, border: "1px solid #334155", overflow: "hidden" }}>
+          <div style={{ background: "var(--main-bg)", borderRadius: 12, border: "1px solid var(--border)", overflow: "hidden" }}>
             {highPriority.length === 0 ? (
-              <div style={{ padding: "24px", textAlign: "center", color: "#475569" }}>
+              <div style={{ padding: "24px", textAlign: "center", color: "var(--text-secondary)" }}>
                 No high priority tasks — great job! 🎉
               </div>
             ) : (
-              highPriority.slice(0, 5).map(t => <TaskRow key={t.id} task={t} onNavigate={onNavigate} />)
+              highPriority.slice(0, 5).map(t => <TaskRow key={t.id} task={t} onOpenDetail={onOpenDetail} />)
             )}
             {highPriority.length > 5 && (
               <div style={{ padding: "10px 14px", textAlign: "center" }}>
                 <button onClick={() => onNavigate("board")} style={{
-                  background: "none", border: "none", color: "#6366f1",
+                  background: "none", border: "none", color: "var(--tk-accent, #3B82F6)",
                   cursor: "pointer", fontSize: 12, fontWeight: 600,
                 }}>
                   +{highPriority.length - 5} more →
@@ -247,8 +247,8 @@ export default function CommandCenter({ workspaceId, onNavigate, tasks = [] }) {
           {blocked.length > 0 && (
             <>
               <SectionHeader title="Blocked Tasks" action="View Blocked" onAction={() => onNavigate("blocked")} />
-              <div style={{ background: "#0f172a", borderRadius: 12, border: "1px solid #7f1d1d", overflow: "hidden" }}>
-                {blocked.slice(0, 3).map(t => <TaskRow key={t.id} task={t} onNavigate={onNavigate} />)}
+              <div style={{ background: "var(--main-bg)", borderRadius: 12, border: "1px solid #7f1d1d", overflow: "hidden" }}>
+                {blocked.slice(0, 3).map(t => <TaskRow key={t.id} task={t} onOpenDetail={onOpenDetail} />)}
                 {blocked.length > 3 && (
                   <div style={{ padding: "10px 14px", textAlign: "center" }}>
                     <button onClick={() => onNavigate("blocked")} style={{
@@ -268,11 +268,11 @@ export default function CommandCenter({ workspaceId, onNavigate, tasks = [] }) {
         <div>
           {/* Task status breakdown */}
           <SectionHeader title="Task Status Breakdown" action="Analytics" onAction={() => onNavigate("analytics")} />
-          <div style={{ background: "#0f172a", borderRadius: 12, border: "1px solid #334155", padding: "16px 20px" }}>
+          <div style={{ background: "var(--main-bg)", borderRadius: 12, border: "1px solid var(--border)", padding: "16px 20px" }}>
             {statusBreakdown.map(({ status, count }) => (
               <div key={status} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
                 <StatusBadge status={status} />
-                <div style={{ flex: 1, height: 6, background: "#1e293b", borderRadius: 3, overflow: "hidden" }}>
+                <div style={{ flex: 1, height: 6, background: "var(--card-bg)", borderRadius: 3, overflow: "hidden" }}>
                   <div style={{
                     height: "100%",
                     width: totalTasks > 0 ? `${Math.round(count / totalTasks * 100)}%` : "0%",
@@ -281,11 +281,11 @@ export default function CommandCenter({ workspaceId, onNavigate, tasks = [] }) {
                     transition: "width 0.5s",
                   }} />
                 </div>
-                <span style={{ color: "#94a3b8", fontSize: 13, fontWeight: 600, minWidth: 24, textAlign: "right" }}>{count}</span>
+                <span style={{ color: "var(--text-secondary)", fontSize: 13, fontWeight: 600, minWidth: 24, textAlign: "right" }}>{count}</span>
               </div>
             ))}
             {totalTasks === 0 && (
-              <div style={{ color: "#475569", textAlign: "center", padding: "12px 0" }}>No tasks yet</div>
+              <div style={{ color: "var(--text-secondary)", textAlign: "center", padding: "12px 0" }}>No tasks yet</div>
             )}
           </div>
 
@@ -293,7 +293,7 @@ export default function CommandCenter({ workspaceId, onNavigate, tasks = [] }) {
           {workload?.members && workload.members.length > 0 && (
             <>
               <SectionHeader title="Workload Distribution" action="View Workload" onAction={() => onNavigate("workload")} />
-              <div style={{ background: "#0f172a", borderRadius: 12, border: "1px solid #334155", padding: "16px 20px" }}>
+              <div style={{ background: "var(--main-bg)", borderRadius: 12, border: "1px solid var(--border)", padding: "16px 20px" }}>
                 {workload.members.slice(0, 5).map(m => {
                   const pct = Math.round((m.active_tasks || 0) / Math.max(1, m.capacity || 8) * 100);
                   const color = pct > 90 ? "#ef4444" : pct > 70 ? "#f59e0b" : "#22c55e";
@@ -314,8 +314,8 @@ export default function CommandCenter({ workspaceId, onNavigate, tasks = [] }) {
           {upcoming.length > 0 && (
             <>
               <SectionHeader title="Upcoming Deadlines" action="Calendar" onAction={() => onNavigate("calendar")} />
-              <div style={{ background: "#0f172a", borderRadius: 12, border: "1px solid #334155", overflow: "hidden" }}>
-                {upcoming.slice(0, 4).map(t => <TaskRow key={t.id} task={t} onNavigate={onNavigate} />)}
+              <div style={{ background: "var(--main-bg)", borderRadius: 12, border: "1px solid var(--border)", overflow: "hidden" }}>
+                {upcoming.slice(0, 4).map(t => <TaskRow key={t.id} task={t} onOpenDetail={onOpenDetail} />)}
               </div>
             </>
           )}
@@ -326,15 +326,15 @@ export default function CommandCenter({ workspaceId, onNavigate, tasks = [] }) {
       {auditLogs.length > 0 && (
         <>
           <SectionHeader title="Recent Activity" action="View All" onAction={() => onNavigate("activity")} />
-          <div style={{ background: "#0f172a", borderRadius: 12, border: "1px solid #334155", overflow: "hidden" }}>
+          <div style={{ background: "var(--main-bg)", borderRadius: 12, border: "1px solid var(--border)", overflow: "hidden" }}>
             {auditLogs.slice(0, 6).map((log, i) => (
               <div key={log.id || i} style={{
                 display: "flex", alignItems: "center", gap: 12, padding: "10px 16px",
-                borderBottom: i < Math.min(5, auditLogs.length - 1) ? "1px solid #1e293b" : "none",
+                borderBottom: i < Math.min(5, auditLogs.length - 1) ? "1px solid var(--card-bg)" : "none",
               }}>
                 <div style={{
                   width: 28, height: 28, borderRadius: "50%",
-                  background: "#1e293b", display: "flex", alignItems: "center",
+                  background: "var(--card-bg)", display: "flex", alignItems: "center",
                   justifyContent: "center", fontSize: 14, flexShrink: 0,
                 }}>
                   {log.action?.includes("delete") ? "🗑" :
@@ -343,12 +343,12 @@ export default function CommandCenter({ workspaceId, onNavigate, tasks = [] }) {
                    log.action?.includes("creat") ? "✨" : "📝"}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ color: "#cbd5e1", fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    <strong style={{ color: "#e2e8f0" }}>{log.actor_name || "Someone"}</strong>
+                  <div style={{ color: "var(--text-secondary)", fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <strong style={{ color: "var(--text-primary)" }}>{log.actor_name || "Someone"}</strong>
                     {" "}{(log.action || "").replace(/_/g, " ")}
                     {log.meta?.task_title ? `: "${log.meta.task_title}"` : ""}
                   </div>
-                  <div style={{ color: "#475569", fontSize: 11, marginTop: 2 }}>
+                  <div style={{ color: "var(--text-secondary)", fontSize: 11, marginTop: 2 }}>
                     {log.created_at ? new Date(log.created_at).toLocaleString() : ""}
                   </div>
                 </div>
@@ -363,28 +363,28 @@ export default function CommandCenter({ workspaceId, onNavigate, tasks = [] }) {
         <>
           <SectionHeader title="Active Sprint" action="View Sprints" onAction={() => onNavigate("sprints")} />
           <div style={{
-            background: "#0f172a", borderRadius: 12, border: "1px solid #334155",
+            background: "var(--main-bg)", borderRadius: 12, border: "1px solid var(--border)",
             padding: "20px", display: "flex", alignItems: "center", gap: 20,
           }}>
             <div style={{ flex: 1 }}>
-              <div style={{ color: "#e2e8f0", fontWeight: 700, fontSize: 16 }}>{activeSprint.name}</div>
-              {activeSprint.goal && <div style={{ color: "#64748b", fontSize: 13, marginTop: 4 }}>{activeSprint.goal}</div>}
-              <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 8 }}>
+              <div style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 16 }}>{activeSprint.name}</div>
+              {activeSprint.goal && <div style={{ color: "var(--text-secondary)", fontSize: 13, marginTop: 4 }}>{activeSprint.goal}</div>}
+              <div style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 8 }}>
                 {sprintDone} / {sprintTasks.length} tasks complete
                 {activeSprint.end_date && ` · ends ${new Date(activeSprint.end_date).toLocaleDateString()}`}
               </div>
             </div>
             <div style={{ position: "relative", width: 72, height: 72, flexShrink: 0 }}>
               <svg viewBox="0 0 36 36" style={{ width: "100%", height: "100%", transform: "rotate(-90deg)" }}>
-                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#334155" strokeWidth="3" />
-                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#6366f1" strokeWidth="3"
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--border)" strokeWidth="3" />
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--tk-accent, #3B82F6)" strokeWidth="3"
                   strokeDasharray={`${sprintPct} ${100 - sprintPct}`}
                   strokeDashoffset="0" strokeLinecap="round" />
               </svg>
               <div style={{
                 position: "absolute", inset: 0, display: "flex",
                 alignItems: "center", justifyContent: "center",
-                color: "#e2e8f0", fontSize: 14, fontWeight: 700,
+                color: "var(--text-primary)", fontSize: 14, fontWeight: 700,
               }}>{sprintPct}%</div>
             </div>
           </div>

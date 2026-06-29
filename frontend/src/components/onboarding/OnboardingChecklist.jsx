@@ -53,7 +53,7 @@ export default function OnboardingChecklist({ onViewChange }) {
       right: 24,
       width: minimised ? 220 : 280,
       background: "#0f172a",
-      border: "1.5px solid rgba(99,102,241,0.3)",
+      border: "1.5px solid rgba(59,130,246,0.3)",
       borderRadius: 14,
       fontFamily: "'Inter', sans-serif",
       zIndex: 1000,
@@ -69,14 +69,14 @@ export default function OnboardingChecklist({ onViewChange }) {
           alignItems: "center",
           gap: 10,
           cursor: "pointer",
-          background: "rgba(99,102,241,0.08)",
+          background: "rgba(59,130,246,0.08)",
           borderBottom: minimised ? "none" : "1px solid rgba(255,255,255,0.06)",
         }}
       >
         <div style={{
           width: 28, height: 28,
           borderRadius: "50%",
-          background: allDone ? "#34d399" : "conic-gradient(#6366f1 0%, #6366f1 " + progress + "%, #1e293b " + progress + "%)",
+          background: allDone ? "#34d399" : "conic-gradient(#3B82F6 0%, #3B82F6 " + progress + "%, #1e293b " + progress + "%)",
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 12, color: "#fff", fontWeight: 700, flexShrink: 0,
         }}>

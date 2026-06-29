@@ -142,9 +142,11 @@ router.get("/", auth, async (req, res) => {
   }
 });
 
-// ── GET /api/workload/users?q=X ───────────────────────────────────────────────
+// ── GET /api/workload/users?q=X&workspace_id=Y ───────────────────────────────
+// Scoped to workspace members when workspace_id is provided
 router.get("/users", auth, async (req, res) => {
-  const { q } = req.query;
+  const { q, workspace_id } = req.query;
+  const wsId = workspace_id ? parseInt(workspace_id) : null;
   try {
     const result = await pool.query(
       `SELECT u.id, u.name, u.email, u.role,
@@ -155,8 +157,13 @@ router.get("/users", auth, async (req, res) => {
        FROM users u
        LEFT JOIN user_capacity uc ON uc.user_id = u.id
        WHERE ($1::text IS NULL OR u.name ILIKE $1 OR u.email ILIKE $1)
+         AND ($2::int IS NULL OR u.id IN (
+           SELECT user_id FROM workspaces WHERE id = $2
+           UNION
+           SELECT user_id FROM workspace_members WHERE workspace_id = $2
+         ))
        ORDER BY u.name LIMIT 20`,
-      [q ? `%${q}%` : null]
+      [q ? `%${q}%` : null, wsId]
     );
     res.json(result.rows);
   } catch (err) {

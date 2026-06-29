@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { canViewSidebar } from "../utils/canAccess";
@@ -7,17 +8,18 @@ const SECTIONS = [
   {
     label: "WORKSPACE",
     views: [
-      { id: "board",        icon: "📋", label: "Board" },
-      { id: "summary",      icon: "📊", label: "Summary" },
-      { id: "calendar",     icon: "📅", label: "Calendar" },
-      { id: "sprints",      icon: "🏃", label: "Sprints" },
-      { id: "gantt",        icon: "🗓", label: "Gantt Chart" },
+      { id: "board",          icon: "📋", label: "Board" },
+      { id: "summary",        icon: "📊", label: "Summary" },
+      { id: "calendar",       icon: "📅", label: "Calendar" },
+      { id: "sprints",        icon: "🏃", label: "Sprints" },
+      { id: "gantt",          icon: "🗓", label: "Gantt Chart" },
     ],
   },
   {
     label: "TEAM",
     views: [
-      { id: "manager",      icon: "🏢", label: "Manager View" },
+      { id: "teams",        icon: "🏢", label: "Teams" },
+      { id: "manager",      icon: "📌", label: "Manager View" },
       { id: "workload",     icon: "👥", label: "Team Workload" },
       { id: "members",      icon: "👤", label: "Members" },
       { id: "capacity",     icon: "⚡", label: "My Capacity" },
@@ -36,7 +38,7 @@ const SECTIONS = [
   {
     label: "MORE",
     views: [
-      { id: "activity",     icon: "⚡", label: "Activity Feed" },
+      { id: "activity",     icon: "📡", label: "Activity Feed" },
       { id: "graph",        icon: "🕸",  label: "Dep. Graph" },
       { id: "integrations", icon: "🔗", label: "Integrations" },
     ],
@@ -76,6 +78,7 @@ export default function Sidebar({
 }) {
   const { user, logout, sidebarViews } = useAuth();
   const navigate = useNavigate();
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   return (
     <aside className={`sidebar${open ? " sidebar--open" : ""}`}>
@@ -93,7 +96,7 @@ export default function Sidebar({
             <rect x="18" y="2" width="4" height="20" rx="1.5" fill="#fff"/>
           </svg>
         </div>
-        <span className="sidebar-logo-text" style={{ color: '#E2E8F0', WebkitTextFillColor: '#E2E8F0', fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 15 }}>Taskora</span>
+        <span className="sidebar-logo-text" style={{ color: '#E2E8F0', fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 15 }}>Taskora</span>
         <span className="sidebar-ai-badge">AI</span>
       </div>
 
@@ -143,21 +146,33 @@ export default function Sidebar({
               <span className="sidebar-workspace-name">{ws.name}</span>
             </button>
             {workspaces.length > 1 && (
-              <button
-                className="sidebar-ws-delete"
-                title="Delete workspace"
-                onClick={e => {
-                  e.stopPropagation();
-                  if (window.confirm(`Delete "${ws.name}"?\n\nThis will permanently delete all tasks. This cannot be undone.`)) {
-                    onDeleteWorkspace?.(ws.id);
-                  }
-                }}
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                  <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                </svg>
-              </button>
+              confirmDeleteId === ws.id ? (
+                <div style={{ display: "flex", gap: 4, alignItems: "center" }} onClick={e => e.stopPropagation()}>
+                  <button
+                    className="sidebar-ws-delete"
+                    onClick={e => { e.stopPropagation(); setConfirmDeleteId(null); onDeleteWorkspace?.(ws.id); }}
+                    style={{ color: "#ef4444", fontSize: 10, fontWeight: 700, padding: "2px 4px" }}
+                    title="Confirm delete"
+                  >Del</button>
+                  <button
+                    className="sidebar-ws-delete"
+                    onClick={e => { e.stopPropagation(); setConfirmDeleteId(null); }}
+                    style={{ color: "#94a3b8", fontSize: 10, padding: "2px 4px" }}
+                    title="Cancel"
+                  >No</button>
+                </div>
+              ) : (
+                <button
+                  className="sidebar-ws-delete"
+                  title="Delete workspace"
+                  onClick={e => { e.stopPropagation(); setConfirmDeleteId(ws.id); }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                    <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                  </svg>
+                </button>
+              )
             )}
           </div>
         ))}

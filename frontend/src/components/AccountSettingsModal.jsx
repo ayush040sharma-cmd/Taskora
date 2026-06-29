@@ -369,7 +369,7 @@ export default function AccountSettingsModal({ onClose, currentWorkspaceId }) {
                     <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>Current session</div>
                     <div style={{ fontSize: 12, color: "var(--text-muted)" }}>This browser · {new Date().toLocaleDateString()}</div>
                   </div>
-                  <span style={{ fontSize: 11, background: "#dcfce7", color: "#16a34a", borderRadius: 99, padding: "2px 8px", fontWeight: 600 }}>Active</span>
+                  <span style={{ fontSize: 11, background: "rgba(34,197,94,0.15)", color: "#22c55e", borderRadius: 99, padding: "2px 8px", fontWeight: 600 }}>Active</span>
                 </div>
               </div>
             </div>
@@ -384,12 +384,12 @@ export default function AccountSettingsModal({ onClose, currentWorkspaceId }) {
                 <strong style={{ color: "var(--text-primary)" }}> This will clear existing tasks.</strong>
               </p>
               {seedMsg && (
-                <div style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#16a34a", marginBottom: 10 }}>
+                <div style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#22c55e", marginBottom: 10 }}>
                   ✅ {seedMsg}
                 </div>
               )}
               {seedError && (
-                <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#dc2626", marginBottom: 10 }}>
+                <div style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#ef4444", marginBottom: 10 }}>
                   ❌ {seedError}
                 </div>
               )}

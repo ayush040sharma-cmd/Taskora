@@ -15,7 +15,7 @@ function LoadBar({ pct, label, color }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
       {label && <span style={{ fontSize: 11, color: "#64748b" }}>{label}</span>}
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <div style={{ flex: 1, height: 8, background: "#f1f5f9", borderRadius: 99, overflow: "hidden" }}>
+        <div style={{ flex: 1, height: 8, background: "var(--column-bg, #334155)", borderRadius: 99, overflow: "hidden" }}>
           <div style={{ width: `${Math.min(pct, 100)}%`, height: "100%", background: color || "#6366f1", borderRadius: 99, transition: "width 0.4s" }} />
         </div>
         <span style={{ fontSize: 12, fontWeight: 700, color, minWidth: 36 }}>{pct}%</span>

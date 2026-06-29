@@ -691,7 +691,7 @@ function QuickActions({ nextTask, onFocusMode, onRefresh }) {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
-export default function SummaryDashboard({ workspaceId }) {
+export default function SummaryDashboard({ workspaceId, onOpenTask }) {
   useAuth();
   const [data,      setData]      = useState(null);
   const [loading,   setLoading]   = useState(false);
@@ -762,7 +762,7 @@ export default function SummaryDashboard({ workspaceId }) {
 
       <div className="sd-row-3">
         <TodayFocusCard todayFocus={data.today_focus} user={data.user} />
-        <NextActionPanel nextAction={data.next_action} onOpenTask={null} />
+        <NextActionPanel nextAction={data.next_action} onOpenTask={onOpenTask} />
         <CapacityWidget capacity={data.capacity} />
       </div>
 

@@ -18,22 +18,28 @@ const TYPE_META = {
   poc:          { label: "POC",          desc: "Proof of concept",    icon: "🔬", days: 30, range: "1–2 months"},
 };
 
-export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "todo", sprints = [] }) {
+export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "todo", sprints = [], workspaceId }) {
   const [form, setForm] = useState({
     title: "", description: "", status: defaultStatus,
     priority: "medium", due_date: "", start_date: "",
     type: "task", estimated_days: 1,
-    assigned_user_id: "", sprint_id: "",
-    estimated_duration: 1,  // system suggested (from TYPE_META)
-    final_duration: 1,      // user confirmed
-    recurrence: "",         // none | daily | weekly | monthly
+    assigned_user_id: "", sprint_id: "", team_id: "",
+    estimated_duration: 1,
+    final_duration: 1,
+    recurrence: "",
   });
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState("");
   const [users, setUsers]         = useState([]);
+  const [teams, setTeams]         = useState([]);
   const [userSearch, setUserSearch] = useState("");
   const [workloadWarn, setWorkloadWarn] = useState("");
   const [daysAutoFilled, setDaysAutoFilled] = useState(false);
+
+  useEffect(() => {
+    if (!workspaceId) return;
+    api.get(`/teams?workspace_id=${workspaceId}`).then(r => setTeams(r.data)).catch(() => {});
+  }, [workspaceId]);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -78,7 +84,7 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
     if (!userSearch) { setUsers([]); return; }
     const t = setTimeout(async () => {
       try {
-        const res = await api.get(`/workload/users?q=${encodeURIComponent(userSearch)}`);
+        const res = await api.get(`/workload/users?q=${encodeURIComponent(userSearch)}${workspaceId ? `&workspace_id=${workspaceId}` : ""}`);
         setUsers(res.data);
       } catch {}
     }, 300);
@@ -109,9 +115,13 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
         progress: 0,
         assigned_user_id: form.assigned_user_id || undefined,
         sprint_id: form.sprint_id || undefined,
+        team_id: form.team_id || undefined,
         due_date: form.due_date || undefined,
         start_date: form.start_date || undefined,
         recurrence: form.recurrence || undefined,
+        blocked_reason: form.blocked_reason || undefined,
+        blocked_severity: form.status === "blocked" ? (form.blocked_severity || "medium") : undefined,
+        blocked_expected_resolution: form.blocked_expected_resolution || undefined,
       });
       onClose();
     } catch (err) {
@@ -176,6 +186,7 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
                   <option value="inprogress">In Progress</option>
                   <option value="review">In Review</option>
                   <option value="done">Done</option>
+                  <option value="blocked">Blocked</option>
                 </select>
               </div>
               {/* Priority */}
@@ -270,11 +281,54 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
               </div>
             )}
 
+            {/* Team */}
+            {teams.length > 0 && (
+              <div className="modal-form-group">
+                <label className="modal-label">Assign to Team</label>
+                <select className="modal-select" value={form.team_id}
+                  onChange={e => set("team_id", e.target.value)}>
+                  <option value="">— No team —</option>
+                  {teams.map(t => <option key={t.id} value={t.id}>{t.icon || "🏢"} {t.name}</option>)}
+                </select>
+              </div>
+            )}
+
+            {/* Blocked fields */}
+            {form.status === "blocked" && (
+              <div style={{ background: "#7f1d1d22", border: "1px solid #ef444433", borderRadius: 10, padding: "14px 16px", marginBottom: 4 }}>
+                <div style={{ color: "#fca5a5", fontSize: 12, fontWeight: 700, marginBottom: 12 }}>🚫 Blocked Task Details</div>
+                <div className="modal-form-group">
+                  <label className="modal-label">Reason for being blocked</label>
+                  <input className="modal-input" placeholder="What is blocking this task?"
+                    value={form.blocked_reason || ""}
+                    onChange={e => set("blocked_reason", e.target.value)} />
+                </div>
+                <div className="modal-row">
+                  <div className="modal-form-group">
+                    <label className="modal-label">Severity</label>
+                    <select className="modal-select" value={form.blocked_severity || "medium"}
+                      onChange={e => set("blocked_severity", e.target.value)}>
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="critical">Critical</option>
+                    </select>
+                  </div>
+                  <div className="modal-form-group">
+                    <label className="modal-label">Expected Resolution</label>
+                    <input type="date" className="modal-input"
+                      value={form.blocked_expected_resolution || ""}
+                      onChange={e => set("blocked_expected_resolution", e.target.value)} />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Recurrence — coming soon */}
             <div className="modal-form-group">
               <label className="modal-label" style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 🔁 Recurrence
-                <span style={{ fontSize: 10, fontWeight: 700, background: "#ede9fe", color: "#7c3aed", borderRadius: 4, padding: "1px 6px", letterSpacing: "0.3px" }}>
+                <span style={{ fontSize: 10, fontWeight: 700, background: "rgba(139,92,246,0.15)", color: "#a78bfa", borderRadius: 4, padding: "1px 6px", letterSpacing: "0.3px" }}>
                   COMING SOON
                 </span>
               </label>

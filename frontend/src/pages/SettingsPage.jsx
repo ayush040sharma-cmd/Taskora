@@ -307,8 +307,8 @@ function SecuritySection() {
           )}
         </div>
 
-        {error   && <div style={{ fontSize: 13, color: "#ef4444", background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, padding: "8px 12px" }}>{error}</div>}
-        {success && <div style={{ fontSize: 13, color: "#16a34a", background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 8, padding: "8px 12px" }}>{success}</div>}
+        {error   && <div style={{ fontSize: 13, color: "#ef4444", background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, padding: "8px 12px" }}>{error}</div>}
+        {success && <div style={{ fontSize: 13, color: "#22c55e", background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 8, padding: "8px 12px" }}>{success}</div>}
 
         <div>
           <button
@@ -356,8 +356,8 @@ function DemoSection({ workspaceId }) {
   return (
     <div>
       <SectionHeading title="Demo Data" desc="Fill your current workspace with realistic sample tasks, a sprint, calendar events, and comments. This will clear existing tasks." />
-      {seedMsg && <div style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#16a34a", marginBottom: 12 }}>✅ {seedMsg}</div>}
-      {seedErr && <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#dc2626", marginBottom: 12 }}>❌ {seedErr}</div>}
+      {seedMsg && <div style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#22c55e", marginBottom: 12 }}>✅ {seedMsg}</div>}
+      {seedErr && <div style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#ef4444", marginBottom: 12 }}>❌ {seedErr}</div>}
       <button
         onClick={handleSeed}
         disabled={seeding}

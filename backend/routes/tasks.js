@@ -74,7 +74,7 @@ router.post("/", auth, validate(schemas.createTask), async (req, res) => {
   const {
     title, description, status, priority, due_date, start_date,
     workspace_id, type, estimated_days, progress, assigned_user_id, sprint_id,
-    estimated_duration, final_duration, recurrence,
+    estimated_duration, final_duration, recurrence, team_id,
   } = req.body;
 
   if (!title || !workspace_id) {
@@ -82,11 +82,13 @@ router.post("/", auth, validate(schemas.createTask), async (req, res) => {
   }
 
   try {
-    const workspace = await pool.query(
-      "SELECT id FROM workspaces WHERE id = $1 AND user_id = $2",
+    const access = await pool.query(
+      `SELECT 1 FROM workspaces WHERE id = $1 AND user_id = $2
+       UNION
+       SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2`,
       [workspace_id, req.user.id]
     );
-    if (!workspace.rows.length) return res.status(403).json({ message: "Access denied" });
+    if (!access.rows.length) return res.status(403).json({ message: "Access denied" });
 
     const maxPos = await pool.query(
       "SELECT COALESCE(MAX(position), 0) as max_pos FROM tasks WHERE workspace_id = $1 AND status = $2",
@@ -99,8 +101,8 @@ router.post("/", auth, validate(schemas.createTask), async (req, res) => {
         title, description, status, priority, due_date, start_date,
         workspace_id, assigned_user_id, position,
         type, estimated_days, progress, sprint_id,
-        estimated_hours, actual_hours, recurrence
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
+        estimated_hours, actual_hours, recurrence, team_id
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING *`,
       [
         title,
         description || null,
@@ -115,9 +117,10 @@ router.post("/", auth, validate(schemas.createTask), async (req, res) => {
         estimated_days || 1,
         progress || 0,
         sprint_id || null,
-        (estimated_duration || estimated_days || 1) * 8,  // convert days to hours
+        (estimated_duration || estimated_days || 1) * 8,
         (final_duration || estimated_days || 1) * 8,
         recurrence || null,
+        team_id || null,
       ]
     );
     const task = result.rows[0];
@@ -157,8 +160,11 @@ router.put("/:id", auth, validate(schemas.updateTask), async (req, res) => {
   try {
     const taskCheck = await pool.query(
       `SELECT t.id, t.status, t.assigned_user_id, t.title FROM tasks t
-       JOIN workspaces w ON t.workspace_id = w.id
-       WHERE t.id = $1 AND w.user_id = $2`,
+       WHERE t.id = $1
+         AND (
+           EXISTS (SELECT 1 FROM workspaces WHERE id = t.workspace_id AND user_id = $2)
+           OR EXISTS (SELECT 1 FROM workspace_members WHERE workspace_id = t.workspace_id AND user_id = $2)
+         )`,
       [req.params.id, req.user.id]
     );
     if (!taskCheck.rows.length) return res.status(404).json({ message: "Task not found" });
@@ -172,6 +178,9 @@ router.put("/:id", auth, validate(schemas.updateTask), async (req, res) => {
       "title", "description", "status", "priority", "due_date", "start_date",
       "position", "progress", "type", "estimated_days", "assigned_user_id",
       "sprint_id", "estimated_duration", "final_duration", "recurrence",
+      "team_id",
+      // Blocked workflow fields
+      "blocked_by_task_id", "blocked_reason", "blocked_severity", "blocked_expected_resolution",
     ];
     const setClauses = [];
     const params     = [];
@@ -185,11 +194,31 @@ router.put("/:id", auth, validate(schemas.updateTask), async (req, res) => {
       }
     }
 
+    // Track when status changes
+    if (newStatus && newStatus !== prevStatus) {
+      setClauses.push("status_changed_at = NOW()");
+    }
+
     // Handle completed_at for status transitions
     if (newStatus === "done" && prevStatus !== "done") {
       setClauses.push("completed_at = NOW()");
     } else if (newStatus && newStatus !== "done" && prevStatus === "done") {
       setClauses.push("completed_at = NULL");
+    }
+
+    // Handle blocked workflow transitions
+    if (newStatus === "blocked" && prevStatus !== "blocked") {
+      setClauses.push("date_blocked = NOW()");
+      setClauses.push("unblocked_at = NULL");
+    } else if (newStatus && newStatus !== "blocked" && prevStatus === "blocked") {
+      setClauses.push("unblocked_at = NOW()");
+      // Clear blocked fields when unblocking
+      if (!("blocked_by_task_id" in req.body)) {
+        setClauses.push("blocked_by_task_id = NULL");
+      }
+      if (!("blocked_reason" in req.body)) {
+        setClauses.push("blocked_reason = NULL");
+      }
     }
 
     if (setClauses.length === 0) return res.status(400).json({ message: "No fields to update" });
@@ -249,8 +278,11 @@ router.delete("/:id", auth, async (req, res) => {
   try {
     const taskCheck = await pool.query(
       `SELECT t.id, t.title, t.workspace_id, t.assigned_user_id FROM tasks t
-       JOIN workspaces w ON t.workspace_id = w.id
-       WHERE t.id = $1 AND w.user_id = $2`,
+       WHERE t.id = $1
+         AND (
+           EXISTS (SELECT 1 FROM workspaces WHERE id = t.workspace_id AND user_id = $2)
+           OR EXISTS (SELECT 1 FROM workspace_members WHERE workspace_id = t.workspace_id AND user_id = $2)
+         )`,
       [req.params.id, req.user.id]
     );
     if (!taskCheck.rows.length) return res.status(404).json({ message: "Task not found" });
@@ -282,7 +314,9 @@ router.delete("/:id", auth, async (req, res) => {
 router.get("/workspace/:workspaceId/graph", auth, async (req, res) => {
   try {
     const workspace = await pool.query(
-      "SELECT id FROM workspaces WHERE id = $1 AND user_id = $2",
+      `SELECT 1 FROM workspaces WHERE id = $1 AND user_id = $2
+       UNION
+       SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2`,
       [req.params.workspaceId, req.user.id]
     );
     if (!workspace.rows.length) return res.status(403).json({ message: "Access denied" });
@@ -354,7 +388,9 @@ router.delete("/:id/dependencies/:depId", auth, async (req, res) => {
 router.get("/workspace/:workspaceId/collaboration", auth, async (req, res) => {
   try {
     const workspace = await pool.query(
-      "SELECT id FROM workspaces WHERE id = $1 AND user_id = $2",
+      `SELECT 1 FROM workspaces WHERE id = $1 AND user_id = $2
+       UNION
+       SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2`,
       [req.params.workspaceId, req.user.id]
     );
     if (!workspace.rows.length) return res.status(403).json({ message: "Access denied" });
@@ -408,6 +444,94 @@ router.get("/workspace/:workspaceId/collaboration", auth, async (req, res) => {
     res.json({ members: members.sort((a, b) => b.collaboration_score - a.collaboration_score) });
   } catch (err) {
     console.error("Collaboration error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ── GET /api/tasks/workspace/:workspaceId/blocked-analytics ──────────────────
+router.get("/workspace/:workspaceId/blocked-analytics", auth, async (req, res) => {
+  try {
+    const access = await Promise.all([
+      pool.query("SELECT id FROM workspaces WHERE id=$1 AND user_id=$2", [req.params.workspaceId, req.user.id]),
+      pool.query("SELECT user_id FROM workspace_members WHERE workspace_id=$1 AND user_id=$2", [req.params.workspaceId, req.user.id]),
+    ]);
+    if (!access[0].rows.length && !access[1].rows.length) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const [blockedTasks, avgBlock, mostBlockingUser, severityCounts] = await Promise.all([
+      // All blocked tasks with details
+      pool.query(
+        `SELECT t.id, t.title, t.status, t.priority, t.blocked_reason,
+                t.blocked_severity, t.blocked_expected_resolution, t.date_blocked,
+                t.blocked_by_task_id,
+                bt.title AS blocked_by_task_title,
+                u.name AS assignee_name, u.email AS assignee_email,
+                EXTRACT(EPOCH FROM (NOW() - t.date_blocked))/3600 AS hours_blocked
+         FROM tasks t
+         LEFT JOIN tasks bt ON bt.id = t.blocked_by_task_id
+         LEFT JOIN users u  ON u.id = t.assigned_user_id
+         WHERE t.workspace_id = $1 AND t.status = 'blocked'
+         ORDER BY t.date_blocked ASC`,
+        [req.params.workspaceId]
+      ),
+
+      // Average block time across all ever-blocked tasks (including resolved)
+      pool.query(
+        `SELECT ROUND(AVG(
+           EXTRACT(EPOCH FROM (COALESCE(unblocked_at, NOW()) - date_blocked))/3600
+         ))::int AS avg_hours
+         FROM tasks
+         WHERE workspace_id=$1 AND date_blocked IS NOT NULL`,
+        [req.params.workspaceId]
+      ),
+
+      // Most blocking person: person whose tasks are most often blocking others
+      pool.query(
+        `SELECT u.name, u.id AS user_id, COUNT(*)::int AS block_count
+         FROM tasks t
+         JOIN task_dependencies td ON td.depends_on_task_id = t.id
+         JOIN tasks blocked_t ON blocked_t.id = td.task_id AND blocked_t.status = 'blocked'
+         LEFT JOIN users u ON u.id = t.assigned_user_id
+         WHERE t.workspace_id = $1 AND t.status != 'done'
+         GROUP BY u.id, u.name
+         ORDER BY block_count DESC LIMIT 1`,
+        [req.params.workspaceId]
+      ),
+
+      // Severity breakdown
+      pool.query(
+        `SELECT COALESCE(blocked_severity,'medium') AS severity, COUNT(*)::int AS count
+         FROM tasks
+         WHERE workspace_id=$1 AND status='blocked'
+         GROUP BY blocked_severity`,
+        [req.params.workspaceId]
+      ),
+    ]);
+
+    // Most common block reason
+    const reasons = blockedTasks.rows
+      .map(t => t.blocked_reason)
+      .filter(Boolean);
+    const reasonCounts = {};
+    for (const r of reasons) reasonCounts[r] = (reasonCounts[r] || 0) + 1;
+    const mostCommonReason = Object.entries(reasonCounts)
+      .sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+
+    // Oldest blocked task
+    const oldest = blockedTasks.rows[0] || null;
+
+    res.json({
+      blocked_tasks:        blockedTasks.rows,
+      total_blocked:        blockedTasks.rows.length,
+      avg_block_time_hours: avgBlock.rows[0]?.avg_hours || 0,
+      most_blocking_user:   mostBlockingUser.rows[0] || null,
+      most_common_reason:   mostCommonReason,
+      oldest_blocked_task:  oldest,
+      severity_breakdown:   severityCounts.rows,
+    });
+  } catch (err) {
+    console.error("Blocked analytics error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });

@@ -1906,7 +1906,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
   align-items: center;
   gap: 6px;
   padding: 7px 14px;
-  background: var(--primary);
+  background: var(--tk-gradient, linear-gradient(90deg, #3B82F6, #06B6D4));
   color: white;
   font-size: 13.5px;
   font-weight: 600;
@@ -1914,8 +1914,8 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
   border: none;
   transition: all 0.2s;
 }
-.btn-create:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,82,204,0.3); }
-.btn-create:active { transform: translateY(0); }
+.btn-create:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 3px 8px rgba(59,130,246,0.35); }
+.btn-create:active { transform: translateY(0); opacity: 1; }
 
 .navbar-profile { position: relative; }
 
@@ -5996,32 +5996,32 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
 
 /* ── Phase 17: Analytics Dashboard ──────────────────────────────────────── */
 .analytics-page { display: flex; flex-direction: column; gap: 20px; }
-.analytics-empty { color: #94a3b8; font-size: 13px; padding: 20px 0; }
+.analytics-empty { color: var(--text-secondary); font-size: 13px; padding: 20px 0; }
 .analytics-kpis {
   display: flex; flex-wrap: wrap; gap: 12px;
 }
 .analytics-kpi {
-  background: #fff; border: 1.5px solid #e2e8f0; border-radius: 10px;
+  background: var(--card-bg); border: 1.5px solid var(--border); border-radius: 10px;
   padding: 14px 18px; min-width: 110px; display: flex; flex-direction: column; gap: 4px;
   flex: 1;
 }
 .analytics-kpi-val  { font-size: 26px; font-weight: 800; line-height: 1; }
-.analytics-kpi-label { font-size: 11px; color: #64748b; font-weight: 500; }
+.analytics-kpi-label { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
 .analytics-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 16px;
 }
 .analytics-card {
-  background: #fff; border: 1.5px solid #e2e8f0; border-radius: 10px;
+  background: var(--card-bg); border: 1.5px solid var(--border); border-radius: 10px;
   padding: 18px; display: flex; flex-direction: column; gap: 10px;
 }
-.analytics-card-title { font-size: 14px; font-weight: 700; color: #1e293b; }
-.analytics-card-sub   { font-size: 12px; color: #64748b; margin-top: -6px; }
+.analytics-card-title { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.analytics-card-sub   { font-size: 12px; color: var(--text-secondary); margin-top: -6px; }
 
 /* Velocity chart */
 .velocity-chart { overflow-x: auto; }
-.velocity-legend { display: flex; gap: 14px; font-size: 11px; color: #64748b; margin-top: 8px; }
+.velocity-legend { display: flex; gap: 14px; font-size: 11px; color: var(--text-secondary); margin-top: 8px; }
 .vl-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; }
 
 /* Throughput */
@@ -6031,9 +6031,9 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
 .analytics-priority-list { display: flex; flex-direction: column; gap: 8px; }
 .analytics-priority-row { display: flex; align-items: center; gap: 10px; }
 .analytics-priority-label { font-size: 11px; font-weight: 700; text-transform: capitalize; min-width: 54px; }
-.analytics-priority-bar-wrap { flex: 1; height: 8px; background: #f1f5f9; border-radius: 99px; overflow: hidden; }
+.analytics-priority-bar-wrap { flex: 1; height: 8px; background: var(--column-bg); border-radius: 99px; overflow: hidden; }
 .analytics-priority-bar { height: 100%; border-radius: 99px; transition: width 0.5s; }
-.analytics-priority-count { font-size: 12px; font-weight: 700; color: #374151; min-width: 20px; text-align: right; }
+.analytics-priority-count { font-size: 12px; font-weight: 700; color: var(--text-primary); min-width: 20px; text-align: right; }
 
 /* Type breakdown */
 .analytics-type-list { display: flex; flex-direction: column; gap: 8px; }

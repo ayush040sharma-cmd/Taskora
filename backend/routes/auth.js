@@ -20,6 +20,15 @@ const authLimiter = rateLimit({
   message: { message: "Too many attempts. Please try again in 15 minutes." },
 });
 
+// Looser limiter for the demo endpoint — no credential to brute-force
+const demoLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many demo requests. Please wait a few minutes." },
+});
+
 // POST /api/auth/register
 // Health / keepalive — no auth, no rate limit
 router.get("/status", (req, res) => res.json({ ok: true, ts: Date.now() }));
@@ -386,7 +395,7 @@ router.post("/reset-password", authLimiter, validate(schemas.resetPassword), asy
 });
 
 // POST /api/auth/demo — instant demo login (creates/resets demo account)
-router.post("/demo", authLimiter, async (req, res) => {
+router.post("/demo", demoLimiter, async (req, res) => {
   const DEMO_EMAIL = "demo@taskora.app";
   const DEMO_NAME  = "Demo User";
 
@@ -396,9 +405,8 @@ router.post("/demo", authLimiter, async (req, res) => {
 
     if (existing.rows.length > 0) {
       user = existing.rows[0];
-      await pool.query("UPDATE users SET last_login_at = NOW() WHERE id = $1", [user.id]);
+      await pool.query("UPDATE users SET last_login_at = NOW() WHERE id = $1", [user.id]).catch(() => {});
     } else {
-      const bcrypt = require("bcryptjs");
       const hash = await bcrypt.hash("demo-password-not-for-login-" + Date.now(), 10);
       const result = await pool.query(
         "INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role",
@@ -418,8 +426,8 @@ router.post("/demo", authLimiter, async (req, res) => {
         { title: "Design new landing page",    type: "task",    status: "done",        priority: "high",   est: 16, pos: 1 },
         { title: "Fix checkout flow bug",      type: "bug",     status: "done",        priority: "high",   est: 8,  pos: 2 },
         { title: "Sprint planning — Q3",       type: "story",   status: "done",        priority: "medium", est: 4,  pos: 3 },
-        { title: "Q3 feature roadmap doc",     type: "story",   status: "in_progress", priority: "high",   est: 40, pos: 1 },
-        { title: "API rate limiting setup",    type: "upgrade", status: "in_progress", priority: "medium", est: 24, pos: 2 },
+        { title: "Q3 feature roadmap doc",     type: "story",   status: "inprogress", priority: "high",   est: 40, pos: 1 },
+        { title: "API rate limiting setup",    type: "upgrade", status: "inprogress", priority: "medium", est: 24, pos: 2 },
         { title: "Mobile responsive audit",    type: "task",    status: "review",      priority: "medium", est: 16, pos: 1 },
         { title: "Write integration docs",     type: "task",    status: "todo",        priority: "low",    est: 16, pos: 1 },
         { title: "Add Slack notifications",    type: "upgrade", status: "todo",        priority: "medium", est: 32, pos: 2 },

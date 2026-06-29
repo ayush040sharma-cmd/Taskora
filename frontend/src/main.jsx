@@ -5,7 +5,7 @@ import './styles/tokens.css'
 import './index.css'
 
 // Apply saved theme before first render to avoid flash
-const savedTheme = localStorage.getItem("taskora-theme") || "dark";
+const savedTheme = localStorage.getItem("taskora-theme") || "light";
 document.documentElement.setAttribute("data-theme", savedTheme);
 
 ReactDOM.createRoot(document.getElementById('root')).render(

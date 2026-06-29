@@ -40,6 +40,10 @@ import CollaborationScore from "../components/CollaborationScore";
 import OnboardingChecklist from "../components/onboarding/OnboardingChecklist";
 import NotificationCenter from "../components/NotificationCenter";
 import SettingsPage from "./SettingsPage";
+import CommandCenter from "../components/CommandCenter";
+import TeamsPanel from "../components/TeamsPanel";
+
+import ImportWizard from "../components/ImportWizard";
 
 
 // ── Undo Toast ────────────────────────────────────────────────────
@@ -203,6 +207,7 @@ export default function Dashboard() {
   const [showWorkspaceModal, setShowWorkspaceModal] = useState(false);
   const [showSprintModal, setShowSprintModal]     = useState(false);
   const [detailTask, setDetailTask]               = useState(null);
+  const [showImportModal, setShowImportModal]     = useState(false);
   const [filters, setFilters] = useState({ search: "", type: "", priority: "", status: "", assignee: "" });
 
   // UI overlays
@@ -275,7 +280,7 @@ export default function Dashboard() {
     try {
       const { data } = await api.get(`/sprints?workspace_id=${wsId}`);
       setSprints(data);
-      if (!activeSprint && data.length > 0) setActiveSprint(data[0]);
+      setActiveSprint(prev => (prev && data.find(s => s.id === prev.id)) ? prev : (data[0] || null));
     } catch (err) {
       if (err.response?.status !== 401) showToast("Failed to load sprints", "error");
     }
@@ -349,7 +354,7 @@ export default function Dashboard() {
     // Optimistic update — filteredColumns derives from allTasks automatically
     setAllTasks(prev => prev.map(t =>
       t.id === taskId
-        ? { ...t, status: newStatus, progress: newStatus === "done" ? 100 : t.progress }
+        ? { ...t, status: newStatus, progress: newStatus === "done" ? 100 : t.progress, status_changed_at: new Date().toISOString() }
         : t
     ));
 
@@ -391,7 +396,9 @@ export default function Dashboard() {
           showToast("Assignment sent to manager for approval");
           return;
         }
-      } catch {}
+      } catch (err) {
+        console.error("Approval creation failed:", err);
+      }
     }
     showToast("Task created");
   };
@@ -438,11 +445,11 @@ export default function Dashboard() {
   };
 
   // ── Create workspace ──────────────────────────────────────────
-  const handleCreateWorkspace = async (name) => {
-    const { data } = await api.post("/workspaces", { name });
+  const handleCreateWorkspace = async (name, template) => {
+    const { data } = await api.post("/workspaces", { name, template: template || undefined });
     setWorkspaces(p => [...p, data]);
     setCurrentWorkspace(data);
-    showToast("Workspace created");
+    showToast(template ? `Workspace created with ${template} template` : "Workspace created");
   };
 
   // ── Delete workspace ──────────────────────────────────────────
@@ -508,9 +515,10 @@ export default function Dashboard() {
 
   const filteredTasks   = applyFilters(allTasks);
   const filteredColumns = {
-    todo:       filteredTasks.filter(t => t.status === "todo"),
+    todo:       filteredTasks.filter(t => t.status === "todo" || t.status === "pending_approval"),
     inprogress: filteredTasks.filter(t => t.status === "inprogress" || t.status === "in_progress"),
     review:     filteredTasks.filter(t => t.status === "review"),
+    blocked:    filteredTasks.filter(t => t.status === "blocked"),
     done:       filteredTasks.filter(t => t.status === "done"),
   };
 
@@ -525,30 +533,30 @@ export default function Dashboard() {
   // ── Server waking up / error screen ──────────────────────────
   if (wakeStatus === "waking" && !workspaces.length) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: 16, padding: 24, background: "#f4f5f7" }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: 16, padding: 24, background: "var(--main-bg)" }}>
         <div style={{ width: 56, height: 56, borderRadius: "50%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, animation: "spin 2s linear infinite" }}>
           ⚡
         </div>
-        <h2 style={{ color: "#172b4d", fontSize: 18, fontWeight: 700, margin: 0 }}>Waking up the server…</h2>
-        <p style={{ color: "#5e6c84", fontSize: 14, textAlign: "center", maxWidth: 340, margin: 0 }}>
+        <h2 style={{ color: "var(--text-primary)", fontSize: 18, fontWeight: 700, margin: 0 }}>Waking up the server…</h2>
+        <p style={{ color: "var(--text-secondary)", fontSize: 14, textAlign: "center", maxWidth: 340, margin: 0 }}>
           The backend is starting up — this takes about 30 seconds on the free plan. Hang tight!
         </p>
         <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
           {[0,1,2,3,4,5,6,7].map(i => (
-            <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: i < wakeAttempt ? "#6366f1" : "#dfe1e6", transition: "background 0.3s" }} />
+            <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: i < wakeAttempt ? "#6366f1" : "var(--border)", transition: "background 0.3s" }} />
           ))}
         </div>
-        <p style={{ color: "#97a0af", fontSize: 12 }}>Attempt {wakeAttempt + 1} of 8</p>
+        <p style={{ color: "var(--text-secondary)", fontSize: 12 }}>Attempt {wakeAttempt + 1} of 8</p>
       </div>
     );
   }
 
   if (wakeStatus === "error") {
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: 16, padding: 24 }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: 16, padding: 24, background: "var(--main-bg)" }}>
         <div style={{ fontSize: 44 }}>😴</div>
-        <h2 style={{ color: "#172b4d", fontSize: 18, fontWeight: 700 }}>Server didn't wake up in time</h2>
-        <p style={{ color: "#5e6c84", fontSize: 14, textAlign: "center", maxWidth: 340 }}>
+        <h2 style={{ color: "var(--text-primary)", fontSize: 18, fontWeight: 700 }}>Server didn't wake up in time</h2>
+        <p style={{ color: "var(--text-secondary)", fontSize: 14, textAlign: "center", maxWidth: 340 }}>
           Render's free tier took too long to respond. Click retry — it usually works on the second attempt.
         </p>
         <button className="btn-primary" onClick={() => { setWakeStatus(null); loadWorkspaces(0); }} style={{ marginTop: 8 }}>
@@ -590,6 +598,21 @@ export default function Dashboard() {
   // ── Shared view content (used by both layouts) ────────────────
   const viewContent = (<>
 
+          {/* ── Teams ── */}
+          {view === "teams" && (
+            <>
+              <div className="board-header">
+                <div className="board-title-area">
+                  <h1>Teams</h1>
+                  <p>Organize workspace members into functional teams</p>
+                </div>
+              </div>
+              <ErrorBoundary inline viewName="Teams">
+                <TeamsPanel workspaceId={currentWorkspace?.id} />
+              </ErrorBoundary>
+            </>
+          )}
+
           {/* ── Board view ── */}
           {view === "board" && (
             <>
@@ -599,6 +622,7 @@ export default function Dashboard() {
                   <p>{totalTasks} task{totalTasks !== 1 ? "s" : ""} · Press <kbd className="inline-kbd">N</kbd> to add</p>
                 </div>
                 <div className="board-header-actions">
+                  <button className="tk-btn-secondary" onClick={() => setShowImportModal(true)}>📥 Import</button>
                   <button className="btn-primary" onClick={() => openCreateTask("todo")}>+ New task</button>
                 </div>
               </div>
@@ -625,8 +649,8 @@ export default function Dashboard() {
               ) : (
                 <div className="empty-state" style={{ marginTop: 80 }}>
                   <div className="empty-state-icon" style={{ fontSize: 56 }}>🗂️</div>
-                  <h2 style={{ marginTop: 16, color: "#172b4d" }}>No workspace yet</h2>
-                  <p style={{ color: "#5e6c84", marginTop: 8 }}>Create a workspace to start tracking your work</p>
+                  <h2 style={{ marginTop: 16, color: "var(--text-primary)" }}>No workspace yet</h2>
+                  <p style={{ color: "var(--text-secondary)", marginTop: 8 }}>Create a workspace to start tracking your work</p>
                   <button className="btn-primary" style={{ marginTop: 20 }}
                     onClick={() => setShowWorkspaceModal(true)}>
                     Create workspace
@@ -646,7 +670,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <ErrorBoundary inline viewName="Summary">
-                <SummaryDashboard workspaceId={currentWorkspace?.id} />
+                <SummaryDashboard workspaceId={currentWorkspace?.id} onOpenTask={setDetailTask} />
               </ErrorBoundary>
             </>
           )}
@@ -680,7 +704,7 @@ export default function Dashboard() {
                 <div className="empty-state" style={{ marginTop: 60 }}>
                   <div style={{ fontSize: 56 }}>🏃</div>
                   <h2 style={{ marginTop: 16 }}>No sprints yet</h2>
-                  <p style={{ color: "#5e6c84", marginTop: 8 }}>Create a sprint to start planning iterations</p>
+                  <p style={{ color: "var(--text-secondary)", marginTop: 8 }}>Create a sprint to start planning iterations</p>
                   <button className="btn-primary" style={{ marginTop: 20 }} onClick={() => setShowSprintModal(true)}>
                     Create first sprint
                   </button>
@@ -789,7 +813,7 @@ export default function Dashboard() {
           {/* ── Security Firewall ── */}
           {view === "security" && (
             <ErrorBoundary inline viewName="Security">
-              <SecurityDashboard token={localStorage.getItem("token")} />
+              <SecurityDashboard />
             </ErrorBoundary>
           )}
 
@@ -824,7 +848,7 @@ export default function Dashboard() {
                 <div className="board-title-area"><h1>Analytics</h1><p>Task throughput, velocity, and team performance</p></div>
               </div>
               <ErrorBoundary inline viewName="Analytics">
-                <AnalyticsDashboard workspaceId={currentWorkspace?.id} />
+                <AnalyticsDashboard workspaceId={currentWorkspace?.id} onNavigate={setView} tasks={allTasks} />
               </ErrorBoundary>
             </>
           )}
@@ -860,7 +884,7 @@ export default function Dashboard() {
                 <div className="board-title-area"><h1>Dependency Graph</h1><p>Visual map of task dependencies and blockers</p></div>
               </div>
               <ErrorBoundary inline viewName="Dependency Graph">
-                <DependencyGraph workspaceId={currentWorkspace?.id} />
+                <DependencyGraph workspaceId={currentWorkspace?.id} onTaskClick={setDetailTask} />
               </ErrorBoundary>
             </>
           )}
@@ -895,6 +919,7 @@ export default function Dashboard() {
         <CreateTaskModal
           defaultStatus={createTaskStatus}
           sprints={sprints}
+          workspaceId={currentWorkspace?.id}
           onClose={() => setShowCreateTask(false)}
           onSubmit={handleCreateTask}
         />
@@ -909,9 +934,29 @@ export default function Dashboard() {
         <TaskDetailModal
           task={detailTask}
           currentUser={user}
+          workspaceId={currentWorkspace?.id}
           onClose={() => setDetailTask(null)}
           onUpdate={(updated) => { handleTaskUpdated(updated); setDetailTask(updated); }}
         />
+      )}
+
+      {/* ── Import / Export modal ────────────────────────────────── */}
+      {showImportModal && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 1100, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "40px 20px", overflowY: "auto" }}
+          onClick={e => e.target === e.currentTarget && setShowImportModal(false)}
+        >
+          <div style={{ background: "var(--card-bg, #0B1220)", border: "1px solid var(--border, #1E293B)", borderRadius: 16, width: "100%", maxWidth: 780, position: "relative", marginBottom: 40, padding: 28 }}>
+            <button
+              onClick={() => setShowImportModal(false)}
+              style={{ position: "absolute", top: 14, right: 14, background: "none", border: "none", color: "var(--text-secondary)", fontSize: 20, cursor: "pointer", zIndex: 10, lineHeight: 1 }}
+              aria-label="Close"
+            >✕</button>
+            <ErrorBoundary inline viewName="Import / Export">
+              <ImportWizard workspaceId={currentWorkspace?.id} />
+            </ErrorBoundary>
+          </div>
+        </div>
       )}
 
       {/* ── Command palette ───────────────────────────────────────── */}
@@ -920,6 +965,7 @@ export default function Dashboard() {
         onClose={() => setCmdOpen(false)}
         onViewChange={(v) => { setView(v); setCmdOpen(false); }}
         onCreateTask={() => { openCreateTask("todo"); setCmdOpen(false); }}
+        onOpenTask={(task) => { setDetailTask(task); setCmdOpen(false); }}
         tasks={allTasks}
         currentView={view}
       />

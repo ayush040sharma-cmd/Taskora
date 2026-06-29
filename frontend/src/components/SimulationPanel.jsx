@@ -188,14 +188,14 @@ export default function SimulationPanel({ workspaceId }) {
           display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999,
         }}>
           <div style={{
-            background: "#fff", borderRadius: 14, padding: "32px 36px",
-            maxWidth: 440, width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+            background: "var(--card-bg)", borderRadius: 14, padding: "32px 36px",
+            maxWidth: 440, width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
             textAlign: "center",
           }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>
               {travelWarning.on_leave ? "🏖️" : "✈️"}
             </div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>
               {travelWarning.name} is {travelWarning.on_leave ? "on leave" : "travelling"}
             </div>
             <div style={{ fontSize: 14, color: "#64748b", lineHeight: 1.7, marginBottom: 24 }}>

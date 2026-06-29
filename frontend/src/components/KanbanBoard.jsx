@@ -6,6 +6,7 @@ const COLUMNS = [
   { id: "todo",       label: "To Do",       colColor: "var(--tk-text-muted)" },
   { id: "inprogress", label: "In Progress",  colColor: "var(--tk-accent)" },
   { id: "review",     label: "In Review",    colColor: "var(--tk-accent-2)" },
+  { id: "blocked",    label: "Blocked",      colColor: "#ef4444" },
   { id: "done",       label: "Done",         colColor: "var(--tk-status-ok)" },
 ];
 

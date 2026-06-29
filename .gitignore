@@ -16,3 +16,4 @@ ai-agent/.jarvis_logs/
 .idea/
 # Claude
 .claude/
+.vercel

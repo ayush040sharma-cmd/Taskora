@@ -22,6 +22,7 @@ const STATUSES   = [
   { value: "todo",       label: "To Do"       },
   { value: "inprogress", label: "In Progress"  },
   { value: "review",     label: "In Review"    },
+  { value: "blocked",    label: "Blocked"      },
   { value: "done",       label: "Done"         },
 ];
 
@@ -288,7 +289,7 @@ function CommentItem({ comment, currentUserId, onDelete }) {
 }
 
 // ── Main Modal ────────────────────────────────────────────────
-export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, currentUser }) {
+export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, currentUser, workspaceId }) {
   const [task, setTask]             = useState(initialTask);
   const [comments, setComments]     = useState([]);
   const [newComment, setNewComment] = useState("");
@@ -302,7 +303,14 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
   const [userSearch, setUserSearch] = useState(initialTask.assignee_name || "");
   const [userResults, setUserResults] = useState([]);
   const [toast, setToast]           = useState(null);
+  const [teams, setTeams]           = useState([]);
   const commentBoxRef               = useRef(null);
+
+  useEffect(() => {
+    const wsId = workspaceId || initialTask.workspace_id;
+    if (!wsId) return;
+    api.get(`/teams?workspace_id=${wsId}`).then(r => setTeams(r.data)).catch(() => {});
+  }, [workspaceId, initialTask.workspace_id]);
 
   useEffect(() => {
     if (activeTab === "comments") loadComments();
@@ -353,7 +361,8 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
     if (!userSearch || userSearch === task.assignee_name) { setUserResults([]); return; }
     const t = setTimeout(async () => {
       try {
-        const res = await api.get(`/workload/users?q=${encodeURIComponent(userSearch)}`);
+        const wsId = workspaceId || initialTask.workspace_id;
+        const res = await api.get(`/workload/users?q=${encodeURIComponent(userSearch)}${wsId ? `&workspace_id=${wsId}` : ""}`);
         setUserResults(res.data);
       } catch {}
     }, 300);
@@ -393,7 +402,11 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
     } catch { showMsg("Failed to delete", "error"); }
   };
 
-  const overdueFlag = task.due_date && new Date(task.due_date) < new Date(new Date().toDateString());
+  useEffect(() => {
+    if (!editTitle) setTitleVal(task.title);
+  }, [task.title]); // eslint-disable-line
+
+  const overdueFlag = task.due_date && new Date(task.due_date) < new Date(new Date().setHours(0, 0, 0, 0));
 
   const TABS = [
     { id: "details",   label: "Details" },
@@ -425,6 +438,7 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
               </h2>
             )}
           </div>
+          <button className="modal-close" onClick={onClose} aria-label="Close"><IconX /></button>
         </div>
 
         {/* ── Tabs ── */}
@@ -619,11 +633,15 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
 
                 {/* Recurrence */}
                 <div className="td-meta-row">
-                  <span className="td-meta-label">Recurrence</span>
+                  <span className="td-meta-label" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    Recurrence
+                    <span style={{ fontSize: 9, fontWeight: 700, background: "rgba(139,92,246,0.15)", color: "#a78bfa", borderRadius: 3, padding: "1px 4px", letterSpacing: "0.3px" }}>SOON</span>
+                  </span>
                   <select
                     className="td-meta-select"
                     value={task.recurrence || ""}
-                    onChange={e => { setTask(p => ({ ...p, recurrence: e.target.value || null })); saveField("recurrence", e.target.value || null); }}
+                    disabled
+                    style={{ opacity: 0.5, cursor: "not-allowed" }}
                   >
                     <option value="">None</option>
                     <option value="daily">🔁 Daily</option>
@@ -631,6 +649,65 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
                     <option value="monthly">🔁 Monthly</option>
                   </select>
                 </div>
+
+                {/* Team */}
+                {teams.length > 0 && (
+                  <div className="td-meta-row">
+                    <span className="td-meta-label">Team</span>
+                    <select
+                      className="td-meta-select"
+                      value={task.team_id || ""}
+                      onChange={e => { const v = e.target.value || null; setTask(p => ({ ...p, team_id: v })); saveField("team_id", v); }}
+                    >
+                      <option value="">— No team —</option>
+                      {teams.map(t => <option key={t.id} value={t.id}>{t.icon || "🏢"} {t.name}</option>)}
+                    </select>
+                  </div>
+                )}
+
+                {/* Blocked fields */}
+                {task.status === "blocked" && (
+                  <div style={{ background: "#7f1d1d22", border: "1px solid #ef444433", borderRadius: 8, padding: "10px 12px", marginTop: 8 }}>
+                    <div style={{ color: "#fca5a5", fontSize: 11, fontWeight: 700, marginBottom: 8 }}>🚫 Blocked Details</div>
+                    <div className="td-meta-row td-meta-row--col" style={{ marginBottom: 6 }}>
+                      <span className="td-meta-label">Reason</span>
+                      <input
+                        className="modal-input"
+                        style={{ fontSize: 12, padding: "4px 8px" }}
+                        placeholder="What is blocking this task?"
+                        value={task.blocked_reason || ""}
+                        onChange={e => setTask(p => ({ ...p, blocked_reason: e.target.value }))}
+                        onBlur={e => saveField("blocked_reason", e.target.value || null)}
+                      />
+                    </div>
+                    <div className="td-meta-row">
+                      <span className="td-meta-label">Severity</span>
+                      <select
+                        className="td-meta-select"
+                        value={task.blocked_severity || "medium"}
+                        onChange={e => { setTask(p => ({ ...p, blocked_severity: e.target.value })); saveField("blocked_severity", e.target.value); }}
+                      >
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="critical">Critical</option>
+                      </select>
+                    </div>
+                    <div className="td-meta-row">
+                      <span className="td-meta-label">Exp. Resolution</span>
+                      <input type="date" className="td-meta-date"
+                        value={formatDate(task.blocked_expected_resolution)}
+                        onChange={e => { setTask(p => ({ ...p, blocked_expected_resolution: e.target.value })); saveField("blocked_expected_resolution", e.target.value || null); }}
+                      />
+                    </div>
+                    {task.date_blocked && (
+                      <div className="td-meta-row">
+                        <span className="td-meta-label">Blocked Since</span>
+                        <span className="td-meta-value" style={{ color: "#fca5a5" }}>{timeAgo(task.date_blocked)}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Timestamps */}
                 <div className="td-meta-row">
@@ -713,13 +790,15 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
 
         {/* ── Footer ── */}
         <div className="td-footer">
-          {saving && <span style={{ fontSize: 12, color: "#94a3b8", marginRight: "auto" }}>Saving…</span>}
+          <span style={{ fontSize: 12, color: "#94a3b8", marginRight: "auto" }}>
+            {saving ? "Saving…" : "All changes auto-saved"}
+          </span>
           <button className="btn-modal-cancel" onClick={onClose}>Close</button>
           <button
             className="btn-modal-save-primary"
             onClick={() => { onUpdate && onUpdate(task); onClose(); }}
           >
-            Save
+            Done
           </button>
         </div>
 

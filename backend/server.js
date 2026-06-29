@@ -179,6 +179,8 @@ app.use("/api/seed",          require("./routes/seed"));
 app.use("/api/roles",         require("./routes/roles"));
 app.use("/api/user-mgmt",     require("./routes/user-management"));
 app.use("/api/approvals-engine", approvalEngine.router);
+app.use("/api/teams",         require("./routes/teams"));
+app.use("/api/import",        require("./routes/import"));
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get("/health", async (req, res) => {

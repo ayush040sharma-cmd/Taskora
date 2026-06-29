@@ -31,7 +31,7 @@ function StatusBadge({ member }) {
       // Planned leave (future)
       return (
         <span style={{
-          background: "#fff7ed", color: "#c2410c", border: "1px solid #fed7aa",
+          background: "rgba(249,115,22,0.15)", color: "#fb923c", border: "1px solid rgba(249,115,22,0.3)",
           borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 600,
           display: "flex", alignItems: "center", gap: 4,
         }}>
@@ -47,7 +47,7 @@ function StatusBadge({ member }) {
     }
     return (
       <span style={{
-        background: "#fef2f2", color: "#b91c1c", border: "1px solid #fecaca",
+        background: "rgba(239,68,68,0.15)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)",
         borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 600,
       }}>
         🏖️ On leave
@@ -320,6 +320,7 @@ export default function MembersPanel({ workspaceId }) {
   const [changingRole, setChangingRole] = useState(null);
   const [searchText, setSearchText]   = useState("");
   const [filterStatus, setFilterStatus] = useState("all"); // all | available | on_leave | travel
+  const [confirmRemove, setConfirmRemove] = useState(null); // member object
 
   const showMsg = (msg, type = "success") => {
     setToast({ msg, type });
@@ -385,10 +386,10 @@ export default function MembersPanel({ workspaceId }) {
   };
 
   const handleRemove = async (member) => {
-    if (!window.confirm(`Remove ${member.name} from this workspace?`)) return;
     try {
       await api.delete(`/members/${member.member_record_id}?workspace_id=${workspaceId}`);
       showMsg(`${member.name} removed`);
+      setConfirmRemove(null);
       load();
     } catch (err) {
       showMsg(err.response?.data?.message || "Failed to remove member", "error");
@@ -457,8 +458,9 @@ export default function MembersPanel({ workspaceId }) {
       <div style={{ display: "flex", gap: 10, marginBottom: 16, alignItems: "center" }}>
         <input
           style={{
-            flex: 1, padding: "8px 12px", border: "1.5px solid #e2e8f0",
+            flex: 1, padding: "8px 12px", border: "1.5px solid var(--border)",
             borderRadius: 8, fontSize: 13, outline: "none",
+            background: "var(--card-bg)", color: "var(--text-primary)",
           }}
           placeholder="Search by name or email…"
           value={searchText}
@@ -466,8 +468,8 @@ export default function MembersPanel({ workspaceId }) {
         />
         <select
           style={{
-            padding: "8px 12px", border: "1.5px solid #e2e8f0",
-            borderRadius: 8, fontSize: 13, background: "#fff",
+            padding: "8px 12px", border: "1px solid var(--border)",
+            borderRadius: 8, fontSize: 13, background: "var(--card-bg)", color: "var(--text-primary)",
           }}
           value={filterStatus}
           onChange={e => setFilterStatus(e.target.value)}
@@ -481,7 +483,7 @@ export default function MembersPanel({ workspaceId }) {
 
       {/* ── Load error ── */}
       {loadError && (
-        <div style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 12 }}>
+        <div style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 12 }}>
           {loadError}
         </div>
       )}
@@ -543,9 +545,9 @@ export default function MembersPanel({ workspaceId }) {
                     )}
                     {cap?.load_percent !== undefined && (
                       <span style={{
-                        background: cap.load_percent >= 90 ? "#fef2f2" : cap.load_percent >= 70 ? "#fffbeb" : "#f0fdf4",
-                        color: cap.load_percent >= 90 ? "#b91c1c" : cap.load_percent >= 70 ? "#92400e" : "#15803d",
-                        border: `1px solid ${cap.load_percent >= 90 ? "#fecaca" : cap.load_percent >= 70 ? "#fde68a" : "#bbf7d0"}`,
+                        background: cap.load_percent >= 90 ? "rgba(239,68,68,0.15)" : cap.load_percent >= 70 ? "rgba(234,179,8,0.15)" : "rgba(34,197,94,0.15)",
+                        color: cap.load_percent >= 90 ? "#ef4444" : cap.load_percent >= 70 ? "#eab308" : "#22c55e",
+                        border: `1px solid ${cap.load_percent >= 90 ? "rgba(239,68,68,0.3)" : cap.load_percent >= 70 ? "rgba(234,179,8,0.3)" : "rgba(34,197,94,0.3)"}`,
                         borderRadius: 20, padding: "2px 8px", fontSize: 11,
                       }}>
                         📊 {Math.round(cap.load_percent)}% load
@@ -569,13 +571,30 @@ export default function MembersPanel({ workspaceId }) {
                     </select>
                   )}
                   {!m.is_owner && (
-                    <button
-                      className="member-remove-btn"
-                      onClick={() => handleRemove(m)}
-                      title="Remove from workspace"
-                    >
-                      ✕
-                    </button>
+                    confirmRemove?.user_id === m.user_id ? (
+                      <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                        <button
+                          className="member-remove-btn"
+                          onClick={() => handleRemove(m)}
+                          style={{ color: "#ef4444", fontSize: 11, fontWeight: 700, padding: "3px 7px" }}
+                          title="Confirm remove"
+                        >Remove</button>
+                        <button
+                          className="member-remove-btn"
+                          onClick={() => setConfirmRemove(null)}
+                          style={{ color: "#94a3b8", fontSize: 11, padding: "3px 7px" }}
+                          title="Cancel"
+                        >Cancel</button>
+                      </div>
+                    ) : (
+                      <button
+                        className="member-remove-btn"
+                        onClick={() => setConfirmRemove(m)}
+                        title="Remove from workspace"
+                      >
+                        ✕
+                      </button>
+                    )
                   )}
                 </div>
               </div>

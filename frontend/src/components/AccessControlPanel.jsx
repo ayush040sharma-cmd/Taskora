@@ -9,27 +9,27 @@ const SCOPE_ORDER  = ["self","team","department","project","org"];
 const S = {
   btn: {
     primary: { background: "#4f46e5", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" },
-    ghost:   { background: "#fff", color: "#374151", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 16px", fontSize: 13, cursor: "pointer" },
+    ghost:   { background: "var(--card-bg)", color: "var(--text-primary)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 16px", fontSize: 13, cursor: "pointer" },
     link:    { background: "none", border: "none", color: "#4f46e5", fontSize: 12, cursor: "pointer", textDecoration: "underline", padding: 0 },
     linkGray:{ background: "none", border: "none", color: "#6b7280", fontSize: 12, cursor: "pointer", textDecoration: "underline", padding: 0 },
     linkRed: { background: "none", border: "none", color: "#ef4444", fontSize: 12, cursor: "pointer", textDecoration: "underline", padding: 0 },
   },
   input: { width: "100%", boxSizing: "border-box", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 12px", fontSize: 13, outline: "none" },
   badge: {
-    green:  { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "#dcfce7", color: "#15803d" },
-    red:    { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "#fee2e2", color: "#dc2626" },
-    blue:   { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "#dbeafe", color: "#1d4ed8" },
-    purple: { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "#ede9fe", color: "#7c3aed" },
-    orange: { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "#ffedd5", color: "#9a3412" },
-    sky:    { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "#e0f2fe", color: "#0369a1" },
-    yellow: { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "#fef9c3", color: "#854d0e" },
-    teal:   { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "#ccfbf1", color: "#0f766e" },
+    green:  { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "rgba(34,197,94,0.15)", color: "#22c55e" },
+    red:    { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "rgba(239,68,68,0.15)", color: "#ef4444" },
+    blue:   { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "rgba(59,130,246,0.15)", color: "#60a5fa" },
+    purple: { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "rgba(139,92,246,0.15)", color: "#a78bfa" },
+    orange: { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "rgba(249,115,22,0.15)", color: "#fb923c" },
+    sky:    { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "rgba(14,165,233,0.15)", color: "#38bdf8" },
+    yellow: { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "rgba(234,179,8,0.15)", color: "#eab308" },
+    teal:   { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "rgba(20,184,166,0.15)", color: "#2dd4bf" },
   },
   overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 },
-  modal:   { background: "#fff", borderRadius: 14, padding: 24, boxShadow: "0 20px 60px rgba(0,0,0,0.2)" },
-  card:    { border: "1px solid #e5e7eb", borderRadius: 12, padding: 16 },
-  section: { fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 },
-  divider: { borderBottom: "1px solid #f3f4f6" },
+  modal:   { background: "var(--card-bg)", borderRadius: 14, padding: 24, boxShadow: "0 20px 60px rgba(0,0,0,0.5)" },
+  card:    { border: "1px solid var(--border)", borderRadius: 12, padding: 16 },
+  section: { fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 },
+  divider: { borderBottom: "1px solid var(--border)" },
 };
 
 const ACTION_BADGE = {
@@ -65,6 +65,7 @@ function UsersTab({ roles }) {
   const [assigning, setAssigning] = useState(null);
   const [assignRole, setAssignRole] = useState("");
   const [assignExpiry, setAssignExpiry] = useState("");
+  const [actionError, setActionError] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -85,28 +86,31 @@ function UsersTab({ roles }) {
 
   async function createUser() {
     if (!createForm.name || !createForm.email) return;
+    setActionError("");
     try {
       await api.post("/user-mgmt/users", createForm);
       setShowCreate(false);
       setCreateForm({ name: "", email: "", password: "" });
       load();
     } catch (err) {
-      alert(err.response?.data?.message || "Create failed");
+      setActionError(err.response?.data?.message || "Create failed");
     }
   }
 
   async function toggleStatus(user) {
     const newStatus = user.status === "active" ? "suspended" : "active";
+    setActionError("");
     try {
       await api.put(`/user-mgmt/users/${user.id}`, { status: newStatus });
       load();
     } catch (err) {
-      alert(err.response?.data?.message || "Update failed");
+      setActionError(err.response?.data?.message || "Update failed");
     }
   }
 
   async function assignRoleToUser() {
     if (!assignRole) return;
+    setActionError("");
     try {
       await api.post(
         `/user-mgmt/users/${assigning}/roles`,
@@ -114,21 +118,27 @@ function UsersTab({ roles }) {
       );
       setAssigning(null); setAssignRole(""); setAssignExpiry(""); load();
     } catch (err) {
-      alert(err.response?.data?.message || "Assign failed");
+      setActionError(err.response?.data?.message || "Assign failed");
     }
   }
 
   async function removeRole(userId, roleId) {
+    setActionError("");
     try {
       await api.delete(`/user-mgmt/users/${userId}/roles/${roleId}`);
       load();
     } catch (err) {
-      alert(err.response?.data?.message || "Remove failed");
+      setActionError(err.response?.data?.message || "Remove failed");
     }
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {actionError && (
+        <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", borderRadius: 8, padding: "8px 12px", fontSize: 13 }}>
+          {actionError}
+        </div>
+      )}
       {/* Toolbar */}
       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
         <input
@@ -201,7 +211,7 @@ function UsersTab({ roles }) {
         <div style={{ overflowX: "auto", borderRadius: 8, border: "1px solid #e5e7eb" }}>
           <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
             <thead>
-              <tr style={{ background: "#f9fafb" }}>
+              <tr style={{ background: "var(--column-bg)" }}>
                 {["User","Roles","Status","Actions"].map(h => (
                   <th key={h} style={{ textAlign: "left", padding: "10px 14px", fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.04em", borderBottom: "1px solid #e5e7eb" }}>{h}</th>
                 ))}
@@ -254,13 +264,14 @@ function UsersTab({ roles }) {
 
 // ── Roles Tab ─────────────────────────────────────────────────────────────────
 function RolesTab({ roles, catalog, reload }) {
-  const [editingRole, setEditingRole] = useState(null);
-  const [editPerms, setEditPerms]     = useState({});
-  const [showCreate, setShowCreate]   = useState(false);
-  const [createForm, setCreateForm]   = useState({ display_name: "", description: "", color: "#6366f1" });
-  const [cloneSource, setCloneSource] = useState(null);
-  const [cloneName, setCloneName]     = useState("");
-  const [saving, setSaving]           = useState(false);
+  const [editingRole, setEditingRole]       = useState(null);
+  const [editPerms, setEditPerms]           = useState({});
+  const [showCreate, setShowCreate]         = useState(false);
+  const [createForm, setCreateForm]         = useState({ display_name: "", description: "", color: "#6366f1" });
+  const [cloneSource, setCloneSource]       = useState(null);
+  const [cloneName, setCloneName]           = useState("");
+  const [saving, setSaving]                 = useState(false);
+  const [confirmDeleteRole, setConfirmDeleteRole] = useState(null);
 
   const modules = [...new Set(catalog.map(p => p.module))].sort();
 
@@ -283,7 +294,7 @@ function RolesTab({ roles, catalog, reload }) {
       setEditingRole(null);
       reload();
     } catch (err) {
-      alert(err.response?.data?.message || "Save failed");
+      console.error("Save permissions failed:", err.response?.data?.message || err.message);
     } finally {
       setSaving(false);
     }
@@ -298,7 +309,7 @@ function RolesTab({ roles, catalog, reload }) {
       setCreateForm({ display_name: "", description: "", color: "#6366f1" });
       reload();
     } catch (err) {
-      alert(err.response?.data?.message || "Create failed");
+      console.error("Create role failed:", err.response?.data?.message || err.message);
     }
   }
 
@@ -308,17 +319,18 @@ function RolesTab({ roles, catalog, reload }) {
       await api.post(`/roles/${cloneSource.id}/clone`, { display_name: cloneName });
       setCloneSource(null); setCloneName(""); reload();
     } catch (err) {
-      alert(err.response?.data?.message || "Clone failed");
+      console.error("Clone role failed:", err.response?.data?.message || err.message);
     }
   }
 
   async function deleteRole(role) {
-    if (!window.confirm(`Delete role "${role.display_name}"?`)) return;
     try {
       await api.delete(`/roles/${role.id}`);
+      setConfirmDeleteRole(null);
       reload();
     } catch (err) {
-      alert(err.response?.data?.message || "Delete failed");
+      setConfirmDeleteRole(null);
+      console.error("Delete role failed:", err.response?.data?.message || err.message);
     }
   }
 
@@ -396,10 +408,10 @@ function RolesTab({ roles, catalog, reload }) {
       {editingRole && (
         <div style={S.overlay}>
           <div style={{
-            background: "#fff", borderRadius: 14, boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+            background: "var(--card-bg)", borderRadius: 14, boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
             width: "min(860px, 94vw)", maxHeight: "88vh", display: "flex", flexDirection: "column",
           }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 24px", borderBottom: "1px solid #e5e7eb" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 24px", borderBottom: "1px solid var(--border)" }}>
               <h3 style={{ fontWeight: 700, fontSize: 17, margin: 0 }}>
                 Permissions for{" "}
                 <span style={{ color: editingRole.color }}>{editingRole.display_name}</span>
@@ -435,7 +447,7 @@ function RolesTab({ roles, catalog, reload }) {
                                     onClick={() => setScope(p.key, s)}
                                     style={scope === s
                                       ? { fontSize: 11, padding: "2px 7px", borderRadius: 4, border: "1px solid #4f46e5", background: "#4f46e5", color: "#fff", cursor: "pointer" }
-                                      : { fontSize: 11, padding: "2px 7px", borderRadius: 4, border: "1px solid #e5e7eb", background: "#fff", color: "#6b7280", cursor: "pointer" }
+                                      : { fontSize: 11, padding: "2px 7px", borderRadius: 4, border: "1px solid var(--border)", background: "var(--column-bg)", color: "var(--text-secondary)", cursor: "pointer" }
                                     }
                                   >
                                     {SCOPE_LABELS[s]}
@@ -485,7 +497,14 @@ function RolesTab({ roles, catalog, reload }) {
                 {!role.is_system && (
                   <>
                     <span style={{ color: "#e5e7eb", fontSize: 12 }}>|</span>
-                    <button onClick={() => deleteRole(role)} style={S.btn.linkRed}>Delete</button>
+                    {confirmDeleteRole?.id === role.id ? (
+                      <span style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                        <button onClick={() => deleteRole(role)} style={{ ...S.btn.linkRed, fontWeight: 700 }}>Confirm</button>
+                        <button onClick={() => setConfirmDeleteRole(null)} style={S.btn.linkGray}>Cancel</button>
+                      </span>
+                    ) : (
+                      <button onClick={() => setConfirmDeleteRole(role)} style={S.btn.linkRed}>Delete</button>
+                    )}
                   </>
                 )}
               </div>
@@ -606,9 +625,9 @@ function DepartmentsTeamsTab() {
             onClick={() => setSubTab(id)}
             style={{
               padding: "6px 16px", fontSize: 13, borderRadius: 99, cursor: "pointer",
-              background: subTab === id ? "#4f46e5" : "#fff",
-              color: subTab === id ? "#fff" : "#374151",
-              border: subTab === id ? "1px solid #4f46e5" : "1px solid #e5e7eb",
+              background: subTab === id ? "#4f46e5" : "var(--column-bg)",
+              color: subTab === id ? "#fff" : "var(--text-primary)",
+              border: subTab === id ? "1px solid #4f46e5" : "1px solid var(--border)",
               fontWeight: subTab === id ? 600 : 400,
             }}
           >
@@ -643,7 +662,7 @@ function DepartmentsTeamsTab() {
                   <div style={{ fontWeight: 600, fontSize: 13, color: "#111827" }}>{d.name}</div>
                   {d.head_name && <div style={{ fontSize: 12, color: "#6b7280" }}>Head: {d.head_name}</div>}
                 </div>
-                <span style={{ fontSize: 11, background: "#f1f5f9", color: "#64748b", borderRadius: 99, padding: "2px 8px" }}>
+                <span style={{ fontSize: 11, background: "var(--column-bg)", color: "var(--text-secondary)", borderRadius: 99, padding: "2px 8px" }}>
                   {d.member_count ?? 0} members
                 </span>
               </div>
@@ -682,7 +701,7 @@ function DepartmentsTeamsTab() {
                   <div style={{ fontWeight: 600, fontSize: 13, color: "#111827" }}>{t.name}</div>
                   <div style={{ fontSize: 12, color: "#6b7280" }}>{t.department_name || "No department"}</div>
                 </div>
-                <span style={{ fontSize: 11, background: "#f1f5f9", color: "#64748b", borderRadius: 99, padding: "2px 8px" }}>
+                <span style={{ fontSize: 11, background: "var(--column-bg)", color: "var(--text-secondary)", borderRadius: 99, padding: "2px 8px" }}>
                   {t.member_count ?? 0} members
                 </span>
               </div>

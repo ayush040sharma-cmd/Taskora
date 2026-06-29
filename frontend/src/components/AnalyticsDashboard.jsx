@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import api from "../api/api";
+import CommandCenter from "./CommandCenter";
 
 // ── Mini sparkline SVG ────────────────────────────────────────────────────────
-function Sparkline({ data, color = "#6366f1", height = 40, width = 120 }) {
+function Sparkline({ data, color = "#3B82F6", height = 40, width = 120 }) {
   if (!data || data.length < 2) return null;
   const max = Math.max(...data, 1);
   const min = Math.min(...data, 0);
@@ -51,17 +52,17 @@ function VelocityChart({ data }) {
           return (
             <g key={i}>
               {/* Planned bar */}
-              <rect x={x} y={H - planned} width={BAR_W} height={planned} rx={3} fill="#e2e8f0" />
-              <text x={x + BAR_W / 2} y={H - planned - 3} textAnchor="middle" fontSize={9} fill="#94a3b8">
+              <rect x={x} y={H - planned} width={BAR_W} height={planned} rx={3} fill="var(--border)" />
+              <text x={x + BAR_W / 2} y={H - planned - 3} textAnchor="middle" fontSize={9} fill="var(--text-secondary)">
                 {s.planned}
               </text>
               {/* Completed bar */}
-              <rect x={x + BAR_W + 4} y={H - done} width={BAR_W} height={done} rx={3} fill="#6366f1" />
-              <text x={x + BAR_W + 4 + BAR_W / 2} y={H - done - 3} textAnchor="middle" fontSize={9} fill="#6366f1" fontWeight={700}>
+              <rect x={x + BAR_W + 4} y={H - done} width={BAR_W} height={done} rx={3} fill="#3B82F6" />
+              <text x={x + BAR_W + 4 + BAR_W / 2} y={H - done - 3} textAnchor="middle" fontSize={9} fill="#3B82F6" fontWeight={700}>
                 {s.completed}
               </text>
               {/* Sprint label */}
-              <text x={x + BAR_W} y={H + 16} textAnchor="middle" fontSize={9} fill="#64748b">
+              <text x={x + BAR_W} y={H + 16} textAnchor="middle" fontSize={9} fill="var(--text-secondary)">
                 {(s.name || `S${i + 1}`).slice(0, 8)}
               </text>
             </g>
@@ -69,8 +70,8 @@ function VelocityChart({ data }) {
         })}
       </svg>
       <div className="velocity-legend">
-        <span><span className="vl-dot" style={{ background: "#e2e8f0" }} />Planned</span>
-        <span><span className="vl-dot" style={{ background: "#6366f1" }} />Completed</span>
+        <span><span className="vl-dot" style={{ background: "var(--border)" }} />Planned</span>
+        <span><span className="vl-dot" style={{ background: "#3B82F6" }} />Completed</span>
       </div>
     </div>
   );
@@ -79,6 +80,7 @@ function VelocityChart({ data }) {
 // ── Throughput line chart (tasks completed per week) ─────────────────────────
 function ThroughputChart({ data }) {
   if (!data || data.length === 0) return <div className="analytics-empty">No throughput data yet.</div>;
+  if (data.length === 1) return <div className="analytics-empty">Not enough data yet — check back next week.</div>;
   const W = 320, H = 100;
   const max = Math.max(...data.map(d => d.count), 1);
   const pts = data.map((d, i) => {
@@ -92,8 +94,8 @@ function ThroughputChart({ data }) {
       <svg width={W} height={H + 24} style={{ overflow: "visible" }}>
         <defs>
           <linearGradient id="tp-gradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#6366f1" stopOpacity={0.15} />
-            <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+            <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.15} />
+            <stop offset="100%" stopColor="#3B82F6" stopOpacity={0} />
           </linearGradient>
         </defs>
         {/* Fill area */}
@@ -108,17 +110,17 @@ function ThroughputChart({ data }) {
         {/* Line */}
         <polyline
           points={pts.map(p => `${p.x},${p.y}`).join(" ")}
-          fill="none" stroke="#6366f1" strokeWidth={2}
+          fill="none" stroke="#3B82F6" strokeWidth={2}
           strokeLinecap="round" strokeLinejoin="round"
         />
         {/* Dots */}
         {pts.map((p, i) => (
-          <circle key={i} cx={p.x} cy={p.y} r={3} fill="#6366f1" />
+          <circle key={i} cx={p.x} cy={p.y} r={3} fill="#3B82F6" />
         ))}
         {/* X labels — show first/last/middle */}
         {pts.filter((_, i) => i === 0 || i === pts.length - 1 || i === Math.floor(pts.length / 2))
           .map((p, i) => (
-            <text key={i} x={p.x} y={H + 20} textAnchor="middle" fontSize={9} fill="#94a3b8">
+            <text key={i} x={p.x} y={H + 20} textAnchor="middle" fontSize={9} fill="var(--text-secondary)">
               {p.week || `W${i + 1}`}
             </text>
           ))}
@@ -127,7 +129,8 @@ function ThroughputChart({ data }) {
   );
 }
 
-export default function AnalyticsDashboard({ workspaceId }) {
+export default function AnalyticsDashboard({ workspaceId, onNavigate, tasks = [] }) {
+  const [activeTab, setActiveTab] = useState("overview");
   const [data, setData]     = useState(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
@@ -136,11 +139,9 @@ export default function AnalyticsDashboard({ workspaceId }) {
     if (!workspaceId) return;
     setLoading(true);
 
-    Promise.all([
-      api.get(`/tasks/workspace/${workspaceId}`),
-      api.get(`/sprints?workspace_id=${workspaceId}`).catch(() => ({ data: [] })),
-    ]).then(([tasksRes, sprintsRes]) => {
-      const tasks   = tasksRes.data;
+    api.get(`/sprints?workspace_id=${workspaceId}`)
+      .catch(() => ({ data: [] }))
+      .then((sprintsRes) => {
       const sprints = sprintsRes.data;
 
       // ── KPI cards ───────────────────────────────────────────────────
@@ -212,7 +213,7 @@ export default function AnalyticsDashboard({ workspaceId }) {
         d.setHours(23, 59, 59, 999);
         const totalByDay = tasks.filter(t => new Date(t.created_at) <= d).length;
         const doneByDay  = tasks.filter(t =>
-          t.status === "done" && new Date(t.updated_at) <= d
+          t.status === "done" && t.completed_at && new Date(t.completed_at) <= d
         ).length;
         return totalByDay > 0 ? Math.round((doneByDay / totalByDay) * 100) : 0;
       });
@@ -222,13 +223,13 @@ export default function AnalyticsDashboard({ workspaceId }) {
         throughput, velocity, priorityCounts, types, trend,
       });
     }).catch(() => { setFetchError(true); }).finally(() => setLoading(false));
-  }, [workspaceId]);
+  }, [workspaceId, tasks]);
 
   if (!workspaceId) return null;
 
   if (loading) {
     return (
-      <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#64748b", padding: "32px 0" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--text-secondary)", padding: "32px 0" }}>
         <div className="spinner" style={{ width: 22, height: 22 }} />
         <span>Building analytics…</span>
       </div>
@@ -237,7 +238,7 @@ export default function AnalyticsDashboard({ workspaceId }) {
 
   if (fetchError) {
     return (
-      <div style={{ textAlign: "center", padding: "48px 0", color: "#64748b" }}>
+      <div style={{ textAlign: "center", padding: "48px 0", color: "var(--text-secondary)" }}>
         <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
         <div style={{ fontWeight: 600, marginBottom: 6 }}>Could not load analytics</div>
         <div style={{ fontSize: 13 }}>Check your connection and refresh the page.</div>
@@ -247,20 +248,59 @@ export default function AnalyticsDashboard({ workspaceId }) {
 
   if (!data) return null;
 
-  const PRIORITY_COLOR = { critical: "#dc2626", high: "#ef4444", medium: "#f59e0b", low: "#10b981" };
+  const PRIORITY_COLOR = { critical: "var(--tk-status-danger, #EF4444)", high: "var(--tk-status-danger, #EF4444)", medium: "var(--tk-status-warn, #F59E0B)", low: "var(--tk-status-ok, #22C55E)" };
+
+  const TABS = [
+    { id: "overview",        label: "Overview" },
+    { id: "command-center",  label: "Command Center" },
+  ];
 
   return (
+    <div style={{ display: "flex", flexDirection: "column" }}>
+      {/* Tab bar */}
+      <div style={{ display: "flex", gap: 4, borderBottom: "1px solid var(--tk-border, #DFE1E6)", marginBottom: 20, flexShrink: 0 }}>
+        {TABS.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setActiveTab(t.id)}
+            style={{
+              position: "relative",
+              padding: "10px 20px", fontSize: 13, fontWeight: activeTab === t.id ? 700 : 500,
+              background: "none", border: "none", cursor: "pointer",
+              color: activeTab === t.id ? "var(--tk-accent, #3B82F6)" : "var(--text-secondary)",
+              marginBottom: -1,
+            }}
+          >
+            {t.label}
+            {activeTab === t.id && (
+              <span style={{
+                position: "absolute", bottom: 0, left: 0, right: 0, height: 2,
+                background: "var(--tk-gradient, linear-gradient(90deg, #3B82F6, #06B6D4))",
+                borderRadius: "2px 2px 0 0",
+              }} />
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Command Center tab */}
+      {activeTab === "command-center" && (
+        <CommandCenter workspaceId={workspaceId} onNavigate={onNavigate} tasks={tasks} />
+      )}
+
+      {/* Overview tab */}
+      {activeTab === "overview" && (
     <div className="analytics-page">
       {/* KPI strip */}
       <div className="analytics-kpis">
         {[
-          { label: "Total Tasks",       val: data.total,           color: "#6366f1" },
-          { label: "Completed",         val: data.done,            color: "#10b981" },
-          { label: "Completion Rate",   val: `${data.completionRate}%`, color: data.completionRate >= 70 ? "#10b981" : "#f59e0b" },
-          { label: "In Progress",       val: data.inProgress,      color: "#6366f1" },
-          { label: "Overdue",           val: data.overdue,         color: data.overdue > 0 ? "#dc2626" : "#10b981" },
-          { label: "Unassigned",        val: data.unassigned,      color: data.unassigned > 0 ? "#f59e0b" : "#10b981" },
-          ...(data.avgDays !== null ? [{ label: "Avg Days/Task", val: `${data.avgDays}d`, color: "#64748b" }] : []),
+          { label: "Total Tasks",       val: data.total,           color: "var(--tk-accent, #3B82F6)" },
+          { label: "Completed",         val: data.done,            color: "var(--tk-status-ok, #22C55E)" },
+          { label: "Completion Rate",   val: `${data.completionRate}%`, color: data.completionRate >= 70 ? "var(--tk-status-ok, #22C55E)" : "var(--tk-status-warn, #F59E0B)" },
+          { label: "In Progress",       val: data.inProgress,      color: "var(--tk-accent, #3B82F6)" },
+          { label: "Overdue",           val: data.overdue,         color: data.overdue > 0 ? "var(--tk-status-danger, #EF4444)" : "var(--tk-status-ok, #22C55E)" },
+          { label: "Unassigned",        val: data.unassigned,      color: data.unassigned > 0 ? "var(--tk-status-warn, #F59E0B)" : "var(--tk-status-ok, #22C55E)" },
+          ...(data.avgDays !== null ? [{ label: "Avg Days/Task", val: `${data.avgDays}d`, color: "var(--text-secondary)" }] : []),
         ].map(k => (
           <div key={k.label} className="analytics-kpi">
             <div className="analytics-kpi-val" style={{ color: k.color }}>{k.val}</div>
@@ -336,6 +376,8 @@ export default function AnalyticsDashboard({ workspaceId }) {
           </div>
         </div>
       </div>
+    </div>
+      )}
     </div>
   );
 }

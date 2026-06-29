@@ -99,7 +99,7 @@ export default function CapacityPanel({ workspaceId }) {
 
   const [form,    setForm]    = useState(DEFAULTS);
   const [loading, setLoading] = useState(true);
-  const [saving,  setSaving]  = useState(false);
+  const [saving,  setSaving]  = useState({ hours: false, travel: false, leave: false });
   const [saved,   setSaved]   = useState("");
   const [error,   setError]   = useState("");
   const [requestSent, setRequestSent] = useState(""); // "leave" | "travel" — success banner
@@ -133,7 +133,7 @@ export default function CapacityPanel({ workspaceId }) {
   };
 
   const save = async (section) => {
-    setSaving(true); setError(""); setSaved("");
+    setSaving(s => ({ ...s, [section]: true })); setError(""); setSaved("");
     try {
       if (section === "travel") {
         await api.put("/capacity/travel", {
@@ -162,9 +162,9 @@ export default function CapacityPanel({ workspaceId }) {
       if (updated) setForm({ ...DEFAULTS, ...updated.data });
       setTimeout(() => setSaved(""), 2500);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to save. Run the SQL migration and retry.");
+      setError(err.response?.data?.message || "Failed to save. Please try again.");
     } finally {
-      setSaving(false);
+      setSaving(s => ({ ...s, [section]: false }));
     }
   };
 
@@ -207,7 +207,7 @@ export default function CapacityPanel({ workspaceId }) {
 
       {/* Request sent banner */}
       {requestSent && (
-        <div style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 10, padding: "12px 16px", marginBottom: 16, fontSize: 14, color: "#16a34a", display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 10, padding: "12px 16px", marginBottom: 16, fontSize: 14, color: "#22c55e", display: "flex", alignItems: "center", gap: 8 }}>
           ✅ Your {requestSent === "leave" ? "leave" : "travel"} request has been sent to your manager for approval.
         </div>
       )}
@@ -294,8 +294,8 @@ export default function CapacityPanel({ workspaceId }) {
         <div className="cap-hours-viz">
           <div className="cap-hours-bar">
             {form.on_leave ? (
-              <div style={{ width: "100%", background: "#fee2e2", borderRadius: 4, height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ fontSize: 11, color: "#dc2626", fontWeight: 600 }}>0h — on leave</span>
+              <div style={{ width: "100%", background: "rgba(239,68,68,0.15)", borderRadius: 4, height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ fontSize: 11, color: "#ef4444", fontWeight: 600 }}>0h — on leave</span>
               </div>
             ) : (
               <>
@@ -360,8 +360,8 @@ export default function CapacityPanel({ workspaceId }) {
           ))}
         </div>
 
-        <button className="cap-save-btn" onClick={() => save("hours")} disabled={saving}>
-          {saving && saved === "" ? "Saving…" : saved === "hours" ? "✓ Saved!" : "Save changes"}
+        <button className="cap-save-btn" onClick={() => save("hours")} disabled={saving.hours}>
+          {saving.hours ? "Saving…" : saved === "hours" ? "✓ Saved!" : "Save changes"}
         </button>
       </div>
 
@@ -426,9 +426,9 @@ export default function CapacityPanel({ workspaceId }) {
           </div>
         )}
 
-        <button className="cap-save-btn" onClick={() => handleSectionSave("travel")} disabled={saving}
+        <button className="cap-save-btn" onClick={() => handleSectionSave("travel")} disabled={saving.travel}
           style={{ marginTop: form.travel_mode ? 12 : 16 }}>
-          {saving && saved === "" ? "Saving…" : saved === "travel" ? "✓ Saved!" : isAnalyst ? "Request travel mode" : "Save travel settings"}
+          {saving.travel ? "Saving…" : saved === "travel" ? "✓ Saved!" : isAnalyst ? "Request travel mode" : "Save travel settings"}
         </button>
       </div>
 
@@ -469,9 +469,9 @@ export default function CapacityPanel({ workspaceId }) {
           </div>
         )}
 
-        <button className="cap-save-btn" onClick={() => handleSectionSave("leave")} disabled={saving}
+        <button className="cap-save-btn" onClick={() => handleSectionSave("leave")} disabled={saving.leave}
           style={{ marginTop: form.on_leave ? 12 : 16 }}>
-          {saving && saved === "" ? "Saving…" : saved === "leave" ? "✓ Saved!" : isAnalyst ? "Apply for leave" : "Save leave settings"}
+          {saving.leave ? "Saving…" : saved === "leave" ? "✓ Saved!" : isAnalyst ? "Apply for leave" : "Save leave settings"}
         </button>
       </div>
 

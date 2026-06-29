@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import api from "../api/api";
+import BlockedDashboard from "./BlockedDashboard";
 
 const STATUS_COLOR  = { todo: "#94a3b8", inprogress: "#6366f1", in_progress: "#6366f1", done: "#10b981", review: "#f59e0b" };
 const RISK_COLOR    = (score) => score >= 75 ? "#dc2626" : score >= 50 ? "#ef4444" : score >= 25 ? "#f59e0b" : "#10b981";
@@ -152,7 +153,8 @@ function GraphNode({ node, selected, onClick }) {
   );
 }
 
-export default function DependencyGraph({ workspaceId }) {
+export default function DependencyGraph({ workspaceId, onTaskClick }) {
+  const [activeTab, setActiveTab] = useState("graph");
   const [graph, setGraph]         = useState({ nodes: [], edges: [] });
   const [layout, setLayout]       = useState({ positioned: [], edgePaths: [] });
   const [selected, setSelected]   = useState(null);
@@ -195,7 +197,39 @@ export default function DependencyGraph({ workspaceId }) {
   const maxX = layout.positioned.reduce((m, n) => Math.max(m, n.x + NODE_W), 0) + H_GAP;
   const maxY = layout.positioned.reduce((m, n) => Math.max(m, n.y + NODE_H), 0) + V_GAP;
 
+  const TABS = [
+    { id: "graph",   label: "Dependency Graph" },
+    { id: "blocked", label: "Blocked Tasks" },
+  ];
+
   return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      {/* Tab bar */}
+      <div style={{ display: "flex", gap: 4, borderBottom: "1px solid var(--tk-border, #1E293B)", padding: "0 0 0 0", marginBottom: 0, flexShrink: 0 }}>
+        {TABS.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setActiveTab(t.id)}
+            style={{
+              padding: "10px 20px", fontSize: 13, fontWeight: activeTab === t.id ? 700 : 500,
+              background: "none", border: "none", cursor: "pointer",
+              color: activeTab === t.id ? "var(--tk-accent, #3B82F6)" : "var(--tk-text-secondary, #94A3B8)",
+              borderBottom: activeTab === t.id ? "2px solid var(--tk-accent, #3B82F6)" : "2px solid transparent",
+              marginBottom: -1,
+            }}
+          >{t.label}</button>
+        ))}
+      </div>
+
+      {/* Blocked Tasks tab */}
+      {activeTab === "blocked" && (
+        <div style={{ flex: 1, overflowY: "auto" }}>
+          <BlockedDashboard workspaceId={workspaceId} onTaskClick={onTaskClick} />
+        </div>
+      )}
+
+      {/* Graph tab */}
+      {activeTab === "graph" && (
     <div className="dep-graph-wrap">
       <div className="dep-graph-toolbar">
         <span className="dep-graph-legend">
@@ -308,6 +342,8 @@ export default function DependencyGraph({ workspaceId }) {
       )}
 
       <div className="dep-graph-hint">Drag to pan · Click node for details · {graph.nodes.length} tasks · {graph.edges.length} dependencies</div>
+    </div>
+      )}
     </div>
   );
 }

@@ -1,3 +1,5 @@
+import { FEATURES, PLAN_RANK } from "../config/features";
+
 /**
  * Frontend permission utilities.
  *
@@ -67,13 +69,15 @@ export function canViewSidebar(viewId, role = "team_member", customViews = null)
   return true;
 }
 
-// Plan gating not enforced yet — kept for API compatibility
-export function canAccess(_feature, _plan = "free", _isAdmin = false) {
-  return true;
+export function canAccess(feature, plan = "free", isAdmin = false) {
+  if (isAdmin) return true;
+  const required = FEATURES[feature];
+  if (!required) return true; // unknown feature → open by default
+  return (PLAN_RANK[plan] || 0) >= (PLAN_RANK[required] || 0);
 }
 
-export function requiredPlan(_feature) {
-  return "free";
+export function requiredPlan(feature) {
+  return FEATURES[feature] || "free";
 }
 
 /**

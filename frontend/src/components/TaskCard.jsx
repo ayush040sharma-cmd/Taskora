@@ -124,6 +124,27 @@ function InsightPanel({ task }) {
 export default function TaskCard({ task, index, columnId, onDelete, onUpdate, onOpenDetail }) {
   const [hovered, setHovered] = useState(false);
 
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const deleteTimerRef = useRef(null);
+
+  const handleDeleteClick = (e) => {
+    e.stopPropagation();
+    if (deleteConfirm) {
+      clearTimeout(deleteTimerRef.current);
+      setDeleteConfirm(false);
+      onDelete(task.id);
+    } else {
+      setDeleteConfirm(true);
+      deleteTimerRef.current = setTimeout(() => setDeleteConfirm(false), 3000);
+    }
+  };
+
+  const cancelDelete = (e) => {
+    e?.stopPropagation();
+    clearTimeout(deleteTimerRef.current);
+    setDeleteConfirm(false);
+  };
+
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft]     = useState(task.title);
   const titleInputRef = useRef(null);
@@ -183,7 +204,7 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
           className={`tk-task-card${snapshot.isDragging ? " dragging" : ""}${isBlocked ? " tk-task-card--blocked" : ""}`}
           style={provided.draggableProps.style}
           onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
+          onMouseLeave={() => { setHovered(false); cancelDelete(); }}
         >
           {/* Status banner — overdue / stuck */}
           {overdue && (
@@ -235,20 +256,43 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
             )}
 
             <div className="tk-task-actions">
-              <button
-                className="tk-task-action-btn"
-                onClick={e => { e.stopPropagation(); onOpenDetail && onOpenDetail(task); }}
-                title="Edit task"
-              >
-                <IconEdit />
-              </button>
-              <button
-                className="tk-task-action-btn tk-task-action-btn--delete"
-                onClick={e => { e.stopPropagation(); onDelete(task.id); }}
-                title="Delete task"
-              >
-                <IconTrash />
-              </button>
+              {!deleteConfirm && (
+                <button
+                  className="tk-task-action-btn"
+                  onClick={e => { e.stopPropagation(); onOpenDetail && onOpenDetail(task); }}
+                  title="Edit task"
+                >
+                  <IconEdit />
+                </button>
+              )}
+              {deleteConfirm ? (
+                <>
+                  <button
+                    className="tk-task-action-btn"
+                    onClick={cancelDelete}
+                    title="Cancel"
+                    style={{ color: "#64748b", fontSize: 11, fontWeight: 700 }}
+                  >
+                    ✕
+                  </button>
+                  <button
+                    className="tk-task-action-btn tk-task-action-btn--delete"
+                    onClick={handleDeleteClick}
+                    title="Confirm delete"
+                    style={{ color: "#ef4444", fontSize: 11, fontWeight: 700 }}
+                  >
+                    Delete?
+                  </button>
+                </>
+              ) : (
+                <button
+                  className="tk-task-action-btn tk-task-action-btn--delete"
+                  onClick={handleDeleteClick}
+                  title="Delete task"
+                >
+                  <IconTrash />
+                </button>
+              )}
             </div>
           </div>
 

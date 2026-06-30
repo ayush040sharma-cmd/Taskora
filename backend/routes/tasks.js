@@ -65,15 +65,11 @@ router.get("/team-intel/:workspaceId", auth, async (req, res) => {
     );
     if (!access.rows.length) return res.status(403).json({ message: "Access denied" });
 
-    // Get ALL member user IDs for this workspace (owner + workspace_members + team_members)
+    // Get ALL member user IDs for this workspace (owner + workspace_members)
     const memberRes = await pool.query(
       `SELECT user_id FROM workspace_members WHERE workspace_id = $1
        UNION
-       SELECT user_id FROM workspaces WHERE id = $1
-       UNION
-       SELECT tm.user_id FROM team_members tm
-         JOIN teams t ON tm.team_id = t.id
-         WHERE t.workspace_id = $1`,
+       SELECT user_id FROM workspaces WHERE id = $1`,
       [wsId]
     );
     if (!memberRes.rows.length) return res.json([]);

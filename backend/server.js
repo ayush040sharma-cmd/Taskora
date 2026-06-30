@@ -328,6 +328,22 @@ async function seedSidebarPermissions() {
   }
 }
 
+// ── Self-ping to prevent Render free-tier sleep (every 10 min) ───────────────
+// Only runs in production. Hits /health so no DB or auth overhead.
+if (process.env.NODE_ENV === "production") {
+  const https = require("https");
+  setInterval(() => {
+    const host = process.env.RENDER_EXTERNAL_URL
+      ? new URL(process.env.RENDER_EXTERNAL_URL).hostname
+      : "taskora-9sjl.onrender.com";
+    https.get(`https://${host}/health`, (res) => {
+      logger.info(`[keepalive] ping ${res.statusCode}`);
+    }).on("error", (e) => {
+      logger.warn(`[keepalive] ping failed: ${e.message}`);
+    });
+  }, 10 * 60 * 1000); // 10 minutes
+}
+
 // ── Start ─────────────────────────────────────────────────────────────────────
 httpServer.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`, { port: PORT, env: process.env.NODE_ENV || "development" });

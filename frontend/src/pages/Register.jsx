@@ -76,7 +76,19 @@ export default function Register() {
       const redirect = searchParams.get("redirect");
       navigate(redirect || "/onboarding");
     } catch (err) {
-      setError(err.response?.data?.message || "Registration failed. Please try again.");
+      // CORS / network failure → err.response is null
+      if (!err.response) {
+        setError("Cannot reach the server. Please check your connection and try again.");
+        setStep(1);
+        return;
+      }
+      // Zod validation errors from backend — join all field messages
+      const fieldErrors = err.response.data?.errors;
+      if (fieldErrors?.length) {
+        setError(fieldErrors.map(e => e.message).join(" · "));
+      } else {
+        setError(err.response.data?.message || "Registration failed. Please try again.");
+      }
       setStep(1);
     } finally {
       setLoading(false);

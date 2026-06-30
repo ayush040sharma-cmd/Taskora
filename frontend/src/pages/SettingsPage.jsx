@@ -335,6 +335,83 @@ function SecuritySection() {
   );
 }
 
+// ── Section: Workspace Preferences ───────────────────────────────────────────
+function WorkspacePreferencesSection({ workspaceId }) {
+  const [taskPrefix,      setTaskPrefix]      = useState(localStorage.getItem("taskora-task-prefix") || "TASK");
+  const [sprintDuration,  setSprintDuration]  = useState(localStorage.getItem("taskora-sprint-days") || "14");
+  const [defaultPriority, setDefaultPriority] = useState(localStorage.getItem("taskora-default-priority") || "medium");
+  const [autoArchiveDays, setAutoArchiveDays] = useState(localStorage.getItem("taskora-auto-archive-days") || "30");
+  const [showCompleted,   setShowCompleted]   = useState(localStorage.getItem("taskora-show-completed") !== "false");
+  const [saved,           setSaved]           = useState(false);
+
+  function save() {
+    localStorage.setItem("taskora-task-prefix",        taskPrefix.trim() || "TASK");
+    localStorage.setItem("taskora-sprint-days",        sprintDuration);
+    localStorage.setItem("taskora-default-priority",   defaultPriority);
+    localStorage.setItem("taskora-auto-archive-days",  autoArchiveDays);
+    localStorage.setItem("taskora-show-completed",     String(showCompleted));
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
+
+  return (
+    <div>
+      <SectionHeading title="Workspace Preferences" desc="Configure workspace-level defaults and task behavior." />
+
+      <Row label="Task ID prefix" desc="Short prefix shown before task numbers (e.g. TASK-001, ENG-042).">
+        <input
+          value={taskPrefix}
+          onChange={e => setTaskPrefix(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))}
+          maxLength={6}
+          style={{ border: "1px solid var(--border)", borderRadius: 8, padding: "7px 10px", fontSize: 13, background: "var(--card-bg)", color: "var(--text-primary)", width: 80, textAlign: "center", fontWeight: 700, letterSpacing: 1 }}
+        />
+      </Row>
+
+      <Row label="Default sprint duration (days)" desc="How many days a new sprint spans when created.">
+        <select
+          value={sprintDuration}
+          onChange={e => setSprintDuration(e.target.value)}
+          style={{ border: "1px solid var(--border)", borderRadius: 8, padding: "7px 10px", fontSize: 13, background: "var(--card-bg)", color: "var(--text-primary)" }}
+        >
+          {["7","10","14","21","28"].map(d => <option key={d} value={d}>{d} days</option>)}
+        </select>
+      </Row>
+
+      <Row label="Default task priority" desc="Priority assigned to new tasks when none is explicitly set.">
+        <select
+          value={defaultPriority}
+          onChange={e => setDefaultPriority(e.target.value)}
+          style={{ border: "1px solid var(--border)", borderRadius: 8, padding: "7px 10px", fontSize: 13, background: "var(--card-bg)", color: "var(--text-primary)" }}
+        >
+          <option value="high">🔴 High</option>
+          <option value="medium">🟡 Medium</option>
+          <option value="low">🟢 Low</option>
+        </select>
+      </Row>
+
+      <Row label="Show completed tasks on board" desc="Toggle whether Done column is visible in Kanban view by default.">
+        <Toggle on={showCompleted} onChange={setShowCompleted} />
+      </Row>
+
+      <Row label="Auto-archive done tasks after (days)" desc="Automatically remove done tasks from active view after this many days.">
+        <select
+          value={autoArchiveDays}
+          onChange={e => setAutoArchiveDays(e.target.value)}
+          style={{ border: "1px solid var(--border)", borderRadius: 8, padding: "7px 10px", fontSize: 13, background: "var(--card-bg)", color: "var(--text-primary)" }}
+        >
+          <option value="0">Never</option>
+          <option value="7">7 days</option>
+          <option value="14">14 days</option>
+          <option value="30">30 days</option>
+          <option value="60">60 days</option>
+        </select>
+      </Row>
+
+      <SaveRow onSave={save} saved={saved} label="Save workspace preferences" />
+    </div>
+  );
+}
+
 // ── Section: Demo Data ───────────────────────────────────────────────────────
 function DemoSection({ workspaceId }) {
   const [seeding, setSeeding]   = useState(false);
@@ -527,7 +604,7 @@ export default function SettingsPage({ currentWorkspaceId }) {
       case "notifications": return <NotificationsSection />;
       case "regional":      return <RegionalSection />;
       case "security":      return <SecuritySection />;
-      case "workspace":     return <GeneralSection workspaceId={currentWorkspaceId} />;
+      case "workspace":     return <WorkspacePreferencesSection workspaceId={currentWorkspaceId} />;
       case "demo":          return <DemoSection workspaceId={currentWorkspaceId} />;
       case "project":       return <ProjectSection />;
       case "workflow":      return <WorkflowSection />;

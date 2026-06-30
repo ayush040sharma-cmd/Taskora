@@ -452,6 +452,454 @@ function AuditLog({ workspaceId }) {
   );
 }
 
+// ── Team Intel — Single Pane of Glass ────────────────────────────────────────
+function TeamIntelPanel({ workspaceId, team }) {
+  const [tasks,        setTasks]        = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [expanded,     setExpanded]     = useState({});
+  const [filterMember, setFilterMember] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterPriority, setFilterPriority] = useState("all");
+  const [filterRisk,   setFilterRisk]   = useState("all");
+  const [toast,        setToast]        = useState(null);
+  const [reassignTask, setReassignTask] = useState(null);
+  const [reassignTo,   setReassignTo]   = useState("");
+  const [saving,       setSaving]       = useState(false);
+
+  const showToast = (msg, type = "success") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const loadTasks = useCallback(async () => {
+    if (!workspaceId) return;
+    setLoading(true);
+    try {
+      const r = await api.get(`/tasks/workspace/${workspaceId}`);
+      setTasks(r.data);
+    } catch {} finally { setLoading(false); }
+  }, [workspaceId]);
+
+  useEffect(() => { loadTasks(); }, [loadTasks]);
+
+  const now = Date.now();
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const todayEnd = new Date(today); todayEnd.setHours(23, 59, 59, 999);
+  const endOfWeek = new Date(today);
+  endOfWeek.setDate(today.getDate() + (6 - today.getDay()));
+  endOfWeek.setHours(23, 59, 59, 999);
+  const staleThreshold = new Date(now - 3 * 86400000);
+
+  const updateTask = async (taskId, changes) => {
+    setSaving(true);
+    try {
+      await api.put(`/tasks/${taskId}`, changes);
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...changes } : t));
+      showToast("Saved");
+    } catch { showToast("Failed to update", "error"); } finally { setSaving(false); }
+  };
+
+  // Enrich each team member with task breakdown
+  const memberData = team.map(m => {
+    const mine       = tasks.filter(t => String(t.assigned_user_id) === String(m.user_id));
+    const active     = mine.filter(t => t.status !== "done");
+    const overdue    = active.filter(t => t.due_date && new Date(t.due_date) < today);
+    const blocked    = active.filter(t => t.status === "blocked");
+    const inProgress = active.filter(t => ["inprogress", "in_progress"].includes(t.status));
+    const inReview   = active.filter(t => t.status === "review");
+    const todo       = active.filter(t => ["todo", "pending_approval"].includes(t.status));
+    const stale      = active.filter(t => t.updated_at && new Date(t.updated_at) < staleThreshold);
+    const dueToday   = active.filter(t => t.due_date && new Date(t.due_date) >= today && new Date(t.due_date) <= todayEnd);
+    const dueWeek    = active.filter(t => t.due_date && new Date(t.due_date) > todayEnd && new Date(t.due_date) <= endOfWeek);
+    const waitingApproval = mine.filter(t => t.status === "pending_approval");
+
+    let risk = "low";
+    if (overdue.length > 0 || m.load_percent >= 100 || (blocked.length > 0 && overdue.length > 0)) risk = "high";
+    else if (blocked.length > 0 || stale.length >= 2 || m.load_percent >= 80) risk = "medium";
+
+    return { ...m, mine, active, overdue, blocked, inProgress, inReview, todo, stale, dueToday, dueWeek, waitingApproval, risk };
+  });
+
+  const unassigned = tasks.filter(t => !t.assigned_user_id && t.status !== "done");
+  const allBlocked = tasks.filter(t => t.status === "blocked");
+
+  // Global AI insights
+  const highRisk   = memberData.filter(m => m.risk === "high");
+  const overloaded = memberData.filter(m => m.load_percent >= 100 && !m.on_leave);
+  const available  = memberData.filter(m => m.load_percent < 60 && !m.on_leave && !m.travel_mode && m.active.length < 5);
+  const insights   = [];
+  if (highRisk.length) {
+    const reasons = highRisk.map(m => {
+      const parts = [];
+      if (m.load_percent >= 100) parts.push(`${m.load_percent}% load`);
+      if (m.overdue.length)      parts.push(`${m.overdue.length} overdue`);
+      if (m.blocked.length)      parts.push(`${m.blocked.length} blocked`);
+      return `${m.name} (${parts.join(", ")})`;
+    });
+    insights.push({ type: "danger", text: `Needs attention: ${reasons.join(" · ")}` });
+  }
+  if (overloaded.length && available.length)
+    insights.push({ type: "warn", text: `Workload imbalance: ${overloaded.map(m => m.name).join(", ")} overloaded; ${available.map(m => m.name).join(", ")} have capacity` });
+  if (unassigned.length)
+    insights.push({ type: "info", text: `${unassigned.length} unassigned task${unassigned.length !== 1 ? "s" : ""} — consider distributing to available members` });
+
+  // Apply filters
+  let rows = memberData;
+  if (filterMember !== "all")   rows = rows.filter(m => String(m.user_id) === filterMember);
+  if (filterRisk !== "all")     rows = rows.filter(m => m.risk === filterRisk);
+  if (filterStatus !== "all") {
+    rows = rows.filter(m => {
+      if (filterStatus === "overdue")  return m.overdue.length > 0;
+      if (filterStatus === "blocked")  return m.blocked.length > 0;
+      if (filterStatus === "stale")    return m.stale.length > 0;
+      if (filterStatus === "waiting")  return m.waitingApproval.length > 0;
+      return true;
+    });
+  }
+
+  // Visible tasks in expanded row depend on priority filter
+  const getVisibleTasks = (memberRow) => {
+    let ts = memberRow.active;
+    if (filterPriority !== "all") ts = ts.filter(t => t.priority === filterPriority);
+    return ts;
+  };
+
+  const RISK_COLORS = { high: "#ef4444", medium: "#f59e0b", low: "#22c55e" };
+  const RISK_BG     = { high: "rgba(239,68,68,0.08)", medium: "rgba(245,158,11,0.08)", low: "rgba(34,197,94,0.08)" };
+  const STATUS_COLOR = { todo: "#64748b", inprogress: "#3b82f6", in_progress: "#3b82f6", review: "#8b5cf6", blocked: "#ef4444", done: "#22c55e", pending_approval: "#f59e0b" };
+  const PRIORITY_ICON = { high: "🔴", medium: "🟡", low: "🟢" };
+
+  const formatDate = (d) => {
+    if (!d) return "—";
+    const dt = new Date(d);
+    const diff = Math.round((dt - today) / 86400000);
+    if (diff < 0) return <span style={{ color: "#ef4444", fontWeight: 700 }}>{Math.abs(diff)}d overdue</span>;
+    if (diff === 0) return <span style={{ color: "#f59e0b", fontWeight: 700 }}>Today</span>;
+    if (diff === 1) return <span style={{ color: "#f59e0b" }}>Tomorrow</span>;
+    if (diff <= 6) return `${diff}d`;
+    return dt.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
+
+  const toggleExpand = (uid) => setExpanded(p => ({ ...p, [uid]: !p[uid] }));
+
+  if (loading) return <div className="mgr-loading" style={{ padding: "48px 0", textAlign: "center" }}>Loading team intelligence…</div>;
+
+  // KPI summary
+  const totalActive   = tasks.filter(t => t.status !== "done").length;
+  const totalOverdue  = tasks.filter(t => t.due_date && new Date(t.due_date) < today && t.status !== "done").length;
+  const totalBlocked  = allBlocked.length;
+  const totalStale    = tasks.filter(t => t.updated_at && new Date(t.updated_at) < staleThreshold && t.status !== "done").length;
+
+  return (
+    <div style={{ padding: "0 0 40px" }}>
+      {/* Toast */}
+      {toast && (
+        <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 9999, background: toast.type === "error" ? "#ef4444" : "#22c55e", color: "#fff", borderRadius: 10, padding: "10px 20px", fontWeight: 700, fontSize: 14, boxShadow: "0 4px 24px rgba(0,0,0,0.3)" }}>
+          {toast.msg}
+        </div>
+      )}
+
+      {/* KPI strip */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
+        {[
+          { label: "Active Tasks", value: totalActive, color: "var(--tk-text-primary)" },
+          { label: "Overdue", value: totalOverdue, color: totalOverdue > 0 ? "#ef4444" : "var(--tk-text-primary)" },
+          { label: "Blocked", value: totalBlocked, color: totalBlocked > 0 ? "#ef4444" : "var(--tk-text-primary)" },
+          { label: "Stale (3d+)", value: totalStale, color: totalStale > 0 ? "#f59e0b" : "var(--tk-text-primary)" },
+          { label: "Unassigned", value: unassigned.length, color: unassigned.length > 0 ? "#f59e0b" : "var(--tk-text-primary)" },
+          { label: "At Risk", value: highRisk.length, color: highRisk.length > 0 ? "#ef4444" : "var(--tk-text-primary)" },
+        ].map(k => (
+          <div key={k.label} style={{ flex: "1 1 100px", background: "var(--tk-surface)", border: "1px solid var(--tk-border)", borderRadius: 10, padding: "12px 16px", textAlign: "center" }}>
+            <div style={{ fontSize: 22, fontWeight: 800, color: k.color }}>{k.value}</div>
+            <div style={{ fontSize: 11, color: "var(--tk-text-muted)", fontWeight: 600, marginTop: 2 }}>{k.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* AI Insights */}
+      {insights.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          {insights.map((ins, i) => {
+            const colors = { danger: { bg: "rgba(239,68,68,0.1)", border: "rgba(239,68,68,0.3)", text: "#ef4444", icon: "🚨" }, warn: { bg: "rgba(245,158,11,0.1)", border: "rgba(245,158,11,0.3)", text: "#f59e0b", icon: "⚠️" }, info: { bg: "rgba(59,130,246,0.1)", border: "rgba(59,130,246,0.3)", text: "#3b82f6", icon: "💡" } };
+            const c = colors[ins.type];
+            return (
+              <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, background: c.bg, border: `1px solid ${c.border}`, borderRadius: 8, padding: "10px 14px", marginBottom: 8, fontSize: 13 }}>
+                <span>{c.icon}</span>
+                <span style={{ color: c.text, fontWeight: 600 }}>{ins.text}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Filters */}
+      <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+        <select value={filterMember} onChange={e => setFilterMember(e.target.value)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid var(--tk-border)", background: "var(--tk-surface)", color: "var(--tk-text-primary)", fontSize: 13, cursor: "pointer" }}>
+          <option value="all">All Members</option>
+          {team.map(m => <option key={m.user_id} value={String(m.user_id)}>{m.name}</option>)}
+        </select>
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid var(--tk-border)", background: "var(--tk-surface)", color: "var(--tk-text-primary)", fontSize: 13, cursor: "pointer" }}>
+          <option value="all">All Statuses</option>
+          <option value="overdue">Has Overdue</option>
+          <option value="blocked">Has Blocked</option>
+          <option value="stale">Has Stale Tasks</option>
+          <option value="waiting">Waiting Approval</option>
+        </select>
+        <select value={filterPriority} onChange={e => setFilterPriority(e.target.value)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid var(--tk-border)", background: "var(--tk-surface)", color: "var(--tk-text-primary)", fontSize: 13, cursor: "pointer" }}>
+          <option value="all">All Priorities</option>
+          <option value="high">High Priority</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+        <select value={filterRisk} onChange={e => setFilterRisk(e.target.value)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid var(--tk-border)", background: "var(--tk-surface)", color: "var(--tk-text-primary)", fontSize: 13, cursor: "pointer" }}>
+          <option value="all">All Risk Levels</option>
+          <option value="high">High Risk</option>
+          <option value="medium">Medium Risk</option>
+          <option value="low">Low Risk</option>
+        </select>
+        <button onClick={loadTasks} style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid var(--tk-border)", background: "var(--tk-surface)", color: "var(--tk-text-secondary)", fontSize: 13, cursor: "pointer" }} title="Refresh">↻ Refresh</button>
+        <span style={{ marginLeft: "auto", fontSize: 12, color: "var(--tk-text-muted)" }}>{rows.length} member{rows.length !== 1 ? "s" : ""}</span>
+      </div>
+
+      {/* Member Rows */}
+      {rows.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "48px 0", color: "var(--tk-text-muted)" }}>No members match the current filters</div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {rows.map(m => {
+            const isOpen = expanded[m.user_id] !== false && (m.risk !== "low" || expanded[m.user_id] === true);
+            const visibleTasks = getVisibleTasks(m);
+            const hasAlerts = m.overdue.length > 0 || m.blocked.length > 0;
+            return (
+              <div key={m.user_id} style={{ background: "var(--tk-surface)", border: `1px solid ${hasAlerts ? "rgba(239,68,68,0.3)" : "var(--tk-border)"}`, borderRadius: 12, overflow: "hidden" }}>
+                {/* Member header row */}
+                <div
+                  onClick={() => toggleExpand(m.user_id)}
+                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", cursor: "pointer", userSelect: "none" }}
+                >
+                  {/* Avatar */}
+                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--tk-accent)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: "#fff", flexShrink: 0 }}>
+                    {m.name.slice(0, 2).toUpperCase()}
+                  </div>
+
+                  {/* Name + role */}
+                  <div style={{ flex: "0 0 160px", minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: "var(--tk-text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name}</div>
+                    <div style={{ fontSize: 11, color: "var(--tk-text-muted)", marginTop: 1 }}>{m.role?.replace(/_/g, " ")}</div>
+                  </div>
+
+                  {/* Status chips */}
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", flex: 1 }}>
+                    {m.inProgress.length > 0 && <span style={{ padding: "2px 8px", borderRadius: 99, background: "rgba(59,130,246,0.15)", color: "#3b82f6", fontSize: 11, fontWeight: 700 }}>🔵 {m.inProgress.length} in progress</span>}
+                    {m.inReview.length > 0 && <span style={{ padding: "2px 8px", borderRadius: 99, background: "rgba(139,92,246,0.15)", color: "#8b5cf6", fontSize: 11, fontWeight: 700 }}>🟣 {m.inReview.length} in review</span>}
+                    {m.todo.length > 0 && <span style={{ padding: "2px 8px", borderRadius: 99, background: "rgba(100,116,139,0.15)", color: "#64748b", fontSize: 11, fontWeight: 700 }}>⚪ {m.todo.length} to do</span>}
+                    {m.overdue.length > 0 && <span style={{ padding: "2px 8px", borderRadius: 99, background: "rgba(239,68,68,0.15)", color: "#ef4444", fontSize: 11, fontWeight: 700 }}>🔴 {m.overdue.length} overdue</span>}
+                    {m.blocked.length > 0 && <span style={{ padding: "2px 8px", borderRadius: 99, background: "rgba(239,68,68,0.12)", color: "#ef4444", fontSize: 11, fontWeight: 700, border: "1px solid rgba(239,68,68,0.4)" }}>🚫 {m.blocked.length} blocked</span>}
+                    {m.stale.length > 0 && <span style={{ padding: "2px 8px", borderRadius: 99, background: "rgba(245,158,11,0.12)", color: "#f59e0b", fontSize: 11, fontWeight: 700 }}>⏸ {m.stale.length} stale</span>}
+                    {m.dueToday.length > 0 && <span style={{ padding: "2px 8px", borderRadius: 99, background: "rgba(245,158,11,0.15)", color: "#f59e0b", fontSize: 11, fontWeight: 700 }}>📅 {m.dueToday.length} due today</span>}
+                    {m.waitingApproval.length > 0 && <span style={{ padding: "2px 8px", borderRadius: 99, background: "rgba(245,158,11,0.12)", color: "#f59e0b", fontSize: 11, fontWeight: 700 }}>⏳ {m.waitingApproval.length} pending approval</span>}
+                    {m.on_leave && <span style={{ padding: "2px 8px", borderRadius: 99, background: "rgba(100,116,139,0.12)", color: "#94a3b8", fontSize: 11, fontWeight: 700 }}>🏖 On leave</span>}
+                    {m.travel_mode && <span style={{ padding: "2px 8px", borderRadius: 99, background: "rgba(100,116,139,0.12)", color: "#94a3b8", fontSize: 11, fontWeight: 700 }}>✈ Travel</span>}
+                    {m.active.length === 0 && !m.on_leave && <span style={{ padding: "2px 8px", borderRadius: 99, background: "rgba(34,197,94,0.12)", color: "#22c55e", fontSize: 11, fontWeight: 700 }}>✓ No active tasks</span>}
+                  </div>
+
+                  {/* Load + Risk */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+                    <div style={{ width: 80 }}>
+                      <div style={{ height: 6, borderRadius: 99, background: "var(--tk-border)", overflow: "hidden" }}>
+                        <div style={{ height: "100%", borderRadius: 99, width: `${Math.min(m.load_percent || 0, 100)}%`, background: m.load_percent >= 100 ? "#ef4444" : m.load_percent >= 80 ? "#f59e0b" : "#22c55e", transition: "width 0.3s" }} />
+                      </div>
+                      <div style={{ fontSize: 10, color: "var(--tk-text-muted)", textAlign: "right", marginTop: 2 }}>{m.load_percent ?? "—"}%</div>
+                    </div>
+                    <span style={{ padding: "2px 8px", borderRadius: 99, background: RISK_BG[m.risk], color: RISK_COLORS[m.risk], fontSize: 11, fontWeight: 700, width: 56, textAlign: "center" }}>
+                      {m.risk}
+                    </span>
+                    <span style={{ fontSize: 16, color: "var(--tk-text-muted)", transition: "transform 0.2s", transform: isOpen ? "rotate(90deg)" : "rotate(0deg)" }}>›</span>
+                  </div>
+                </div>
+
+                {/* Expanded task table */}
+                {isOpen && visibleTasks.length > 0 && (
+                  <div style={{ borderTop: "1px solid var(--tk-border)" }}>
+                    {/* Column headers */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 120px 80px 100px 80px 160px", gap: 0, padding: "6px 16px", background: "var(--tk-surface-elevated, var(--tk-surface))", borderBottom: "1px solid var(--tk-border)" }}>
+                      {["Task", "Status", "Priority", "Due", "Updated", "Actions"].map(h => (
+                        <div key={h} style={{ fontSize: 11, fontWeight: 700, color: "var(--tk-text-muted)", textTransform: "uppercase", letterSpacing: 0.5 }}>{h}</div>
+                      ))}
+                    </div>
+                    {visibleTasks.map(t => {
+                      const isOverdue = t.due_date && new Date(t.due_date) < today && t.status !== "done";
+                      const isStale   = t.updated_at && new Date(t.updated_at) < staleThreshold;
+                      return (
+                        <div key={t.id} style={{ display: "grid", gridTemplateColumns: "1fr 120px 80px 100px 80px 160px", gap: 0, padding: "8px 16px", borderBottom: "1px solid var(--tk-border)", background: isOverdue ? "rgba(239,68,68,0.04)" : "transparent", alignItems: "center" }}>
+                          {/* Task name */}
+                          <div style={{ fontSize: 13, color: "var(--tk-text-primary)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 8 }}>
+                            {t.title}
+                            {t.blocked_reason && <div style={{ fontSize: 11, color: "#ef4444", marginTop: 2 }}>⛔ {t.blocked_reason}</div>}
+                          </div>
+                          {/* Status */}
+                          <div>
+                            <span style={{ padding: "2px 8px", borderRadius: 99, background: `${STATUS_COLOR[t.status] || "#64748b"}20`, color: STATUS_COLOR[t.status] || "#64748b", fontSize: 11, fontWeight: 700 }}>
+                              {t.status?.replace(/_/g, " ")}
+                            </span>
+                          </div>
+                          {/* Priority */}
+                          <div style={{ fontSize: 13 }}>{PRIORITY_ICON[t.priority] || "—"}</div>
+                          {/* Due */}
+                          <div style={{ fontSize: 12 }}>{formatDate(t.due_date)}</div>
+                          {/* Updated */}
+                          <div style={{ fontSize: 11, color: isStale ? "#f59e0b" : "var(--tk-text-muted)" }}>
+                            {t.updated_at ? timeAgoShort(t.updated_at) : "—"}
+                          </div>
+                          {/* Actions */}
+                          <div style={{ display: "flex", gap: 4 }}>
+                            <button
+                              onClick={() => { setReassignTask(t); setReassignTo(""); }}
+                              style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid var(--tk-border)", background: "var(--tk-surface)", color: "var(--tk-text-secondary)", fontSize: 11, cursor: "pointer" }}
+                              title="Reassign task"
+                            >↪ Reassign</button>
+                            {t.priority !== "high" && (
+                              <button
+                                onClick={() => updateTask(t.id, { priority: "high" })}
+                                disabled={saving}
+                                style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid rgba(239,68,68,0.4)", background: "rgba(239,68,68,0.08)", color: "#ef4444", fontSize: 11, cursor: "pointer" }}
+                                title="Escalate to high priority"
+                              >🔴</button>
+                            )}
+                            {t.status !== "blocked" && (
+                              <button
+                                onClick={() => updateTask(t.id, { status: "blocked" })}
+                                disabled={saving}
+                                style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.06)", color: "#ef4444", fontSize: 11, cursor: "pointer" }}
+                                title="Mark as blocked"
+                              >🚫</button>
+                            )}
+                            {t.status === "blocked" && (
+                              <button
+                                onClick={() => updateTask(t.id, { status: "inprogress" })}
+                                disabled={saving}
+                                style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid rgba(34,197,94,0.4)", background: "rgba(34,197,94,0.08)", color: "#22c55e", fontSize: 11, cursor: "pointer" }}
+                                title="Unblock — mark in progress"
+                              >▶ Unblock</button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {visibleTasks.length === 0 && (
+                      <div style={{ padding: "16px", color: "var(--tk-text-muted)", fontSize: 13, textAlign: "center" }}>No tasks match filter</div>
+                    )}
+                  </div>
+                )}
+                {isOpen && visibleTasks.length === 0 && m.active.length > 0 && (
+                  <div style={{ borderTop: "1px solid var(--tk-border)", padding: "14px 16px", color: "var(--tk-text-muted)", fontSize: 13 }}>No tasks match the current priority filter</div>
+                )}
+                {isOpen && m.active.length === 0 && (
+                  <div style={{ borderTop: "1px solid var(--tk-border)", padding: "14px 16px", color: "var(--tk-text-muted)", fontSize: 13 }}>No active tasks — this member is fully available</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Unassigned tasks */}
+      {unassigned.length > 0 && filterMember === "all" && (
+        <div style={{ marginTop: 24 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: "var(--tk-text-primary)", marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ background: "rgba(245,158,11,0.15)", color: "#f59e0b", padding: "2px 10px", borderRadius: 99, fontSize: 12 }}>Unassigned</span>
+            <span style={{ color: "var(--tk-text-muted)", fontSize: 12 }}>{unassigned.length} task{unassigned.length !== 1 ? "s" : ""} with no owner</span>
+          </div>
+          <div style={{ background: "var(--tk-surface)", border: "1px solid rgba(245,158,11,0.3)", borderRadius: 12, overflow: "hidden" }}>
+            {unassigned.map((t, i) => (
+              <div key={t.id} style={{ display: "grid", gridTemplateColumns: "1fr 120px 80px 100px 160px", gap: 0, padding: "9px 16px", borderBottom: i < unassigned.length - 1 ? "1px solid var(--tk-border)" : "none", alignItems: "center" }}>
+                <div style={{ fontSize: 13, color: "var(--tk-text-primary)", fontWeight: 500 }}>{t.title}</div>
+                <div><span style={{ padding: "2px 8px", borderRadius: 99, background: `${STATUS_COLOR[t.status] || "#64748b"}20`, color: STATUS_COLOR[t.status] || "#64748b", fontSize: 11, fontWeight: 700 }}>{t.status?.replace(/_/g, " ")}</span></div>
+                <div style={{ fontSize: 13 }}>{PRIORITY_ICON[t.priority] || "—"}</div>
+                <div style={{ fontSize: 12, color: "var(--tk-text-muted)" }}>{formatDate(t.due_date)}</div>
+                <div style={{ display: "flex", gap: 4 }}>
+                  <button onClick={() => { setReassignTask(t); setReassignTo(""); }} style={{ padding: "3px 10px", borderRadius: 6, border: "1px solid var(--tk-accent)", background: "rgba(59,130,246,0.1)", color: "var(--tk-accent)", fontSize: 11, cursor: "pointer", fontWeight: 600 }}>Assign →</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Blocked tasks summary */}
+      {allBlocked.length > 0 && filterMember === "all" && filterStatus === "all" && (
+        <div style={{ marginTop: 24 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: "var(--tk-text-primary)", marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ background: "rgba(239,68,68,0.15)", color: "#ef4444", padding: "2px 10px", borderRadius: 99, fontSize: 12 }}>Blocked Tasks</span>
+            <span style={{ color: "var(--tk-text-muted)", fontSize: 12 }}>{allBlocked.length} task{allBlocked.length !== 1 ? "s" : ""} blocked across the team</span>
+          </div>
+          <div style={{ background: "var(--tk-surface)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 12, overflow: "hidden" }}>
+            {allBlocked.map((t, i) => (
+              <div key={t.id} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 16px", borderBottom: i < allBlocked.length - 1 ? "1px solid var(--tk-border)" : "none" }}>
+                <span style={{ fontSize: 16, flexShrink: 0 }}>🚫</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--tk-text-primary)" }}>{t.title}</div>
+                  {t.blocked_reason && <div style={{ fontSize: 12, color: "#ef4444", marginTop: 3 }}>Reason: {t.blocked_reason}</div>}
+                  {t.assignee_name && <div style={{ fontSize: 11, color: "var(--tk-text-muted)", marginTop: 2 }}>Assigned to {t.assignee_name}</div>}
+                </div>
+                <button
+                  onClick={() => updateTask(t.id, { status: "inprogress" })}
+                  disabled={saving}
+                  style={{ padding: "4px 12px", borderRadius: 8, border: "1px solid rgba(34,197,94,0.4)", background: "rgba(34,197,94,0.08)", color: "#22c55e", fontSize: 12, cursor: "pointer", fontWeight: 600, flexShrink: 0 }}
+                >▶ Unblock</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Reassign modal */}
+      {reassignTask && (
+        <div className="modal-overlay" onClick={() => setReassignTask(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2 className="modal-title">Reassign Task</h2>
+              <button className="modal-close" onClick={() => setReassignTask(null)}>✕</button>
+            </div>
+            <div style={{ padding: "12px 0" }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: "var(--tk-text-primary)", marginBottom: 12 }}>"{reassignTask.title}"</div>
+              <label className="modal-label">Assign to</label>
+              <select
+                className="modal-input"
+                value={reassignTo}
+                onChange={e => setReassignTo(e.target.value)}
+                autoFocus
+              >
+                <option value="">Select member…</option>
+                <option value="__unassigned__">Unassigned</option>
+                {team.map(m => (
+                  <option key={m.user_id} value={String(m.user_id)}>
+                    {m.name} ({m.load_percent ?? 0}% load)
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="modal-actions">
+              <button className="btn-modal-cancel" onClick={() => setReassignTask(null)}>Cancel</button>
+              <button
+                className="btn-modal-save"
+                disabled={!reassignTo || saving}
+                onClick={async () => {
+                  const newAssignee = reassignTo === "__unassigned__" ? null : parseInt(reassignTo);
+                  await updateTask(reassignTask.id, { assigned_user_id: newAssignee });
+                  setReassignTask(null);
+                }}
+              >
+                {saving ? "Saving…" : "Reassign"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function timeAgoShort(dateStr) {
   const diff = (Date.now() - new Date(dateStr)) / 1000;
@@ -667,7 +1115,7 @@ export default function ManagerDashboard({ workspaceId, workspaceName, onNavigat
   const [predError,   setPredError]   = useState("");
   const [loading,     setLoading]     = useState(true);
   const [editMember,  setEditMember]  = useState(null);
-  const [activeTab,   setActiveTab]   = useState("dashboard");
+  const [activeTab,   setActiveTab]   = useState("team_intel");
 
   const canManage = user?.role === "manager" || user?.role === "super_boss";
 
@@ -712,8 +1160,9 @@ export default function ManagerDashboard({ workspaceId, workspaceName, onNavigat
     ? Math.round(team.filter(m => !m.on_leave).reduce((s, m) => s + (m.load_percent || 0), 0) / Math.max(1, team.filter(m => !m.on_leave).length))
     : 0;
 
-  const TABS = ["dashboard", "workload", "members", "predictions", "approvals", "collab", "channel"];
+  const TABS = ["team_intel", "dashboard", "workload", "members", "predictions", "approvals", "collab", "channel"];
   const TAB_LABELS = {
+    team_intel:  "👁 Team Intel",
     dashboard:   "🗂️ Overview",
     workload:    "👥 Workload & Capacity",
     members:     "👤 Members",
@@ -760,6 +1209,13 @@ export default function ManagerDashboard({ workspaceId, workspaceName, onNavigat
           </button>
         ))}
       </div>
+
+      {activeTab === "team_intel" && (
+        <div className="mgr-panel">
+          <div className="mgr-panel-title" style={{ marginBottom: 16 }}>👁 Team Intelligence — Single Pane of Glass</div>
+          <TeamIntelPanel workspaceId={workspaceId} team={team} />
+        </div>
+      )}
 
       {activeTab === "dashboard" && (
         <ManagerOverview

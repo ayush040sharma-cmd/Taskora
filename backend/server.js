@@ -206,8 +206,9 @@ app.use("/api/teams",         require("./routes/teams"));
 app.use("/api/import",        require("./routes/import"));
 app.use("/api/analytics",     require("./routes/analytics"));
 
-// ── System info (no auth — read-only OS stats, no secrets exposed) ───────────
-app.get("/sysinfo", (req, res) => {
+// ── System info (admin only) ──────────────────────────────────────────────────
+const authMiddleware = require("./middleware/auth");
+app.get("/sysinfo", authMiddleware, (req, res) => {
   const os = require("os");
   const cpus = os.cpus();
   const totalMem = os.totalmem();

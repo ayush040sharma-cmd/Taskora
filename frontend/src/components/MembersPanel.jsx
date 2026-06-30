@@ -71,6 +71,27 @@ function StatusBadge({ member }) {
     );
   }
 
+  const load = member.load_percent ?? 0;
+  if (load >= 100) {
+    return (
+      <span style={{
+        background: "rgba(239,68,68,0.15)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)",
+        borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 600,
+      }}>
+        🔴 Overloaded ({load}%)
+      </span>
+    );
+  }
+  if (load >= 80) {
+    return (
+      <span style={{
+        background: "rgba(245,158,11,0.15)", color: "#d97706", border: "1px solid rgba(245,158,11,0.3)",
+        borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 600,
+      }}>
+        🟡 High load ({load}%)
+      </span>
+    );
+  }
   return (
     <span style={{
       background: "#f0fdf4", color: "#15803d", border: "1px solid #bbf7d0",

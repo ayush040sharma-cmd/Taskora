@@ -518,21 +518,163 @@ function ActivityFeed({ workspaceId }) {
   );
 }
 
-// ─── Main ManagerOverview ─────────────────────────────────────────────────────
-export default function ManagerOverview({ workspaceId, team = [], onNavigateToSimulate }) {
-  const [tasks,   setTasks]   = useState([]);
-  const [loading, setLoading] = useState(true);
+// ─── CategoryChart ────────────────────────────────────────────────────────────
+function CategoryChart({ tasks, team }) {
+  const TYPE_COLORS = {
+    task: HC.accent, bug: HC.danger, story: "#8b5cf6", rfp: "#f59e0b",
+    proposal: "#06b6d4", presentation: "#ec4899", upgrade: "#14b8a6",
+    poc: "#a78bfa",
+  };
+  const activeTasks = tasks.filter(t => t.status !== "done");
+  const memberMap = {};
+  activeTasks.forEach(t => {
+    const name = t.assignee_name?.split(" ")[0] || "Unassigned";
+    const type = t.task_type || t.type || "task";
+    if (!memberMap[name]) memberMap[name] = {};
+    memberMap[name][type] = (memberMap[name][type] || 0) + 1;
+  });
+  const entries = Object.entries(memberMap).slice(0, 6);
+  if (!entries.length) return (
+    <div style={{ color:C.muted, textAlign:"center", padding:"36px 0", fontSize:13 }}>No active tasks to categorize</div>
+  );
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:14, marginTop:8 }}>
+      {entries.map(([name, types]) => {
+        const total = Object.values(types).reduce((s,v)=>s+v,0);
+        return (
+          <div key={name}>
+            <div style={{ display:"flex", justifyContent:"space-between", fontSize:12, marginBottom:5 }}>
+              <span style={{ fontWeight:600, color:C.text }}>{name}</span>
+              <span style={{ color:C.muted }}>{total} tasks</span>
+            </div>
+            <div style={{ display:"flex", height:20, borderRadius:6, overflow:"hidden", gap:2 }}>
+              {Object.entries(types).map(([type,count])=>(
+                <div key={type} title={`${type}: ${count}`}
+                  style={{ flex:count, background:TYPE_COLORS[type]||HC.muted, minWidth:4, display:"flex", alignItems:"center", justifyContent:"center", transition:"flex 0.4s" }}>
+                  {count>1&&<span style={{ fontSize:9, color:"#fff", fontWeight:700 }}>{count}</span>}
+                </div>
+              ))}
+            </div>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:4 }}>
+              {Object.entries(types).map(([type,count])=>(
+                <span key={type} style={{ fontSize:10, color:TYPE_COLORS[type]||HC.muted, fontWeight:600 }}>{type} {count}</span>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
-  const load = useCallback(async () => {
+// ─── VelocityChart ────────────────────────────────────────────────────────────
+function VelocityChart({ tasks, team }) {
+  const weekAgo = new Date(Date.now() - 7*86400000);
+  const done = tasks.filter(t => t.status==="done" && t.status_changed_at && new Date(t.status_changed_at)>=weekAgo);
+  const byMember = {};
+  done.forEach(t => {
+    const name = t.assignee_name?.split(" ")[0] || "Unassigned";
+    byMember[name] = (byMember[name]||0) + 1;
+  });
+  const entries = Object.entries(byMember).sort((a,b)=>b[1]-a[1]);
+  if (!entries.length) return (
+    <div style={{ color:C.muted, textAlign:"center", padding:"36px 0", fontSize:13 }}>No tasks completed this week yet</div>
+  );
+  const max = Math.max(...entries.map(([,v])=>v), 1);
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:12, marginTop:8 }}>
+      {entries.map(([name,count])=>(
+        <div key={name} style={{ display:"flex", alignItems:"center", gap:12 }}>
+          <div style={{ width:70, fontSize:13, fontWeight:600, color:C.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{name}</div>
+          <div className="tk-progress-track" style={{ flex:1, height:10, borderRadius:5 }}>
+            <div style={{ height:"100%", width:`${(count/max)*100}%`, background:HC.ok, borderRadius:5, transition:"width 0.6s" }} />
+          </div>
+          <div style={{ width:24, textAlign:"right", fontSize:15, fontWeight:800, color:HC.ok }}>{count}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── TeamActivityFeed ─────────────────────────────────────────────────────────
+function TeamActivityFeed({ tasks, workspaceId }) {
+  const [logs, setLogs] = useState([]);
+  useEffect(() => {
     if (!workspaceId) return;
-    setLoading(true);
-    try {
-      const r = await api.get(`/tasks/workspace/${workspaceId}`);
-      setTasks(r.data || []);
-    } catch {} finally { setLoading(false); }
+    api.get(`/audit?workspace_id=${workspaceId}&limit=20`)
+      .then(r => setLogs(r.data||[])).catch(()=>{});
   }, [workspaceId]);
 
+  const ICON = {
+    task_assigned:"📋", task_created:"➕", task_completed:"✅", task_updated:"✏️",
+    approval_requested:"⏳", approval_approved:"✅", approval_rejected:"❌",
+    capacity_changed:"⚙️", travel_mode_on:"✈️", leave_started:"🏖️",
+  };
+
+  const recentTasks = [...tasks]
+    .sort((a,b)=>new Date(b.status_changed_at||b.created_at||0)-new Date(a.status_changed_at||a.created_at||0))
+    .slice(0,8)
+    .map(t=>({
+      id:`t-${t.id}`, ts:t.status_changed_at||t.created_at,
+      actor:t.assignee_name||"Unassigned",
+      action:t.status==="done"?"completed":t.status==="blocked"?"blocked":"updated",
+      taskTitle:t.title,
+      icon:t.status==="done"?"✅":t.status==="blocked"?"🚫":"📝",
+    }));
+
+  const logEvents = logs.slice(0,12).map(l=>({
+    id:`l-${l.id}`, ts:l.created_at,
+    actor:l.actor_name||"Someone",
+    action:l.action?.replace(/_/g," "),
+    taskTitle:l.meta?.task_title,
+    icon:ICON[l.action]||"📝",
+  }));
+
+  const combined = [...logEvents, ...recentTasks.filter(te=>!logEvents.some(le=>le.taskTitle===te.taskTitle))]
+    .sort((a,b)=>new Date(b.ts)-new Date(a.ts)).slice(0,16);
+
+  if (!combined.length) return (
+    <div style={{ color:C.muted, textAlign:"center", padding:"32px 0", fontSize:13 }}>No recent activity</div>
+  );
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column" }}>
+      {combined.map((e,i)=>(
+        <div key={e.id} style={{ display:"flex", alignItems:"flex-start", gap:12, padding:"10px 0", borderBottom:i<combined.length-1?`1px solid ${C.border}`:"none" }}>
+          <div style={{ width:34, height:34, borderRadius:"50%", background:`${HC.accent}20`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:15, flexShrink:0 }}>
+            {e.icon}
+          </div>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ fontSize:13, color:C.text, lineHeight:1.4 }}>
+              <strong>{e.actor}</strong>{" "}
+              <span style={{ color:C.secondary }}>{e.action}</span>
+              {e.taskTitle&&<span style={{ color:HC.accent }}> "{e.taskTitle}"</span>}
+            </div>
+            <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>{timeAgo(e.ts)}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Main ManagerOverview ─────────────────────────────────────────────────────
+export default function ManagerOverview({ workspaceId, team = [], tasks: propTasks, onNavigateToSimulate }) {
+  const [ownTasks, setOwnTasks] = useState([]);
+  const [loading,  setLoading]  = useState(!propTasks);
+
+  const load = useCallback(async () => {
+    if (!workspaceId || propTasks) return;
+    setLoading(true);
+    try {
+      const r = await api.get(`/tasks/team-intel/${workspaceId}`);
+      setOwnTasks(r.data || []);
+    } catch {} finally { setLoading(false); }
+  }, [workspaceId, propTasks]);
+
   useEffect(() => { load(); }, [load]);
+
+  const tasks = propTasks ?? ownTasks;
 
   if (!workspaceId) return null;
 
@@ -621,13 +763,13 @@ export default function ManagerOverview({ workspaceId, team = [], onNavigateToSi
         </div>
 
         <div className="mo-card">
-          <div className="mo-card-title">Task Status</div>
-          <div className="mo-card-sub">Overall progress breakdown</div>
-          <StatusChart tasks={tasks} />
+          <div className="mo-card-title">Task Distribution by Category</div>
+          <div className="mo-card-sub">Work type breakdown per member</div>
+          <CategoryChart tasks={tasks} team={team} />
         </div>
       </div>
 
-      {/* Priority + Weekly Progress */}
+      {/* Priority + Velocity by Member */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1.6fr", gap: 18 }}>
         <div className="mo-card">
           <div className="mo-card-title">Open Tasks by Priority</div>
@@ -636,9 +778,9 @@ export default function ManagerOverview({ workspaceId, team = [], onNavigateToSi
         </div>
 
         <div className="mo-card">
-          <div className="mo-card-title">Daily Completions</div>
-          <div className="mo-card-sub">Tasks marked done over the last 7 days</div>
-          <ProgressChart tasks={tasks} />
+          <div className="mo-card-title">Team Velocity — This Week</div>
+          <div className="mo-card-sub">Tasks completed per member in last 7 days</div>
+          <VelocityChart tasks={tasks} team={team} />
         </div>
       </div>
 
@@ -671,15 +813,18 @@ export default function ManagerOverview({ workspaceId, team = [], onNavigateToSi
         </div>
       </div>
 
-      {/* Activity + Task List */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 18 }}>
-        <div className="mo-card">
-          <div className="mo-card-title">Recent Activity</div>
-          <div className="mo-card-sub" style={{ marginBottom: 14 }}>Latest team actions</div>
-          <ActivityFeed workspaceId={workspaceId} />
+      {/* Merged Team Activity Feed */}
+      <div className="mo-card">
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+          <div>
+            <div className="mo-card-title">Team Activity Feed</div>
+            <div className="mo-card-sub">Live stream of task updates, completions, and assignments</div>
+          </div>
+          <span style={{ fontSize:12, background:C.bg, color:C.secondary, padding:"3px 10px", borderRadius:20, border:`1px solid ${C.border}` }}>
+            {tasks.length} total tasks
+          </span>
         </div>
-
-        <TaskList tasks={tasks} />
+        <TeamActivityFeed tasks={tasks} workspaceId={workspaceId} />
       </div>
     </div>
   );

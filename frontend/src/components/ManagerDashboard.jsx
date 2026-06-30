@@ -180,21 +180,49 @@ function CapacityEditModal({ member, workspaceId, onClose, onSaved }) {
 }
 
 // ── AI Prediction Panel ───────────────────────────────────────────────────────
-function PredictionPanel({ predictions, loading, error }) {
+function PredictionPanel({ predictions, loading, error, team = [], tasks = [] }) {
   if (loading) return <div className="mgr-empty-note">Loading AI predictions…</div>;
   if (error)   return <div className="mgr-empty-note" style={{ color: "var(--tk-status-danger)" }}>Could not load predictions. {error}</div>;
-  if (!predictions?.length) return (
-    <div className="mgr-empty-note">
-      No team members found to predict. Add members to this workspace first.
-    </div>
+
+  const displayPredictions = predictions?.length > 0 ? predictions : (() => {
+    if (!team.length) return [];
+    const today = new Date(); today.setHours(0,0,0,0);
+    return team.map(m => {
+      const mine    = tasks.filter(t => (String(t.assigned_user_id)===String(m.user_id)||String(t.effective_assignee_id)===String(m.user_id)) && t.status!=="done");
+      const overdue = mine.filter(t => t.due_date && new Date(t.due_date) < today).length;
+      const blocked = mine.filter(t => t.status==="blocked").length;
+      const load    = m.load_percent || Math.min(140, mine.length * 11);
+      const risk    = load>=100||overdue>=2 ? "high" : load>=80||overdue>=1||blocked>=1 ? "medium" : "low";
+      const peak    = Math.min(150, load + overdue*12 + blocked*8);
+      return {
+        user_id: m.user_id, name: m.name,
+        prediction: {
+          risk, peak_load: peak, burnout_risk: load>=110, on_leave: m.on_leave,
+          summary: `${mine.length} active · ${overdue} overdue · ${blocked} blocked`,
+          days: Array.from({length:14},(_,i)=>({
+            date: new Date(Date.now()+i*86400000).toISOString().split("T")[0],
+            load_percent: Math.max(0,Math.min(150,peak-(i>7?(i-7)*4:0)+Math.round((Math.random()-0.5)*6))),
+          })),
+        },
+      };
+    });
+  })();
+
+  if (!displayPredictions.length) return (
+    <div className="mgr-empty-note">No team members found. Add members to this workspace first.</div>
   );
 
-  const at_risk = predictions.filter(p => p.prediction.risk === "high" || p.prediction.burnout_risk);
+  const at_risk = displayPredictions.filter(p => p.prediction.risk === "high" || p.prediction.burnout_risk);
 
   return (
     <div className="mgr-predict-panel">
       <div className="tk-eyebrow" style={{ marginBottom: 16 }}>🤖 AI Workload Prediction — 14 days</div>
-      {predictions.map(p => {
+      {!predictions?.length && (
+        <div style={{ padding:"8px 14px", background:"rgba(59,130,246,0.08)", border:"1px solid rgba(59,130,246,0.2)", borderRadius:8, fontSize:12, color:"var(--tk-accent)", marginBottom:16 }}>
+          Showing locally computed predictions based on current workload data.
+        </div>
+      )}
+      {displayPredictions.map(p => {
         const riskColor = p.prediction.risk === "high" ? "var(--tk-status-danger)"
                         : p.prediction.risk === "medium" ? "var(--tk-status-warn)"
                         : "var(--tk-status-ok)";
@@ -216,6 +244,7 @@ function PredictionPanel({ predictions, loading, error }) {
               {p.prediction.risk === "on_leave" ? "On leave" : `${p.prediction.peak_load}% peak`}
             </span>
             {p.prediction.burnout_risk && <span className="mgr-burnout-tag">🔥 burnout risk</span>}
+            {p.prediction.summary && <div style={{ fontSize:11, color:"var(--tk-text-muted)", marginTop:3, paddingLeft:2 }}>{p.prediction.summary}</div>}
           </div>
         );
       })}
@@ -723,7 +752,8 @@ function TeamIntelPanel({ workspaceId, team }) {
 
       {/* Hover popover */}
       {hoveredKpi && (
-        <div style={{ position:"fixed", left:Math.min(hoverPos.x, window.innerWidth-260), top:hoverPos.y, zIndex:9000, background:"var(--tk-surface)", border:"1px solid var(--tk-border)", borderRadius:10, boxShadow:"0 8px 32px rgba(0,0,0,0.25)", padding:"12px 16px", minWidth:220, pointerEvents:"none" }}>
+        <div style={{ position:"fixed", left:Math.min(hoverPos.x, window.innerWidth-260), top:hoverPos.y, zIndex:9000, background:"var(--tk-surface)", border:"1px solid var(--tk-border)", borderRadius:12, boxShadow:"0 16px 48px rgba(0,0,0,0.3)", padding:"14px 18px", minWidth:240, pointerEvents:"none", animation:"kpiHoverIn 0.15s ease" }}>
+          <style>{`@keyframes kpiHoverIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}`}</style>
           {hoveredKpi==="active" && <>
             <div style={{ fontWeight:700, fontSize:12, marginBottom:8, color:"var(--tk-text-primary)" }}>Active Tasks — {activeTasks}</div>
             {activeByMember.length>0 && <>
@@ -1553,6 +1583,7 @@ export default function ManagerDashboard({ workspaceId, workspaceName, onNavigat
   const [loading,     setLoading]     = useState(true);
   const [editMember,  setEditMember]  = useState(null);
   const [activeTab,   setActiveTab]   = useState("team_intel");
+  const [teamTasks,   setTeamTasks]   = useState([]);
 
   const canManage = user?.role === "manager" || user?.role === "super_boss";
 
@@ -1577,7 +1608,22 @@ export default function ManagerDashboard({ workspaceId, workspaceName, onNavigat
     setLoading(false);
   }, [workspaceId, canManage]);
 
+  const loadTeamTasks = useCallback(async () => {
+    if (!workspaceId || !canManage) return;
+    try {
+      const r = await api.get(`/tasks/team-intel/${workspaceId}`);
+      setTeamTasks(r.data || []);
+    } catch {}
+  }, [workspaceId, canManage]);
+
   useEffect(() => { loadTeam(); }, [loadTeam]);
+  useEffect(() => { loadTeamTasks(); }, [loadTeamTasks]);
+
+  useSocket(workspaceId, {
+    "task:created": loadTeamTasks,
+    "task:updated": loadTeamTasks,
+    "task:deleted": loadTeamTasks,
+  });
 
   if (!canManage) {
     return (
@@ -1658,13 +1704,14 @@ export default function ManagerDashboard({ workspaceId, workspaceName, onNavigat
         <ManagerOverview
           workspaceId={workspaceId}
           team={team}
+          tasks={teamTasks}
           onNavigateToSimulate={() => { if (onNavigate) onNavigate("simulation"); }}
         />
       )}
 
       {activeTab === "workload" && (
         <div>
-          <WorkloadDashboard workspaceId={workspaceId} />
+          <WorkloadDashboard workspaceId={workspaceId} teamTasks={teamTasks} teamMembers={team} />
           <div style={{ marginTop: 24 }}>
             <div className="mgr-panel-title" style={{ marginBottom: 12, paddingLeft: 4 }}>⚙️ Team Capacity</div>
             <div className="mgr-team-grid">
@@ -1678,7 +1725,7 @@ export default function ManagerDashboard({ workspaceId, workspaceName, onNavigat
       {activeTab === "members" && <MembersPanel workspaceId={workspaceId} />}
 
       {activeTab === "predictions" && (
-        <PredictionPanel predictions={predictions} loading={predLoading} error={predError} />
+        <PredictionPanel predictions={predictions} loading={predLoading} error={predError} team={team} tasks={teamTasks} />
       )}
 
       {activeTab === "approvals" && (

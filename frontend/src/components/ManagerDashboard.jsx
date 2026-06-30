@@ -533,7 +533,7 @@ function TeamIntelPanel({ workspaceId, team }) {
     if (filterStatus === "blocked") return t.status === "blocked";
     if (filterStatus === "overdue") return t.due_date && new Date(t.due_date) < today && t.status !== "done";
     if (filterStatus === "today")   return t.due_date && new Date(t.due_date) >= today && new Date(t.due_date) <= todayEnd;
-    if (filterStatus === "stale")   return t.updated_at && new Date(t.updated_at) < staleThreshold && t.status !== "done";
+    if (filterStatus === "stale")   return t.status_changed_at && new Date(t.status_changed_at) < staleThreshold && t.status !== "done";
     if (filterStatus === "done")    return t.status === "done";
     return true; // "all"
   }).filter(t => {
@@ -556,7 +556,7 @@ function TeamIntelPanel({ workspaceId, team }) {
     const inProgress = allMine.filter(t => ["inprogress","in_progress"].includes(t.status));
     const inReview   = allMine.filter(t => t.status === "review");
     const todo       = allMine.filter(t => ["todo","pending_approval"].includes(t.status));
-    const stale      = allMine.filter(t => t.updated_at && new Date(t.updated_at) < staleThreshold);
+    const stale      = allMine.filter(t => t.status_changed_at && new Date(t.status_changed_at) < staleThreshold);
     const dueToday   = allMine.filter(t => t.due_date && new Date(t.due_date) >= today && new Date(t.due_date) <= todayEnd);
     const dueWeek    = allMine.filter(t => t.due_date && new Date(t.due_date) > todayEnd && new Date(t.due_date) <= endOfWeek);
 
@@ -605,7 +605,7 @@ function TeamIntelPanel({ workspaceId, team }) {
   const activeTasks  = tasks.filter(t => t.status !== "done").length;
   const overdueCount = tasks.filter(t => t.due_date && new Date(t.due_date) < today && t.status !== "done").length;
   const blockedCount = tasks.filter(t => t.status === "blocked").length;
-  const staleCount   = tasks.filter(t => t.updated_at && new Date(t.updated_at) < staleThreshold && t.status !== "done").length;
+  const staleCount   = tasks.filter(t => t.status_changed_at && new Date(t.status_changed_at) < staleThreshold && t.status !== "done").length;
   const unassignedCount = tasks.filter(t => !t.assigned_user_id && t.status !== "done").length;
   const highRiskCount   = memberData.filter(m => m.risk === "high").length;
 
@@ -800,7 +800,7 @@ function TeamIntelPanel({ workspaceId, team }) {
                 {memberTasks.map(t => {
                   const due   = formatDue(t.due_date);
                   const isOverdue = t.due_date && new Date(t.due_date) < today && t.status !== "done";
-                  const isStale   = t.updated_at && new Date(t.updated_at) < staleThreshold;
+                  const isStale   = t.status_changed_at && new Date(t.status_changed_at) < staleThreshold;
 
                   return (
                     <div key={t.id} style={{ display:"grid", gridTemplateColumns:"1fr 110px 90px 70px 70px 80px 90px 80px 200px", padding:"8px 16px", borderBottom:"1px solid var(--tk-border)", background: isOverdue?"rgba(239,68,68,0.04)":"transparent", alignItems:"center" }}>
@@ -833,8 +833,8 @@ function TeamIntelPanel({ workspaceId, team }) {
                       {/* Due */}
                       <div style={{ fontSize:11, color:due.color, fontWeight: due.bold?700:400, whiteSpace:"nowrap" }}>{due.label}</div>
                       {/* Updated */}
-                      <div style={{ fontSize:11, color: isStale?"#f59e0b":"var(--tk-text-muted)" }} title={t.updated_at ? new Date(t.updated_at).toLocaleString() : ""}>
-                        {t.updated_at ? timeAgoShort(t.updated_at) : "—"}
+                      <div style={{ fontSize:11, color: isStale?"#f59e0b":"var(--tk-text-muted)" }} title={t.status_changed_at ? new Date(t.status_changed_at).toLocaleString() : ""}>
+                        {t.status_changed_at ? timeAgoShort(t.status_changed_at) : "—"}
                       </div>
                       {/* Actions */}
                       <div style={{ display:"flex", gap:3, flexWrap:"wrap" }}>

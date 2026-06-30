@@ -75,62 +75,39 @@ router.get("/team-intel/:workspaceId", auth, async (req, res) => {
     if (!memberRes.rows.length) return res.json([]);
     const memberIds = memberRes.rows.map(r => r.user_id);
 
-    // Get all workspace IDs owned by members (their personal workspaces)
-    const wsListRes = await pool.query(
-      `SELECT id FROM workspaces WHERE user_id = ANY($1::int[])`,
-      [memberIds]
-    );
-    const memberWsIds = wsListRes.rows.map(r => r.id);
-
-    // All workspace IDs to scan (deduplicated)
-    const allWsIds = [...new Set(memberWsIds)];
-
-    const COLS = `
-      t.*,
-      COALESCE(t.assigned_user_id, w.user_id) AS effective_assignee_id,
-      COALESCE(u.name,  wo.name)              AS assignee_name,
-      COALESCE(u.email, wo.email)             AS assignee_email,
-      uc.on_leave     AS assignee_on_leave,
-      uc.travel_mode  AS assignee_travel_mode,
-      uc.daily_hours  AS assignee_daily_hours,
-      w.name          AS workspace_name,
-      w.user_id       AS workspace_owner_id
-    `;
-    const JOINS = `
-      LEFT JOIN users         u   ON t.assigned_user_id = u.id
-      LEFT JOIN workspaces    w   ON t.workspace_id = w.id
-      LEFT JOIN users         wo  ON w.user_id = wo.id
-      LEFT JOIN user_capacity uc  ON u.id = uc.user_id
-    `;
-
-    // Query 1 — tasks explicitly assigned to any member (across all workspaces)
-    const assignedRes = await pool.query(
-      `SELECT ${COLS} FROM tasks t ${JOINS}
-       WHERE t.assigned_user_id = ANY($1::int[])`,
+    // Single query: tasks assigned to any member OR in any member-owned workspace
+    // NOTE: tasks table has no updated_at — use status_changed_at for ordering
+    const taskRes = await pool.query(
+      `SELECT t.*,
+              COALESCE(t.assigned_user_id, w.user_id)  AS effective_assignee_id,
+              COALESCE(u.name,  wo.name)                AS assignee_name,
+              COALESCE(u.email, wo.email)               AS assignee_email,
+              uc.on_leave     AS assignee_on_leave,
+              uc.travel_mode  AS assignee_travel_mode,
+              uc.daily_hours  AS assignee_daily_hours,
+              w.name          AS workspace_name,
+              w.user_id       AS workspace_owner_id,
+              s.name          AS sprint_name,
+              (SELECT COUNT(*) FROM task_comments c WHERE c.task_id = t.id)::int  AS comment_count,
+              (SELECT COUNT(*) FROM task_dependencies td
+               JOIN tasks dep ON td.depends_on_task_id = dep.id
+               WHERE td.task_id = t.id AND dep.status != 'done')::int            AS blocking_dep_count
+       FROM tasks t
+       LEFT JOIN users         u   ON t.assigned_user_id = u.id
+       LEFT JOIN workspaces    w   ON t.workspace_id = w.id
+       LEFT JOIN users         wo  ON w.user_id = wo.id
+       LEFT JOIN user_capacity uc  ON u.id = uc.user_id
+       LEFT JOIN sprints        s  ON t.sprint_id = s.id
+       WHERE t.assigned_user_id = ANY($1::int[])
+          OR t.workspace_id IN (SELECT id FROM workspaces WHERE user_id = ANY($1::int[]))
+       ORDER BY
+         CASE WHEN t.status = 'blocked' THEN 0 ELSE 1 END,
+         t.due_date ASC NULLS LAST,
+         t.status_changed_at DESC NULLS LAST`,
       [memberIds]
     );
 
-    // Query 2 — tasks inside member-owned workspaces not already captured above
-    let wsRows = [];
-    if (allWsIds.length > 0) {
-      const wsRes = await pool.query(
-        `SELECT ${COLS} FROM tasks t ${JOINS}
-         WHERE t.workspace_id = ANY($1::int[])
-           AND (t.assigned_user_id IS NULL OR NOT (t.assigned_user_id = ANY($2::int[])))`,
-        [allWsIds, memberIds]
-      );
-      wsRows = wsRes.rows;
-    }
-
-    // Merge, deduplicate by task id, sort by updated_at
-    const seen = new Set();
-    const merged = [...assignedRes.rows, ...wsRows].filter(r => {
-      if (seen.has(r.id)) return false;
-      seen.add(r.id);
-      return true;
-    }).sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
-
-    res.json(merged);
+    res.json(taskRes.rows);
   } catch (err) {
     console.error("Team Intel error:", err);
     res.status(500).json({ message: "Team Intel query failed", detail: err.message });

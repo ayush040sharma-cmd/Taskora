@@ -20,6 +20,15 @@ const authLimiter = rateLimit({
   message: { message: "Too many attempts. Please try again in 15 minutes." },
 });
 
+// Separate, lenient limiter for forgot-password (5 per hour — independent of login attempts)
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many password reset requests. Please try again in an hour." },
+});
+
 // Looser limiter for the demo endpoint — no credential to brute-force
 const demoLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -310,7 +319,7 @@ router.get("/google/status", (req, res) => {
 });
 
 // POST /api/auth/forgot-password — send reset link
-router.post("/forgot-password", authLimiter, validate(schemas.forgotPassword), async (req, res) => {
+router.post("/forgot-password", forgotPasswordLimiter, validate(schemas.forgotPassword), async (req, res) => {
   const { email } = req.body;
   // Always respond 200 to avoid email enumeration
   try {
@@ -324,9 +333,12 @@ router.post("/forgot-password", authLimiter, validate(schemas.forgotPassword), a
         "UPDATE users SET reset_token=$1, reset_token_expiry=$2 WHERE id=$3",
         [token, expiry, user.id]
       );
-      // Send email via Resend (falls back gracefully if RESEND_API_KEY not set)
       const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
       const resetLink   = `${frontendUrl}/reset-password?token=${token}`;
+
+      // Always log the link — visible in Render logs as a fallback if email fails
+      logger.info(`[password-reset] link generated for ${email} → ${resetLink}`);
+
       if (process.env.RESEND_API_KEY) {
         try {
           const { Resend } = require("resend");
@@ -336,39 +348,59 @@ router.post("/forgot-password", authLimiter, validate(schemas.forgotPassword), a
             to:      [email],
             subject: "Reset your Taskora password",
             html: `
-              <div style="font-family:sans-serif;max-width:480px;margin:auto">
-                <h2 style="color:#6366f1">Reset your password</h2>
-                <p>Hi ${user.name},</p>
-                <p>Click the button below to reset your Taskora password. This link expires in <strong>1 hour</strong>.</p>
-                <a href="${resetLink}" style="display:inline-block;padding:12px 24px;background:#6366f1;color:#fff;border-radius:8px;text-decoration:none;font-weight:700;margin:16px 0">
-                  Reset Password
-                </a>
-                <p style="color:#94a3b8;font-size:13px">If you didn't request this, you can safely ignore this email.</p>
-                <hr style="border:none;border-top:1px solid #f1f5f9">
-                <p style="color:#94a3b8;font-size:12px">Taskora · task management for modern teams</p>
-              </div>`,
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#020617;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#020617;padding:40px 0;">
+    <tr><td align="center">
+      <table width="520" cellpadding="0" cellspacing="0" style="background:#0B1220;border:1px solid #1E293B;border-radius:16px;overflow:hidden;">
+        <tr><td style="background:linear-gradient(90deg,#3B82F6,#06B6D4);height:4px;"></td></tr>
+        <tr><td style="padding:32px 40px 0;">
+          <table cellpadding="0" cellspacing="0"><tr>
+            <td style="background:linear-gradient(135deg,#3B82F6,#06B6D4);border-radius:8px;width:32px;height:32px;text-align:center;vertical-align:middle;">
+              <span style="color:#fff;font-size:16px;font-weight:700;line-height:32px;">T</span>
+            </td>
+            <td style="padding-left:10px;font-size:20px;font-weight:700;color:#E2E8F0;vertical-align:middle;">Taskora</td>
+          </tr></table>
+        </td></tr>
+        <tr><td style="padding:28px 40px 36px;">
+          <h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#E2E8F0;">Reset your password</h1>
+          <p style="margin:0 0 24px;font-size:15px;color:#94A3B8;line-height:1.6;">
+            Hi <strong style="color:#E2E8F0;">${user.name}</strong>, click below to reset your Taskora password.
+            This link expires in <strong style="color:#E2E8F0;">1 hour</strong>.
+          </p>
+          <table cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
+            <tr><td style="background:linear-gradient(90deg,#3B82F6,#06B6D4);border-radius:10px;">
+              <a href="${resetLink}" style="display:inline-block;padding:14px 32px;color:#fff;font-size:15px;font-weight:600;text-decoration:none;">
+                Reset Password →
+              </a>
+            </td></tr>
+          </table>
+          <p style="margin:0 0 8px;font-size:13px;color:#475569;">Or paste this link in your browser:</p>
+          <p style="margin:0 0 24px;font-size:12px;color:#3B82F6;word-break:break-all;">${resetLink}</p>
+          <hr style="border:none;border-top:1px solid #1E293B;margin:0 0 20px;">
+          <p style="margin:0;font-size:12px;color:#334155;">If you didn't request this, you can safely ignore this email.</p>
+        </td></tr>
+        <tr><td style="padding:16px 40px;background:#060f1e;border-top:1px solid #1E293B;">
+          <p style="margin:0;font-size:11px;color:#334155;text-align:center;">© ${new Date().getFullYear()} Taskora · AI-powered project management</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
           });
-          logger.info(`Password reset email sent to ${email}`);
+          logger.info(`[password-reset] email sent successfully to ${email}`);
         } catch (emailErr) {
-          logger.error(`Failed to send reset email: ${emailErr.message}`);
+          logger.error(`[password-reset] Resend failed for ${email}: ${emailErr.message}`);
         }
       } else {
-        logger.warn(`RESEND_API_KEY not set — reset link for ${email}: ${resetLink}`);
+        logger.warn(`[password-reset] RESEND_API_KEY not set — email skipped for ${email}`);
       }
     }
   } catch (err) {
-    logger.error(`Forgot password error: ${err.message}`);
-  }
-  // In local dev (no email service + not production), log the link to the server console only.
-  // Never include it in the API response — the frontend must never render reset tokens.
-  if (!process.env.RESEND_API_KEY && process.env.NODE_ENV !== "production") {
-    try {
-      const r = await pool.query("SELECT reset_token FROM users WHERE email = $1", [req.body.email]);
-      if (r.rows[0]?.reset_token) {
-        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-        logger.warn(`DEV reset link (server only): ${frontendUrl}/reset-password?token=${r.rows[0].reset_token}`);
-      }
-    } catch {}
+    logger.error(`Forgot password error: ${err.message}`, { stack: err.stack });
   }
   res.json({ message: "If that email exists, a reset link has been sent." });
 });

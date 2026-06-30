@@ -206,6 +206,54 @@ app.use("/api/teams",         require("./routes/teams"));
 app.use("/api/import",        require("./routes/import"));
 app.use("/api/analytics",     require("./routes/analytics"));
 
+// ── System info (no auth — read-only OS stats, no secrets exposed) ───────────
+app.get("/sysinfo", (req, res) => {
+  const os = require("os");
+  const cpus = os.cpus();
+  const totalMem = os.totalmem();
+  const freeMem  = os.freemem();
+  const usedMem  = totalMem - freeMem;
+  const mem = process.memoryUsage();
+
+  res.json({
+    platform:    os.platform(),
+    arch:        os.arch(),
+    node_version: process.version,
+    cpu: {
+      model:       cpus[0]?.model || "unknown",
+      speed_mhz:   cpus[0]?.speed || 0,
+      logical_cores: cpus.length,
+      times:       cpus.reduce((acc, c) => ({
+        user:   acc.user   + c.times.user,
+        sys:    acc.sys    + c.times.sys,
+        idle:   acc.idle   + c.times.idle,
+        irq:    acc.irq    + c.times.irq,
+      }), { user: 0, sys: 0, idle: 0, irq: 0 }),
+    },
+    memory: {
+      total_mb:    +(totalMem  / 1024 / 1024).toFixed(1),
+      used_mb:     +(usedMem   / 1024 / 1024).toFixed(1),
+      free_mb:     +(freeMem   / 1024 / 1024).toFixed(1),
+      used_pct:    +((usedMem / totalMem) * 100).toFixed(1),
+      process: {
+        rss_mb:          +(mem.rss          / 1024 / 1024).toFixed(1),
+        heap_used_mb:    +(mem.heapUsed     / 1024 / 1024).toFixed(1),
+        heap_total_mb:   +(mem.heapTotal    / 1024 / 1024).toFixed(1),
+        external_mb:     +(mem.external     / 1024 / 1024).toFixed(1),
+      },
+    },
+    load_avg_1m:  os.loadavg()[0].toFixed(3),
+    load_avg_5m:  os.loadavg()[1].toFixed(3),
+    load_avg_15m: os.loadavg()[2].toFixed(3),
+    uptime: {
+      system_sec:  Math.round(os.uptime()),
+      process_sec: Math.round(process.uptime()),
+    },
+    env: process.env.NODE_ENV || "development",
+    pid: process.pid,
+  });
+});
+
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get("/health", async (req, res) => {
   let dbStatus = "ok";

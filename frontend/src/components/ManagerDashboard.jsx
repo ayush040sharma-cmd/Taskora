@@ -540,9 +540,15 @@ function TeamIntelPanel({ workspaceId, team }) {
   });
 
   // Enrich each team member with their task breakdown
+  // effective_assignee_id: backend sends this — falls back to workspace_owner_id for unassigned tasks
+  const matchesMember = (t, uid) =>
+    String(t.assigned_user_id) === String(uid) ||
+    String(t.effective_assignee_id) === String(uid) ||
+    String(t.workspace_owner_id) === String(uid);
+
   const memberData = (team || []).map(m => {
-    const mine       = visibleTasks.filter(t => String(t.assigned_user_id) === String(m.user_id));
-    const allMine    = tasks.filter(t => String(t.assigned_user_id) === String(m.user_id) && t.status !== "done");
+    const mine       = visibleTasks.filter(t => matchesMember(t, m.user_id));
+    const allMine    = tasks.filter(t => matchesMember(t, m.user_id) && t.status !== "done");
     const overdue    = allMine.filter(t => t.due_date && new Date(t.due_date) < today);
     const blocked    = allMine.filter(t => t.status === "blocked");
     const inProgress = allMine.filter(t => ["inprogress","in_progress"].includes(t.status));
@@ -564,8 +570,14 @@ function TeamIntelPanel({ workspaceId, team }) {
   if (filterMember !== "all") rows = rows.filter(m => String(m.user_id) === filterMember);
   if (filterRisk   !== "all") rows = rows.filter(m => m.risk === filterRisk);
 
-  // Unassigned active tasks
-  const unassigned = visibleTasks.filter(t => !t.assigned_user_id && t.status !== "done");
+  // Unassigned active tasks — only those with no effective assignee and no workspace owner match
+  const memberIdSet = new Set((team || []).map(m => String(m.user_id)));
+  const unassigned = visibleTasks.filter(t =>
+    !t.assigned_user_id &&
+    !memberIdSet.has(String(t.effective_assignee_id)) &&
+    !memberIdSet.has(String(t.workspace_owner_id)) &&
+    t.status !== "done"
+  );
 
   // AI insights
   const highRisk   = memberData.filter(m => m.risk === "high");

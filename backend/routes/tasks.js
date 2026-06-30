@@ -65,17 +65,24 @@ router.get("/team-intel/:workspaceId", auth, async (req, res) => {
     );
     if (!access.rows.length) return res.status(403).json({ message: "Access denied" });
 
-    // Get ALL member user IDs for this workspace (owner + all members)
+    // Get ALL member user IDs for this workspace (owner + workspace_members + team_members)
     const memberRes = await pool.query(
       `SELECT user_id FROM workspace_members WHERE workspace_id = $1
        UNION
-       SELECT user_id FROM workspaces WHERE id = $1`,
+       SELECT user_id FROM workspaces WHERE id = $1
+       UNION
+       SELECT tm.user_id FROM team_members tm
+         JOIN teams t ON tm.team_id = t.id
+         WHERE t.workspace_id = $1`,
       [wsId]
     );
     if (!memberRes.rows.length) return res.json([]);
     const memberIds = memberRes.rows.map(r => r.user_id);
 
-    // Fetch ALL tasks assigned to any member, across ALL their workspaces
+    // Fetch ALL tasks that belong to any team member:
+    //   1. Tasks explicitly assigned to any member (in ANY workspace)
+    //   2. Tasks inside workspaces OWNED by any member (catches unassigned & self-created tasks)
+    // effective_assignee_id: prefer assigned_user_id, fall back to workspace owner
     const taskRes = await pool.query(
       `SELECT
          t.id, t.title, t.description, t.status, t.priority,
@@ -85,23 +92,27 @@ router.get("/team-intel/:workspaceId", auth, async (req, res) => {
          t.created_at, t.updated_at, t.status_changed_at,
          t.blocked_reason, t.blocked_severity, t.date_blocked, t.unblocked_at,
          t.team_id,
-         u.name    AS assignee_name,
-         u.email   AS assignee_email,
+         COALESCE(t.assigned_user_id, w.user_id)  AS effective_assignee_id,
+         COALESCE(u.name,  wo.name)                AS assignee_name,
+         COALESCE(u.email, wo.email)               AS assignee_email,
          uc.on_leave     AS assignee_on_leave,
          uc.travel_mode  AS assignee_travel_mode,
          uc.daily_hours  AS assignee_daily_hours,
          w.name    AS workspace_name,
+         w.user_id AS workspace_owner_id,
          s.name    AS sprint_name,
          (SELECT COUNT(*) FROM task_comments c WHERE c.task_id = t.id)::int AS comment_count,
          (SELECT COUNT(*) FROM task_dependencies td
           JOIN tasks dep ON td.depends_on_task_id = dep.id
           WHERE td.task_id = t.id AND dep.status != 'done')::int AS blocking_dep_count
        FROM tasks t
-       LEFT JOIN users         u  ON t.assigned_user_id = u.id
-       LEFT JOIN user_capacity uc ON u.id = uc.user_id
-       LEFT JOIN workspaces    w  ON t.workspace_id = w.id
+       LEFT JOIN users         u   ON t.assigned_user_id = u.id
+       LEFT JOIN workspaces    w   ON t.workspace_id = w.id
+       LEFT JOIN users         wo  ON w.user_id = wo.id
+       LEFT JOIN user_capacity uc  ON COALESCE(t.assigned_user_id, w.user_id) = uc.user_id
        LEFT JOIN sprints        s  ON t.sprint_id = s.id
        WHERE t.assigned_user_id = ANY($1::int[])
+          OR t.workspace_id IN (SELECT id FROM workspaces WHERE user_id = ANY($1::int[]))
        ORDER BY
          CASE WHEN t.status = 'blocked' THEN 0 ELSE 1 END,
          t.due_date ASC NULLS LAST,

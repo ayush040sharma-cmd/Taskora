@@ -750,7 +750,13 @@ export default function Dashboard() {
                   <div style={{ fontSize: 13 }}>Manager View is available to managers and above.</div>
                 </div>
               ) : (
-              <ManagerDashboard workspaceId={currentWorkspace?.id} workspaceName={currentWorkspace?.name} onNavigate={setView} />
+              <ManagerDashboard
+                workspaceId={currentWorkspace?.id}
+                workspaceName={currentWorkspace?.name}
+                onNavigate={setView}
+                allTasks={allTasks}
+                onRefreshTasks={() => loadTasks(currentWorkspace?.id)}
+              />
               )}
             </>
           )}

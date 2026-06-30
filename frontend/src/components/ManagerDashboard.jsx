@@ -453,9 +453,11 @@ function AuditLog({ workspaceId }) {
 }
 
 // ── Team Intel — Single Pane of Glass ────────────────────────────────────────
-function TeamIntelPanel({ workspaceId, team }) {
-  const [tasks,        setTasks]        = useState([]);
-  const [loading,      setLoading]      = useState(true);
+function TeamIntelPanel({ workspaceId, team, allTasks: propTasks, onRefreshTasks }) {
+  // Use live socket-synced tasks from Dashboard parent when available;
+  // fall back to a local fetch if this panel is rendered without the prop.
+  const [localTasks,   setLocalTasks]   = useState([]);
+  const [localLoading, setLocalLoading] = useState(!propTasks?.length);
   const [expanded,     setExpanded]     = useState({});
   const [filterMember, setFilterMember] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -466,21 +468,32 @@ function TeamIntelPanel({ workspaceId, team }) {
   const [reassignTo,   setReassignTo]   = useState("");
   const [saving,       setSaving]       = useState(false);
 
+  // Derived: prefer parent's live allTasks (socket-synced); use local copy as fallback
+  const tasks   = propTasks && propTasks.length >= 0 && propTasks !== undefined ? propTasks : localTasks;
+  const loading = propTasks ? false : localLoading;
+
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   };
 
-  const loadTasks = useCallback(async () => {
-    if (!workspaceId) return;
-    setLoading(true);
+  const fetchLocal = useCallback(async () => {
+    if (!workspaceId || propTasks) return; // skip if parent is supplying tasks
+    setLocalLoading(true);
     try {
       const r = await api.get(`/tasks/workspace/${workspaceId}`);
-      setTasks(r.data);
-    } catch {} finally { setLoading(false); }
-  }, [workspaceId]);
+      setLocalTasks(r.data);
+    } catch {} finally { setLocalLoading(false); }
+  }, [workspaceId, propTasks]);
 
-  useEffect(() => { loadTasks(); }, [loadTasks]);
+  useEffect(() => { fetchLocal(); }, [fetchLocal]);
+
+  // Refresh: ask parent to reload (which also re-fires socket listeners),
+  // or do a local fetch if no parent callback provided
+  const handleRefresh = () => {
+    if (onRefreshTasks) onRefreshTasks();
+    else fetchLocal();
+  };
 
   const now = Date.now();
   const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -494,7 +507,11 @@ function TeamIntelPanel({ workspaceId, team }) {
     setSaving(true);
     try {
       await api.put(`/tasks/${taskId}`, changes);
-      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...changes } : t));
+      // If using local tasks (no parent prop), patch the local copy immediately.
+      // If using parent's allTasks, the socket event will propagate the update automatically.
+      if (!propTasks) {
+        setLocalTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...changes } : t));
+      }
       showToast("Saved");
     } catch { showToast("Failed to update", "error"); } finally { setSaving(false); }
   };
@@ -657,7 +674,7 @@ function TeamIntelPanel({ workspaceId, team }) {
           <option value="medium">Medium Risk</option>
           <option value="low">Low Risk</option>
         </select>
-        <button onClick={loadTasks} style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid var(--tk-border)", background: "var(--tk-surface)", color: "var(--tk-text-secondary)", fontSize: 13, cursor: "pointer" }} title="Refresh">↻ Refresh</button>
+        <button onClick={handleRefresh} style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid var(--tk-border)", background: "var(--tk-surface)", color: "var(--tk-text-secondary)", fontSize: 13, cursor: "pointer" }} title="Refresh">↻ Refresh</button>
         <span style={{ marginLeft: "auto", fontSize: 12, color: "var(--tk-text-muted)" }}>{rows.length} member{rows.length !== 1 ? "s" : ""}</span>
       </div>
 
@@ -1107,7 +1124,7 @@ function ManagerDashView({ workspaceId }) {
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────────
-export default function ManagerDashboard({ workspaceId, workspaceName, onNavigate }) {
+export default function ManagerDashboard({ workspaceId, workspaceName, onNavigate, allTasks = [], onRefreshTasks }) {
   const { user } = useAuth();
   const [team,        setTeam]        = useState([]);
   const [predictions, setPredictions] = useState([]);
@@ -1213,7 +1230,12 @@ export default function ManagerDashboard({ workspaceId, workspaceName, onNavigat
       {activeTab === "team_intel" && (
         <div className="mgr-panel">
           <div className="mgr-panel-title" style={{ marginBottom: 16 }}>👁 Team Intelligence — Single Pane of Glass</div>
-          <TeamIntelPanel workspaceId={workspaceId} team={team} />
+          <TeamIntelPanel
+            workspaceId={workspaceId}
+            team={team}
+            allTasks={allTasks}
+            onRefreshTasks={onRefreshTasks}
+          />
         </div>
       )}
 

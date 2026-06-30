@@ -332,7 +332,7 @@ router.post("/forgot-password", authLimiter, validate(schemas.forgotPassword), a
           const { Resend } = require("resend");
           const resend = new Resend(process.env.RESEND_API_KEY);
           await resend.emails.send({
-            from:    process.env.EMAIL_FROM || "Taskora <noreply@taskora.app>",
+            from:    process.env.FROM_EMAIL || "Taskora <onboarding@resend.dev>",
             to:      [email],
             subject: "Reset your Taskora password",
             html: `

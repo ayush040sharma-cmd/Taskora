@@ -48,6 +48,74 @@ router.get("/workspace/:workspaceId", auth, async (req, res) => {
   }
 });
 
+// GET /api/tasks/team-intel/:workspaceId
+// Returns ALL tasks assigned to ANY member of the workspace, across ALL their workspaces
+router.get("/team-intel/:workspaceId", auth, async (req, res) => {
+  const wsId = parseInt(req.params.workspaceId);
+  if (isNaN(wsId)) return res.status(400).json({ message: "Invalid workspace ID" });
+
+  try {
+    // Must be owner or member of this workspace
+    const access = await pool.query(
+      `SELECT 1 FROM workspaces WHERE id = $1 AND user_id = $2
+       UNION ALL
+       SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2
+       LIMIT 1`,
+      [wsId, req.user.id]
+    );
+    if (!access.rows.length) return res.status(403).json({ message: "Access denied" });
+
+    // Get ALL member user IDs for this workspace (owner + all members)
+    const memberRes = await pool.query(
+      `SELECT user_id FROM workspace_members WHERE workspace_id = $1
+       UNION
+       SELECT user_id FROM workspaces WHERE id = $1`,
+      [wsId]
+    );
+    if (!memberRes.rows.length) return res.json([]);
+    const memberIds = memberRes.rows.map(r => r.user_id);
+
+    // Fetch ALL tasks assigned to any member, across ALL their workspaces
+    const taskRes = await pool.query(
+      `SELECT
+         t.id, t.title, t.description, t.status, t.priority,
+         t.due_date, t.start_date, t.progress,
+         t.workspace_id, t.type, t.estimated_days, t.estimated_hours,
+         t.actual_hours, t.assigned_user_id, t.sprint_id,
+         t.created_at, t.updated_at, t.status_changed_at,
+         t.blocked_reason, t.blocked_severity, t.date_blocked, t.unblocked_at,
+         t.team_id,
+         u.name    AS assignee_name,
+         u.email   AS assignee_email,
+         uc.on_leave     AS assignee_on_leave,
+         uc.travel_mode  AS assignee_travel_mode,
+         uc.daily_hours  AS assignee_daily_hours,
+         w.name    AS workspace_name,
+         s.name    AS sprint_name,
+         (SELECT COUNT(*) FROM task_comments c WHERE c.task_id = t.id)::int AS comment_count,
+         (SELECT COUNT(*) FROM task_dependencies td
+          JOIN tasks dep ON td.depends_on_task_id = dep.id
+          WHERE td.task_id = t.id AND dep.status != 'done')::int AS blocking_dep_count
+       FROM tasks t
+       LEFT JOIN users         u  ON t.assigned_user_id = u.id
+       LEFT JOIN user_capacity uc ON u.id = uc.user_id
+       LEFT JOIN workspaces    w  ON t.workspace_id = w.id
+       LEFT JOIN sprints        s  ON t.sprint_id = s.id
+       WHERE t.assigned_user_id = ANY($1::int[])
+       ORDER BY
+         CASE WHEN t.status = 'blocked' THEN 0 ELSE 1 END,
+         t.due_date ASC NULLS LAST,
+         t.updated_at DESC NULLS LAST`,
+      [memberIds]
+    );
+
+    res.json(taskRes.rows);
+  } catch (err) {
+    console.error("Team Intel error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // GET /api/tasks/:id  — single task with comment count
 router.get("/:id", auth, async (req, res) => {
   try {

@@ -541,6 +541,10 @@ function TeamIntelPanel({ workspaceId, team }) {
     return true;
   });
 
+  // Exclude managers/owners from the team display — Team Intel is for viewing non-manager members
+  const MANAGER_ROLES = ["manager", "owner", "admin", "super_boss", "super_admin"];
+  const displayTeam = (team || []).filter(m => !MANAGER_ROLES.includes(m.role));
+
   // Enrich each team member with their task breakdown
   // effective_assignee_id: backend sends this — falls back to workspace_owner_id for unassigned tasks
   const matchesMember = (t, uid) =>
@@ -548,7 +552,7 @@ function TeamIntelPanel({ workspaceId, team }) {
     String(t.effective_assignee_id) === String(uid) ||
     String(t.workspace_owner_id) === String(uid);
 
-  const memberData = (team || []).map(m => {
+  const memberData = displayTeam.map(m => {
     const mine       = visibleTasks.filter(t => matchesMember(t, m.user_id));
     const allMine    = tasks.filter(t => matchesMember(t, m.user_id) && t.status !== "done");
     const overdue    = allMine.filter(t => t.due_date && new Date(t.due_date) < today);
@@ -705,7 +709,7 @@ function TeamIntelPanel({ workspaceId, team }) {
         {/* Member filter */}
         <select value={filterMember} onChange={e=>setFilterMember(e.target.value)} style={sel}>
           <option value="all">All Members</option>
-          {(team||[]).map(m=><option key={m.user_id} value={String(m.user_id)}>{m.name}</option>)}
+          {displayTeam.map(m=><option key={m.user_id} value={String(m.user_id)}>{m.name}</option>)}
         </select>
         {/* Priority filter */}
         <select value={filterPriority} onChange={e=>setFilterPriority(e.target.value)} style={sel}>
@@ -775,14 +779,8 @@ function TeamIntelPanel({ workspaceId, team }) {
                 {m.travel_mode         && <Chip color="#94a3b8" bg="rgba(100,116,139,0.1)">✈ Travel</Chip>}
                 {m.allMine.length===0 && !m.on_leave && <Chip color="#22c55e" bg="rgba(34,197,94,0.1)">✓ Available</Chip>}
               </div>
-              {/* Load + risk + arrow */}
+              {/* Risk badge + arrow */}
               <div style={{ display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
-                <div style={{ width:72 }}>
-                  <div style={{ height:5, borderRadius:99, background:"var(--tk-border)", overflow:"hidden" }}>
-                    <div style={{ height:"100%", borderRadius:99, width:`${Math.min(m.load_percent||0,100)}%`, background: m.load_percent>=100?"#ef4444":m.load_percent>=80?"#f59e0b":"#22c55e" }} />
-                  </div>
-                  <div style={{ fontSize:10, color:"var(--tk-text-muted)", textAlign:"right", marginTop:2 }}>{m.load_percent??0}%</div>
-                </div>
                 <span style={{ padding:"2px 8px", borderRadius:99, background:RISK_BG[m.risk], color:RISK_COLOR[m.risk], fontSize:11, fontWeight:700, width:52, textAlign:"center" }}>{m.risk}</span>
                 <span style={{ fontSize:14, color:"var(--tk-text-muted)", transform: open?"rotate(90deg)":"rotate(0)", display:"inline-block", transition:"transform 0.15s" }}>›</span>
               </div>
@@ -792,8 +790,8 @@ function TeamIntelPanel({ workspaceId, team }) {
             {open && memberTasks.length > 0 && (
               <>
                 {/* Column headers */}
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 110px 90px 70px 70px 80px 90px 80px 200px", padding:"5px 16px", background:"rgba(0,0,0,0.06)", borderBottom:"1px solid var(--tk-border)" }}>
-                  {["Task","Project","Sprint","Status","Priority","Progress","Due","Updated","Actions"].map(h=>(
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 110px 90px 70px 70px 90px 80px 200px", padding:"5px 16px", background:"rgba(0,0,0,0.06)", borderBottom:"1px solid var(--tk-border)" }}>
+                  {["Task","Project","Sprint","Status","Priority","Due","Updated","Actions"].map(h=>(
                     <span key={h} style={{ fontSize:10, fontWeight:700, color:"var(--tk-text-muted)", textTransform:"uppercase", letterSpacing:0.5 }}>{h}</span>
                   ))}
                 </div>
@@ -803,7 +801,7 @@ function TeamIntelPanel({ workspaceId, team }) {
                   const isStale   = t.status_changed_at && new Date(t.status_changed_at) < staleThreshold;
 
                   return (
-                    <div key={t.id} style={{ display:"grid", gridTemplateColumns:"1fr 110px 90px 70px 70px 80px 90px 80px 200px", padding:"8px 16px", borderBottom:"1px solid var(--tk-border)", background: isOverdue?"rgba(239,68,68,0.04)":"transparent", alignItems:"center" }}>
+                    <div key={t.id} style={{ display:"grid", gridTemplateColumns:"1fr 110px 90px 70px 70px 90px 80px 200px", padding:"8px 16px", borderBottom:"1px solid var(--tk-border)", background: isOverdue?"rgba(239,68,68,0.04)":"transparent", alignItems:"center" }}>
                       {/* Task name */}
                       <div style={{ paddingRight:8, minWidth:0 }}>
                         <div style={{ fontSize:13, fontWeight:500, color:"var(--tk-text-primary)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{t.title}</div>
@@ -823,13 +821,6 @@ function TeamIntelPanel({ workspaceId, team }) {
                       </div>
                       {/* Priority */}
                       <div style={{ fontSize:13 }}>{PRIORITY_ICON[t.priority]||"—"}</div>
-                      {/* Progress */}
-                      <div>
-                        <div style={{ height:5, borderRadius:99, background:"var(--tk-border)", overflow:"hidden", width:"100%" }}>
-                          <div style={{ height:"100%", borderRadius:99, width:`${t.progress||0}%`, background:"var(--tk-accent)" }} />
-                        </div>
-                        <div style={{ fontSize:10, color:"var(--tk-text-muted)", textAlign:"right", marginTop:1 }}>{t.progress||0}%</div>
-                      </div>
                       {/* Due */}
                       <div style={{ fontSize:11, color:due.color, fontWeight: due.bold?700:400, whiteSpace:"nowrap" }}>{due.label}</div>
                       {/* Updated */}

@@ -469,6 +469,15 @@ function TeamIntelPanel({ workspaceId, team }) {
   const [reassignTo,  setReassignTo]  = useState("");
   const [statusTask,  setStatusTask]  = useState(null);
   const [saving,      setSaving]      = useState(false);
+  const [drawerType,  setDrawerType]  = useState(null);
+  const [drawerSearch,setDrawerSearch]= useState("");
+  const [selectedTasks,setSelectedTasks]= useState(new Set());
+  const [hoveredKpi,  setHoveredKpi]  = useState(null);
+  const [hoverPos,    setHoverPos]    = useState({ x: 0, y: 0 });
+  const [exportOpen,  setExportOpen]  = useState(false);
+  const [exportFmt,   setExportFmt]   = useState("csv");
+  const [exportScope, setExportScope] = useState("all");
+  const [bulkAction,  setBulkAction]  = useState("");
   const timerRef = useRef(null);
 
   const showToast = useCallback((msg, type = "success") => {
@@ -613,6 +622,29 @@ function TeamIntelPanel({ workspaceId, team }) {
   const unassignedCount = tasks.filter(t => !t.assigned_user_id && t.status !== "done").length;
   const highRiskCount   = memberData.filter(m => m.risk === "high").length;
 
+  // KPI drill-down datasets (full task list, no status filter)
+  const allActive     = tasks.filter(t => t.status !== "done");
+  const allOverdue    = tasks.filter(t => t.due_date && new Date(t.due_date) < today && t.status !== "done")
+                             .sort((a,b) => new Date(a.due_date) - new Date(b.due_date));
+  const allBlocked    = tasks.filter(t => t.status === "blocked");
+  const allStale      = tasks.filter(t => t.status_changed_at && new Date(t.status_changed_at) < staleThreshold && t.status !== "done")
+                             .sort((a,b) => new Date(a.status_changed_at) - new Date(b.status_changed_at));
+  const allUnassigned = tasks.filter(t => !t.assigned_user_id && t.status !== "done");
+  const allAtRisk     = memberData.filter(m => m.risk === "high");
+
+  const activeByMember = displayTeam.map(m => ({
+    name: m.name, count: allActive.filter(t => matchesMember(t, m.user_id)).length
+  })).filter(x => x.count > 0).sort((a,b) => b.count - a.count).slice(0,5);
+
+  const activeByProject = Object.entries(
+    allActive.reduce((acc, t) => { const k = t.workspace_name||"Unknown"; acc[k]=(acc[k]||0)+1; return acc; }, {})
+  ).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  const unassignedByPriority = { high: 0, medium: 0, low: 0 };
+  allUnassigned.forEach(t => { if (unassignedByPriority[t.priority]!==undefined) unassignedByPriority[t.priority]++; });
+
+  const suggestedOwner = [...displayTeam].filter(m => !m.on_leave).sort((a,b) => (a.load_percent||0) - (b.load_percent||0))[0];
+
   // Time since last refresh
   const refreshLabel = refreshedAt
     ? (() => {
@@ -666,22 +698,93 @@ function TeamIntelPanel({ workspaceId, team }) {
         </div>
       )}
 
-      {/* KPI strip */}
+      {/* Interactive KPI strip */}
       <div style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap" }}>
         {[
-          { label: "Active Tasks",  value: activeTasks,    color: "var(--tk-text-primary)" },
-          { label: "Overdue",       value: overdueCount,   color: overdueCount > 0 ? "#ef4444" : "var(--tk-text-primary)" },
-          { label: "Blocked",       value: blockedCount,   color: blockedCount > 0 ? "#ef4444" : "var(--tk-text-primary)" },
-          { label: "Stale (3d+)",   value: staleCount,     color: staleCount   > 0 ? "#f59e0b" : "var(--tk-text-primary)" },
-          { label: "Unassigned",    value: unassignedCount,color: unassignedCount > 0 ? "#f59e0b" : "var(--tk-text-primary)" },
-          { label: "Members at Risk",value: highRiskCount, color: highRiskCount > 0 ? "#ef4444" : "var(--tk-text-primary)" },
+          { key:"active",    label:"Active Tasks",    value:activeTasks,     color: "var(--tk-text-primary)",                                icon:"📋" },
+          { key:"overdue",   label:"Overdue",         value:overdueCount,    color: overdueCount   > 0 ? "#ef4444" : "var(--tk-text-primary)", icon:"🔴" },
+          { key:"blocked",   label:"Blocked",         value:blockedCount,    color: blockedCount   > 0 ? "#ef4444" : "var(--tk-text-primary)", icon:"🚫" },
+          { key:"stale",     label:"Stale (3d+)",     value:staleCount,      color: staleCount     > 0 ? "#f59e0b" : "var(--tk-text-primary)", icon:"⏸" },
+          { key:"unassigned",label:"Unassigned",      value:unassignedCount, color: unassignedCount> 0 ? "#f59e0b" : "var(--tk-text-primary)", icon:"👤" },
+          { key:"risk",      label:"Members at Risk", value:highRiskCount,   color: highRiskCount  > 0 ? "#ef4444" : "var(--tk-text-primary)", icon:"⚠️" },
         ].map(k => (
-          <div key={k.label} style={{ flex: "1 1 90px", background: "var(--tk-surface)", border: "1px solid var(--tk-border)", borderRadius: 10, padding: "10px 14px", textAlign: "center", minWidth: 80 }}>
-            <div style={{ fontSize: 22, fontWeight: 800, color: k.color, lineHeight: 1 }}>{k.value}</div>
-            <div style={{ fontSize: 11, color: "var(--tk-text-muted)", fontWeight: 600, marginTop: 4 }}>{k.label}</div>
+          <div key={k.key}
+            onMouseEnter={e => { setHoveredKpi(k.key); const r=e.currentTarget.getBoundingClientRect(); setHoverPos({ x:r.left, y:r.bottom+8 }); }}
+            onMouseLeave={() => setHoveredKpi(null)}
+            onClick={() => { setDrawerType(k.key); setDrawerSearch(""); setSelectedTasks(new Set()); }}
+            style={{ flex:"1 1 90px", background:"var(--tk-surface)", border:`1px solid ${drawerType===k.key?"var(--tk-accent)":"var(--tk-border)"}`, borderRadius:10, padding:"10px 14px", textAlign:"center", minWidth:80, cursor:"pointer", transition:"all 0.15s", userSelect:"none", boxShadow: drawerType===k.key?"0 0 0 2px var(--tk-accent)30":hoveredKpi===k.key?"0 2px 8px rgba(0,0,0,0.15)":"none" }}>
+            <div style={{ fontSize:11, marginBottom:3 }}>{k.icon}</div>
+            <div style={{ fontSize:22, fontWeight:800, color:k.color, lineHeight:1 }}>{k.value}</div>
+            <div style={{ fontSize:11, color:"var(--tk-text-muted)", fontWeight:600, marginTop:4 }}>{k.label}</div>
+            <div style={{ fontSize:9, color:"var(--tk-accent)", marginTop:3, opacity:0.7 }}>click to explore</div>
           </div>
         ))}
       </div>
+
+      {/* Hover popover */}
+      {hoveredKpi && (
+        <div style={{ position:"fixed", left:Math.min(hoverPos.x, window.innerWidth-260), top:hoverPos.y, zIndex:9000, background:"var(--tk-surface)", border:"1px solid var(--tk-border)", borderRadius:10, boxShadow:"0 8px 32px rgba(0,0,0,0.25)", padding:"12px 16px", minWidth:220, pointerEvents:"none" }}>
+          {hoveredKpi==="active" && <>
+            <div style={{ fontWeight:700, fontSize:12, marginBottom:8, color:"var(--tk-text-primary)" }}>Active Tasks — {activeTasks}</div>
+            {activeByMember.length>0 && <>
+              <div style={{ fontSize:10, color:"var(--tk-text-muted)", fontWeight:600, marginBottom:4 }}>BY MEMBER</div>
+              {activeByMember.map(x=><div key={x.name} style={{ display:"flex", justifyContent:"space-between", fontSize:12, padding:"2px 0", color:"var(--tk-text-secondary)" }}><span>{x.name}</span><span style={{ fontWeight:700, color:"var(--tk-text-primary)" }}>{x.count}</span></div>)}
+            </>}
+            {activeByProject.length>0 && <>
+              <div style={{ fontSize:10, color:"var(--tk-text-muted)", fontWeight:600, marginTop:8, marginBottom:4 }}>BY PROJECT</div>
+              {activeByProject.map(([p,c])=><div key={p} style={{ display:"flex", justifyContent:"space-between", fontSize:12, padding:"2px 0", color:"var(--tk-text-secondary)" }}><span>{p}</span><span style={{ fontWeight:700, color:"var(--tk-text-primary)" }}>{c}</span></div>)}
+            </>}
+          </>}
+          {hoveredKpi==="overdue" && <>
+            <div style={{ fontWeight:700, fontSize:12, marginBottom:8, color:"#ef4444" }}>{overdueCount} Overdue Tasks</div>
+            {allOverdue.slice(0,5).map(t=>{
+              const days=Math.round((today-new Date(t.due_date))/86400000);
+              return <div key={t.id} style={{ fontSize:12, padding:"3px 0", borderBottom:"1px solid var(--tk-border)", color:"var(--tk-text-secondary)" }}>
+                <div style={{ fontWeight:600, color:"var(--tk-text-primary)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{t.title}</div>
+                <div style={{ fontSize:10, color:"#ef4444" }}>{t.assignee_name||"Unassigned"} · {days}d overdue</div>
+              </div>;
+            })}
+          </>}
+          {hoveredKpi==="blocked" && <>
+            <div style={{ fontWeight:700, fontSize:12, marginBottom:8, color:"#ef4444" }}>{blockedCount} Blocked Tasks</div>
+            {allBlocked.slice(0,5).map(t=><div key={t.id} style={{ fontSize:12, padding:"3px 0", borderBottom:"1px solid var(--tk-border)" }}>
+              <div style={{ fontWeight:600, color:"var(--tk-text-primary)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{t.title}</div>
+              <div style={{ fontSize:10, color:"#ef4444" }}>{t.blocked_reason||"No reason given"}</div>
+            </div>)}
+          </>}
+          {hoveredKpi==="stale" && <>
+            <div style={{ fontWeight:700, fontSize:12, marginBottom:8, color:"#f59e0b" }}>Tasks not updated 3+ days</div>
+            {allStale.slice(0,5).map(t=>{
+              const days=Math.round((now-new Date(t.status_changed_at))/86400000);
+              return <div key={t.id} style={{ display:"flex", justifyContent:"space-between", fontSize:12, padding:"3px 0", borderBottom:"1px solid var(--tk-border)", gap:8 }}>
+                <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", color:"var(--tk-text-secondary)" }}>{t.title}</span>
+                <span style={{ color:"#f59e0b", fontWeight:700, flexShrink:0 }}>{days}d</span>
+              </div>;
+            })}
+          </>}
+          {hoveredKpi==="unassigned" && <>
+            <div style={{ fontWeight:700, fontSize:12, marginBottom:8, color:"#f59e0b" }}>{unassignedCount} Unassigned Tasks</div>
+            <div style={{ display:"flex", gap:8, marginBottom:8 }}>
+              {[["High","#ef4444",unassignedByPriority.high],["Medium","#f59e0b",unassignedByPriority.medium],["Low","#22c55e",unassignedByPriority.low]].map(([l,c,v])=>(
+                <div key={l} style={{ flex:1, background:`${c}15`, borderRadius:7, padding:"6px 4px", textAlign:"center" }}>
+                  <div style={{ fontSize:16, fontWeight:800, color:c }}>{v}</div>
+                  <div style={{ fontSize:9, color:"var(--tk-text-muted)", fontWeight:600 }}>{l}</div>
+                </div>
+              ))}
+            </div>
+          </>}
+          {hoveredKpi==="risk" && <>
+            <div style={{ fontWeight:700, fontSize:12, marginBottom:8, color:"#ef4444" }}>Members at Risk</div>
+            {allAtRisk.map(m=><div key={m.user_id} style={{ padding:"4px 0", borderBottom:"1px solid var(--tk-border)", fontSize:12 }}>
+              <div style={{ fontWeight:700, color:"var(--tk-text-primary)" }}>{m.name}</div>
+              <div style={{ fontSize:10, color:"#ef4444" }}>
+                {[m.overdue.length>0&&`${m.overdue.length} overdue`, m.load_percent>=100&&`${m.load_percent}% load`, m.blocked.length>0&&`${m.blocked.length} blocked`].filter(Boolean).join(" · ")}
+              </div>
+            </div>)}
+          </>}
+          <div style={{ fontSize:10, color:"var(--tk-accent)", marginTop:8, fontWeight:600 }}>Click to open full view →</div>
+        </div>
+      )}
 
       {/* AI Insights */}
       {insights.map((ins, i) => {
@@ -733,6 +836,11 @@ function TeamIntelPanel({ workspaceId, team }) {
         >
           <span style={{ display:"inline-block", animation: refreshing ? "spin 0.8s linear infinite" : "none" }}>↻</span>
           {refreshing ? "Refreshing…" : "Refresh"}
+        </button>
+        {/* Export */}
+        <button onClick={() => setExportOpen(true)}
+          style={{ padding:"6px 14px", borderRadius:8, border:"1px solid var(--tk-border)", background:"var(--tk-surface)", color:"var(--tk-text-secondary)", fontSize:13, cursor:"pointer", display:"flex", alignItems:"center", gap:6 }}>
+          ↓ Export
         </button>
         <span style={{ marginLeft:"auto", fontSize:11, color:"var(--tk-text-muted)" }}>
           {rows.length} member{rows.length!==1?"s":""} · refreshed {refreshLabel}
@@ -789,8 +897,31 @@ function TeamIntelPanel({ workspaceId, team }) {
             {/* Task table */}
             {open && memberTasks.length > 0 && (
               <>
+                {/* Bulk action bar */}
+                {selectedTasks.size > 0 && (
+                  <div style={{ display:"flex", alignItems:"center", gap:8, padding:"7px 16px", background:"rgba(59,130,246,0.08)", borderBottom:"1px solid rgba(59,130,246,0.2)" }}>
+                    <span style={{ fontSize:12, fontWeight:700, color:"var(--tk-accent)" }}>{selectedTasks.size} selected</span>
+                    <select value={bulkAction} onChange={e=>setBulkAction(e.target.value)} style={{ ...sel, padding:"3px 8px", fontSize:12 }}>
+                      <option value="">Bulk action…</option>
+                      <option value="reassign">Reassign</option>
+                      <option value="high">Set High Priority</option>
+                      <option value="done">Mark Done</option>
+                      <option value="blocked">Mark Blocked</option>
+                    </select>
+                    <button disabled={!bulkAction} onClick={async () => {
+                      const ids = [...selectedTasks];
+                      if (bulkAction==="reassign") { const first=tasks.find(t=>t.id===ids[0]); setReassignTask(first); }
+                      else { for (const id of ids) await updateTask(id, bulkAction==="high"?{priority:"high"}:bulkAction==="done"?{status:"done",progress:100}:{status:"blocked"}); }
+                      setSelectedTasks(new Set()); setBulkAction("");
+                    }} style={{ padding:"3px 12px", borderRadius:7, border:"1px solid var(--tk-accent)", background:"var(--tk-accent)", color:"#fff", fontSize:12, cursor:"pointer", fontWeight:600 }}>Apply</button>
+                    <button onClick={() => { setSelectedTasks(new Set()); setBulkAction(""); }} style={{ marginLeft:"auto", fontSize:11, color:"var(--tk-text-muted)", background:"none", border:"none", cursor:"pointer" }}>Clear</button>
+                  </div>
+                )}
                 {/* Column headers */}
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 110px 90px 70px 70px 90px 80px 200px", padding:"5px 16px", background:"rgba(0,0,0,0.06)", borderBottom:"1px solid var(--tk-border)" }}>
+                <div style={{ display:"grid", gridTemplateColumns:"28px 1fr 110px 90px 70px 70px 90px 80px 200px", padding:"5px 16px", background:"rgba(0,0,0,0.06)", borderBottom:"1px solid var(--tk-border)" }}>
+                  <input type="checkbox" checked={memberTasks.every(t=>selectedTasks.has(t.id))}
+                    onChange={e => setSelectedTasks(prev => { const n=new Set(prev); if(e.target.checked) memberTasks.forEach(t=>n.add(t.id)); else memberTasks.forEach(t=>n.delete(t.id)); return n; })}
+                    style={{ cursor:"pointer" }} />
                   {["Task","Project","Sprint","Status","Priority","Due","Updated","Actions"].map(h=>(
                     <span key={h} style={{ fontSize:10, fontWeight:700, color:"var(--tk-text-muted)", textTransform:"uppercase", letterSpacing:0.5 }}>{h}</span>
                   ))}
@@ -799,9 +930,14 @@ function TeamIntelPanel({ workspaceId, team }) {
                   const due   = formatDue(t.due_date);
                   const isOverdue = t.due_date && new Date(t.due_date) < today && t.status !== "done";
                   const isStale   = t.status_changed_at && new Date(t.status_changed_at) < staleThreshold;
+                  const isSelected = selectedTasks.has(t.id);
 
                   return (
-                    <div key={t.id} style={{ display:"grid", gridTemplateColumns:"1fr 110px 90px 70px 70px 90px 80px 200px", padding:"8px 16px", borderBottom:"1px solid var(--tk-border)", background: isOverdue?"rgba(239,68,68,0.04)":"transparent", alignItems:"center" }}>
+                    <div key={t.id} style={{ display:"grid", gridTemplateColumns:"28px 1fr 110px 90px 70px 70px 90px 80px 200px", padding:"8px 16px", borderBottom:"1px solid var(--tk-border)", background: isSelected?"rgba(59,130,246,0.07)":isOverdue?"rgba(239,68,68,0.04)":"transparent", alignItems:"center" }}>
+                      {/* Checkbox */}
+                      <input type="checkbox" checked={isSelected}
+                        onChange={e => setSelectedTasks(prev => { const n=new Set(prev); e.target.checked?n.add(t.id):n.delete(t.id); return n; })}
+                        onClick={e => e.stopPropagation()} style={{ cursor:"pointer" }} />
                       {/* Task name */}
                       <div style={{ paddingRight:8, minWidth:0 }}>
                         <div style={{ fontSize:13, fontWeight:500, color:"var(--tk-text-primary)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{t.title}</div>
@@ -946,8 +1082,244 @@ function TeamIntelPanel({ workspaceId, team }) {
           </div>
         </div>
       )}
+
+      {/* ── KPI Right-side Drawer ── */}
+      {drawerType && (() => {
+        const drawerTitles = { active:"Active Tasks", overdue:"Overdue Tasks", blocked:"Blocked Tasks", stale:"Stale Tasks (3d+)", unassigned:"Unassigned Tasks", risk:"Members at Risk" };
+        const drawerDatasets = { active:allActive, overdue:allOverdue, blocked:allBlocked, stale:allStale, unassigned:allUnassigned };
+        const isTaskDrawer = drawerType !== "risk";
+        const drawerTasks = isTaskDrawer ? (drawerDatasets[drawerType]||[]).filter(t =>
+          !drawerSearch || t.title?.toLowerCase().includes(drawerSearch.toLowerCase()) || t.assignee_name?.toLowerCase().includes(drawerSearch.toLowerCase()) || t.workspace_name?.toLowerCase().includes(drawerSearch.toLowerCase())
+        ) : [];
+        const drawerMembers = !isTaskDrawer ? allAtRisk.filter(m => !drawerSearch || m.name?.toLowerCase().includes(drawerSearch.toLowerCase())) : [];
+
+        return (
+          <>
+            {/* Overlay */}
+            <div onClick={() => setDrawerType(null)} style={{ position:"fixed", inset:0, zIndex:8000, background:"rgba(0,0,0,0.3)" }} />
+            {/* Drawer panel */}
+            <div style={{ position:"fixed", top:0, right:0, bottom:0, width:Math.min(680,window.innerWidth-40), zIndex:8001, background:"var(--tk-bg)", boxShadow:"-8px 0 40px rgba(0,0,0,0.25)", display:"flex", flexDirection:"column", animation:"slideInRight 0.2s ease" }}>
+              <style>{`@keyframes slideInRight{from{transform:translateX(100%)}to{transform:translateX(0)}}`}</style>
+
+              {/* Drawer header */}
+              <div style={{ padding:"18px 20px", borderBottom:"1px solid var(--tk-border)", display:"flex", alignItems:"center", gap:12 }}>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontWeight:800, fontSize:16, color:"var(--tk-text-primary)" }}>{drawerTitles[drawerType]}</div>
+                  <div style={{ fontSize:12, color:"var(--tk-text-muted)", marginTop:2 }}>
+                    {isTaskDrawer ? `${drawerTasks.length} task${drawerTasks.length!==1?"s":""} · click to act` : `${drawerMembers.length} member${drawerMembers.length!==1?"s":""} at risk`}
+                  </div>
+                </div>
+                <button onClick={() => setDrawerType(null)} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:"var(--tk-text-muted)", padding:"4px 8px" }}>✕</button>
+              </div>
+
+              {/* Search bar */}
+              <div style={{ padding:"10px 20px", borderBottom:"1px solid var(--tk-border)" }}>
+                <input value={drawerSearch} onChange={e=>setDrawerSearch(e.target.value)} placeholder="Search tasks, members, projects…"
+                  style={{ width:"100%", padding:"7px 12px", borderRadius:8, border:"1px solid var(--tk-border)", background:"var(--tk-surface)", color:"var(--tk-text-primary)", fontSize:13, boxSizing:"border-box" }} />
+              </div>
+
+              {/* AI insight banner */}
+              {drawerType==="overdue" && allOverdue.length>0 && (
+                <div style={{ margin:"10px 20px 0", padding:"9px 14px", background:"rgba(239,68,68,0.08)", border:"1px solid rgba(239,68,68,0.2)", borderRadius:8, fontSize:12 }}>
+                  <span style={{ fontWeight:700, color:"#ef4444" }}>AI Insight: </span>
+                  <span style={{ color:"var(--tk-text-secondary)" }}>
+                    {allOverdue.length} overdue tasks — top overdue owner: {
+                      (() => { const cnt={}; allOverdue.forEach(t=>{const n=t.assignee_name||"Unassigned"; cnt[n]=(cnt[n]||0)+1;}); return Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0]?.[0]||"—"; })()
+                    }. Consider redistributing to members below 60% load.
+                  </span>
+                </div>
+              )}
+              {drawerType==="unassigned" && suggestedOwner && allUnassigned.length>0 && (
+                <div style={{ margin:"10px 20px 0", padding:"9px 14px", background:"rgba(59,130,246,0.08)", border:"1px solid rgba(59,130,246,0.2)", borderRadius:8, fontSize:12 }}>
+                  <span style={{ fontWeight:700, color:"var(--tk-accent)" }}>AI Suggestion: </span>
+                  <span style={{ color:"var(--tk-text-secondary)" }}>
+                    Assign to <strong>{suggestedOwner.name}</strong> (currently {suggestedOwner.load_percent||0}% load — lowest available capacity).
+                  </span>
+                  <button onClick={() => { allUnassigned.forEach(t => updateTask(t.id, { assigned_user_id: suggestedOwner.user_id })); setDrawerType(null); showToast(`All unassigned tasks assigned to ${suggestedOwner.name}`); }}
+                    style={{ marginLeft:8, padding:"2px 10px", borderRadius:6, border:"1px solid var(--tk-accent)", background:"rgba(59,130,246,0.15)", color:"var(--tk-accent)", fontSize:11, cursor:"pointer", fontWeight:700 }}>Auto-Assign All</button>
+                </div>
+              )}
+              {drawerType==="risk" && allAtRisk.length>0 && (
+                <div style={{ margin:"10px 20px 0", padding:"9px 14px", background:"rgba(239,68,68,0.08)", border:"1px solid rgba(239,68,68,0.2)", borderRadius:8, fontSize:12 }}>
+                  <span style={{ fontWeight:700, color:"#ef4444" }}>AI Recommendation: </span>
+                  <span style={{ color:"var(--tk-text-secondary)" }}>
+                    {allAtRisk.map(m=>m.name).join(", ")} {allAtRisk.length===1?"is":"are"} overloaded. Move high-priority tasks to {available.length>0?available.map(m=>m.name).join(", "):"members with available capacity"}.
+                  </span>
+                </div>
+              )}
+
+              {/* Drawer content */}
+              <div style={{ flex:1, overflowY:"auto", padding:"10px 0" }}>
+                {isTaskDrawer && drawerTasks.length===0 && (
+                  <div style={{ textAlign:"center", padding:"48px 0", color:"var(--tk-text-muted)", fontSize:13 }}>No tasks found.</div>
+                )}
+
+                {/* Task drawer rows */}
+                {isTaskDrawer && drawerTasks.map(t => {
+                  const due = formatDue(t.due_date);
+                  const staleDays = t.status_changed_at ? Math.round((now-new Date(t.status_changed_at))/86400000) : null;
+                  const overdueDays = t.due_date ? Math.round((today-new Date(t.due_date))/86400000) : null;
+                  return (
+                    <div key={t.id} style={{ padding:"12px 20px", borderBottom:"1px solid var(--tk-border)", display:"flex", gap:12, alignItems:"flex-start" }}>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontWeight:600, fontSize:13, color:"var(--tk-text-primary)", marginBottom:3 }}>{t.title}</div>
+                        <div style={{ display:"flex", gap:8, flexWrap:"wrap", fontSize:11, color:"var(--tk-text-muted)" }}>
+                          <span>{t.assignee_name||"Unassigned"}</span>
+                          {t.workspace_name && <span>· {t.workspace_name}</span>}
+                          {t.sprint_name && <span>· {t.sprint_name}</span>}
+                          {overdueDays!==null && overdueDays>0 && <span style={{ color:"#ef4444", fontWeight:700 }}>· {overdueDays}d overdue</span>}
+                          {staleDays!==null && staleDays>=3 && drawerType==="stale" && <span style={{ color:"#f59e0b", fontWeight:700 }}>· idle {staleDays}d</span>}
+                          {t.blocked_reason && <span style={{ color:"#ef4444" }}>· {t.blocked_reason}</span>}
+                        </div>
+                        <div style={{ display:"flex", gap:6, marginTop:5, flexWrap:"wrap" }}>
+                          <span style={{ padding:"1px 7px", borderRadius:99, background:`${STATUS_COLOR[t.status]||"#64748b"}20`, color:STATUS_COLOR[t.status]||"#64748b", fontSize:10, fontWeight:700 }}>{STATUS_LABEL[t.status]||t.status}</span>
+                          <span style={{ fontSize:11, color:due.color, fontWeight:due.bold?700:400 }}>{due.label}</span>
+                          <span style={{ fontSize:11 }}>{PRIORITY_ICON[t.priority]||""} {t.priority}</span>
+                        </div>
+                      </div>
+                      <div style={{ display:"flex", flexDirection:"column", gap:4, flexShrink:0 }}>
+                        <button onClick={() => { setReassignTask(t); setReassignTo(""); }} style={{ ...actionBtn("#64748b"), padding:"4px 10px", fontSize:11 }}>↪ Reassign</button>
+                        <button onClick={() => setStatusTask(t)} style={{ ...actionBtn("#3b82f6","rgba(59,130,246,0.1)"), padding:"4px 10px", fontSize:11 }}>✏ Status</button>
+                        {t.status==="blocked" && (
+                          <button onClick={() => updateTask(t.id, { status:"inprogress" })} style={{ ...actionBtn("#22c55e","rgba(34,197,94,0.1)"), padding:"4px 10px", fontSize:11 }}>▶ Unblock</button>
+                        )}
+                        {drawerType==="overdue" && (
+                          <button onClick={() => updateTask(t.id, { due_date: new Date(Date.now()+7*86400000).toISOString().split("T")[0] })}
+                            style={{ ...actionBtn("#f59e0b","rgba(245,158,11,0.1)"), padding:"4px 10px", fontSize:11 }}>+7d</button>
+                        )}
+                        {(drawerType==="unassigned" || !t.assigned_user_id) && suggestedOwner && (
+                          <button onClick={() => updateTask(t.id, { assigned_user_id: suggestedOwner.user_id })}
+                            style={{ ...actionBtn("#22c55e","rgba(34,197,94,0.1)"), padding:"4px 10px", fontSize:11 }}>→ {suggestedOwner.name?.split(" ")[0]}</button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Risk drawer — member cards */}
+                {!isTaskDrawer && drawerMembers.map(m => (
+                  <div key={m.user_id} style={{ margin:"10px 20px", background:"var(--tk-surface)", border:"1px solid rgba(239,68,68,0.25)", borderRadius:10, padding:"14px 16px" }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
+                      <div style={{ width:36, height:36, borderRadius:"50%", background:"#ef4444", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700, color:"#fff", flexShrink:0 }}>
+                        {(m.name||"?").slice(0,2).toUpperCase()}
+                      </div>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontWeight:700, fontSize:14, color:"var(--tk-text-primary)" }}>{m.name}</div>
+                        <div style={{ fontSize:11, color:"var(--tk-text-muted)" }}>{m.role?.replace(/_/g," ")}</div>
+                      </div>
+                      <span style={{ padding:"3px 10px", borderRadius:99, background:"rgba(239,68,68,0.12)", color:"#ef4444", fontSize:11, fontWeight:700 }}>HIGH RISK</span>
+                    </div>
+                    {/* Health metrics */}
+                    <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:8, marginBottom:12 }}>
+                      {[
+                        { label:"Load",    value:`${m.load_percent||0}%`,   color:m.load_percent>=100?"#ef4444":"#f59e0b" },
+                        { label:"Overdue", value:m.overdue.length,           color:m.overdue.length>0?"#ef4444":"#22c55e" },
+                        { label:"Blocked", value:m.blocked.length,           color:m.blocked.length>0?"#ef4444":"#22c55e" },
+                        { label:"Stale",   value:m.stale.length,             color:m.stale.length>0?"#f59e0b":"#22c55e" },
+                      ].map(s=>(
+                        <div key={s.label} style={{ textAlign:"center", background:"var(--tk-bg)", borderRadius:7, padding:"8px 4px" }}>
+                          <div style={{ fontSize:18, fontWeight:800, color:s.color }}>{s.value}</div>
+                          <div style={{ fontSize:9, color:"var(--tk-text-muted)", fontWeight:600 }}>{s.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                    {/* AI recommendation */}
+                    <div style={{ padding:"8px 10px", background:"rgba(245,158,11,0.08)", borderRadius:7, fontSize:12, color:"var(--tk-text-secondary)", marginBottom:10 }}>
+                      <span style={{ fontWeight:700, color:"#f59e0b" }}>AI: </span>
+                      {m.load_percent>=100&&m.overdue.length>0 ? `Move ${Math.min(2,m.overdue.length)} overdue tasks to reduce load below 80%.` :
+                       m.overdue.length>0 ? `${m.overdue.length} overdue task${m.overdue.length>1?"s":""} — schedule a review or extend deadlines.` :
+                       m.blocked.length>0 ? `${m.blocked.length} blocked task${m.blocked.length>1?"s":""} — unblock or reassign to keep sprint on track.` :
+                       "Monitor closely — stale tasks indicate possible blockers."}
+                    </div>
+                    {/* Manager actions */}
+                    <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                      <button onClick={() => { setFilterMember(String(m.user_id)); setDrawerType(null); }} style={{ ...actionBtn("#64748b"), padding:"5px 12px", fontSize:12 }}>View Tasks</button>
+                      {m.overdue.length>0 && available.length>0 && (
+                        <button onClick={async () => { for(const t of m.overdue.slice(0,2)) await updateTask(t.id, { assigned_user_id: available[0].user_id }); showToast(`Moved ${Math.min(2,m.overdue.length)} tasks to ${available[0].name}`); }}
+                          style={{ ...actionBtn("#f59e0b","rgba(245,158,11,0.1)"), padding:"5px 12px", fontSize:12 }}>↪ Move 2 Tasks</button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Drawer footer */}
+              <div style={{ padding:"12px 20px", borderTop:"1px solid var(--tk-border)", display:"flex", gap:8, justifyContent:"flex-end" }}>
+                <button onClick={() => exportData(drawerType, isTaskDrawer?drawerTasks:drawerMembers, "csv")}
+                  style={{ padding:"7px 16px", borderRadius:8, border:"1px solid var(--tk-border)", background:"var(--tk-surface)", color:"var(--tk-text-secondary)", fontSize:13, cursor:"pointer" }}>↓ Export CSV</button>
+                <button onClick={() => setDrawerType(null)}
+                  style={{ padding:"7px 16px", borderRadius:8, border:"none", background:"var(--tk-accent)", color:"#fff", fontSize:13, cursor:"pointer", fontWeight:600 }}>Done</button>
+              </div>
+            </div>
+          </>
+        );
+      })()}
+
+      {/* ── Export Modal ── */}
+      {exportOpen && (
+        <div className="modal-overlay" onClick={() => setExportOpen(false)}>
+          <div className="modal-box" onClick={e=>e.stopPropagation()} style={{ maxWidth:460 }}>
+            <div className="modal-header">
+              <h2 className="modal-title">Export Team Report</h2>
+              <button className="modal-close" onClick={() => setExportOpen(false)}>✕</button>
+            </div>
+            <div style={{ padding:"14px 0 4px", display:"flex", flexDirection:"column", gap:14 }}>
+              <div>
+                <div style={{ fontSize:12, fontWeight:700, color:"var(--tk-text-muted)", marginBottom:6 }}>SCOPE</div>
+                <div style={{ display:"flex", gap:8 }}>
+                  {[["all","Entire Team"],["overdue","Overdue Only"],["blocked","Blocked Only"],["unassigned","Unassigned Only"]].map(([v,l])=>(
+                    <button key={v} onClick={()=>setExportScope(v)}
+                      style={{ flex:1, padding:"8px 6px", borderRadius:8, border:`1px solid ${exportScope===v?"var(--tk-accent)":"var(--tk-border)"}`, background:exportScope===v?"rgba(59,130,246,0.1)":"transparent", color:exportScope===v?"var(--tk-accent)":"var(--tk-text-secondary)", fontSize:11, cursor:"pointer", fontWeight:exportScope===v?700:400 }}>{l}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize:12, fontWeight:700, color:"var(--tk-text-muted)", marginBottom:6 }}>FORMAT</div>
+                <div style={{ display:"flex", gap:8 }}>
+                  {[["csv","CSV"],["json","JSON"]].map(([v,l])=>(
+                    <button key={v} onClick={()=>setExportFmt(v)}
+                      style={{ flex:1, padding:"8px 6px", borderRadius:8, border:`1px solid ${exportFmt===v?"var(--tk-accent)":"var(--tk-border)"}`, background:exportFmt===v?"rgba(59,130,246,0.1)":"transparent", color:exportFmt===v?"var(--tk-accent)":"var(--tk-text-secondary)", fontSize:12, cursor:"pointer", fontWeight:exportFmt===v?700:400 }}>{l}</button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ padding:"10px 12px", background:"var(--tk-surface)", borderRadius:8, fontSize:12, color:"var(--tk-text-muted)" }}>
+                {exportScope==="all"&&`${tasks.length} total tasks · ${memberData.length} members`}
+                {exportScope==="overdue"&&`${allOverdue.length} overdue tasks`}
+                {exportScope==="blocked"&&`${allBlocked.length} blocked tasks`}
+                {exportScope==="unassigned"&&`${allUnassigned.length} unassigned tasks`}
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button className="btn-modal-cancel" onClick={() => setExportOpen(false)}>Cancel</button>
+              <button className="btn-modal-save" onClick={() => {
+                const dataset = exportScope==="all"?tasks:exportScope==="overdue"?allOverdue:exportScope==="blocked"?allBlocked:allUnassigned;
+                exportData(exportScope, dataset, exportFmt);
+                setExportOpen(false);
+              }}>Download {exportFmt.toUpperCase()}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+function exportData(label, data, fmt) {
+  const ts = new Date().toISOString().slice(0,10);
+  if (fmt === "json") {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type:"application/json" });
+    const a = document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=`team-intel-${label}-${ts}.json`; a.click();
+    return;
+  }
+  // CSV
+  const cols = ["id","title","status","priority","due_date","assignee_name","workspace_name","sprint_name","blocked_reason","status_changed_at"];
+  const header = cols.join(",");
+  const rows = data.map(t => cols.map(c => {
+    const v = t[c]??""
+    return `"${String(v).replace(/"/g,'""')}"`;
+  }).join(","));
+  const blob = new Blob([[header,...rows].join("\n")], { type:"text/csv" });
+  const a = document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=`team-intel-${label}-${ts}.csv`; a.click();
 }
 
 // Small chip helper used inside TeamIntelPanel

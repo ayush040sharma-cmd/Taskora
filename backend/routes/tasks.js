@@ -76,18 +76,12 @@ router.get("/team-intel/:workspaceId", auth, async (req, res) => {
     const memberIds = memberRes.rows.map(r => r.user_id);
 
     // Fetch ALL tasks that belong to any team member:
-    //   1. Tasks explicitly assigned to any member (in ANY workspace)
-    //   2. Tasks inside workspaces OWNED by any member (catches unassigned & self-created tasks)
-    // effective_assignee_id: prefer assigned_user_id, fall back to workspace owner
+    //   1. Tasks explicitly assigned to any member (across ALL workspaces)
+    //   2. Tasks inside workspaces OWNED by any member (catches self-created tasks)
+    // Use t.* to avoid failures from columns added in newer schema migrations
     const taskRes = await pool.query(
       `SELECT
-         t.id, t.title, t.description, t.status, t.priority,
-         t.due_date, t.start_date, t.progress,
-         t.workspace_id, t.type, t.estimated_days, t.estimated_hours,
-         t.actual_hours, t.assigned_user_id, t.sprint_id,
-         t.created_at, t.updated_at, t.status_changed_at,
-         t.blocked_reason, t.blocked_severity, t.date_blocked, t.unblocked_at,
-         t.team_id,
+         t.*,
          COALESCE(t.assigned_user_id, w.user_id)  AS effective_assignee_id,
          COALESCE(u.name,  wo.name)                AS assignee_name,
          COALESCE(u.email, wo.email)               AS assignee_email,
@@ -97,10 +91,10 @@ router.get("/team-intel/:workspaceId", auth, async (req, res) => {
          w.name    AS workspace_name,
          w.user_id AS workspace_owner_id,
          s.name    AS sprint_name,
-         (SELECT COUNT(*) FROM task_comments c WHERE c.task_id = t.id)::int AS comment_count,
+         (SELECT COUNT(*) FROM task_comments c WHERE c.task_id = t.id)::int   AS comment_count,
          (SELECT COUNT(*) FROM task_dependencies td
           JOIN tasks dep ON td.depends_on_task_id = dep.id
-          WHERE td.task_id = t.id AND dep.status != 'done')::int AS blocking_dep_count
+          WHERE td.task_id = t.id AND dep.status != 'done')::int              AS blocking_dep_count
        FROM tasks t
        LEFT JOIN users         u   ON t.assigned_user_id = u.id
        LEFT JOIN workspaces    w   ON t.workspace_id = w.id

@@ -501,8 +501,6 @@ function TeamIntelPanel({ workspaceId, team }) {
   const [drawerType,  setDrawerType]  = useState(null);
   const [drawerSearch,setDrawerSearch]= useState("");
   const [selectedTasks,setSelectedTasks]= useState(new Set());
-  const [hoveredKpi,  setHoveredKpi]  = useState(null);
-  const [hoverPos,    setHoverPos]    = useState({ x: 0, y: 0 });
   const [exportOpen,  setExportOpen]  = useState(false);
   const [exportFmt,   setExportFmt]   = useState("csv");
   const [exportScope, setExportScope] = useState("all");
@@ -738,10 +736,8 @@ function TeamIntelPanel({ workspaceId, team }) {
           { key:"risk",      label:"Members at Risk", value:highRiskCount,   color: highRiskCount  > 0 ? "#ef4444" : "var(--tk-text-primary)", icon:"⚠️" },
         ].map(k => (
           <div key={k.key}
-            onMouseEnter={e => { setHoveredKpi(k.key); const r=e.currentTarget.getBoundingClientRect(); setHoverPos({ x:r.left, y:r.bottom+8 }); }}
-            onMouseLeave={() => setHoveredKpi(null)}
             onClick={() => { setDrawerType(k.key); setDrawerSearch(""); setSelectedTasks(new Set()); }}
-            style={{ flex:"1 1 90px", background:"var(--tk-surface)", border:`1px solid ${drawerType===k.key?"var(--tk-accent)":"var(--tk-border)"}`, borderRadius:10, padding:"10px 14px", textAlign:"center", minWidth:80, cursor:"pointer", transition:"all 0.15s", userSelect:"none", boxShadow: drawerType===k.key?"0 0 0 2px var(--tk-accent)30":hoveredKpi===k.key?"0 2px 8px rgba(0,0,0,0.15)":"none" }}>
+            style={{ flex:"1 1 90px", background:"var(--tk-surface)", border:`1px solid ${drawerType===k.key?"var(--tk-accent)":"var(--tk-border)"}`, borderRadius:10, padding:"10px 14px", textAlign:"center", minWidth:80, cursor:"pointer", transition:"all 0.15s", userSelect:"none", boxShadow: drawerType===k.key?"0 0 0 2px var(--tk-accent)30":"none" }}>
             <div style={{ fontSize:11, marginBottom:3 }}>{k.icon}</div>
             <div style={{ fontSize:22, fontWeight:800, color:k.color, lineHeight:1 }}>{k.value}</div>
             <div style={{ fontSize:11, color:"var(--tk-text-muted)", fontWeight:600, marginTop:4 }}>{k.label}</div>
@@ -749,72 +745,6 @@ function TeamIntelPanel({ workspaceId, team }) {
           </div>
         ))}
       </div>
-
-      {/* Hover popover */}
-      {hoveredKpi && (
-        <div style={{ position:"fixed", left:Math.min(hoverPos.x, window.innerWidth-260), top:hoverPos.y, zIndex:9000, background:"var(--tk-surface)", border:"1px solid var(--tk-border)", borderRadius:12, boxShadow:"0 16px 48px rgba(0,0,0,0.3)", padding:"14px 18px", minWidth:240, pointerEvents:"none", animation:"kpiHoverIn 0.15s ease" }}>
-          <style>{`@keyframes kpiHoverIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}`}</style>
-          {hoveredKpi==="active" && <>
-            <div style={{ fontWeight:700, fontSize:12, marginBottom:8, color:"var(--tk-text-primary)" }}>Active Tasks — {activeTasks}</div>
-            {activeByMember.length>0 && <>
-              <div style={{ fontSize:10, color:"var(--tk-text-muted)", fontWeight:600, marginBottom:4 }}>BY MEMBER</div>
-              {activeByMember.map(x=><div key={x.name} style={{ display:"flex", justifyContent:"space-between", fontSize:12, padding:"2px 0", color:"var(--tk-text-secondary)" }}><span>{x.name}</span><span style={{ fontWeight:700, color:"var(--tk-text-primary)" }}>{x.count}</span></div>)}
-            </>}
-            {activeByProject.length>0 && <>
-              <div style={{ fontSize:10, color:"var(--tk-text-muted)", fontWeight:600, marginTop:8, marginBottom:4 }}>BY PROJECT</div>
-              {activeByProject.map(([p,c])=><div key={p} style={{ display:"flex", justifyContent:"space-between", fontSize:12, padding:"2px 0", color:"var(--tk-text-secondary)" }}><span>{p}</span><span style={{ fontWeight:700, color:"var(--tk-text-primary)" }}>{c}</span></div>)}
-            </>}
-          </>}
-          {hoveredKpi==="overdue" && <>
-            <div style={{ fontWeight:700, fontSize:12, marginBottom:8, color:"#ef4444" }}>{overdueCount} Overdue Tasks</div>
-            {allOverdue.slice(0,5).map(t=>{
-              const days=Math.round((today-new Date(t.due_date))/86400000);
-              return <div key={t.id} style={{ fontSize:12, padding:"3px 0", borderBottom:"1px solid var(--tk-border)", color:"var(--tk-text-secondary)" }}>
-                <div style={{ fontWeight:600, color:"var(--tk-text-primary)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{t.title}</div>
-                <div style={{ fontSize:10, color:"#ef4444" }}>{t.assignee_name||"Unassigned"} · {days}d overdue</div>
-              </div>;
-            })}
-          </>}
-          {hoveredKpi==="blocked" && <>
-            <div style={{ fontWeight:700, fontSize:12, marginBottom:8, color:"#ef4444" }}>{blockedCount} Blocked Tasks</div>
-            {allBlocked.slice(0,5).map(t=><div key={t.id} style={{ fontSize:12, padding:"3px 0", borderBottom:"1px solid var(--tk-border)" }}>
-              <div style={{ fontWeight:600, color:"var(--tk-text-primary)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{t.title}</div>
-              <div style={{ fontSize:10, color:"#ef4444" }}>{t.blocked_reason||"No reason given"}</div>
-            </div>)}
-          </>}
-          {hoveredKpi==="stale" && <>
-            <div style={{ fontWeight:700, fontSize:12, marginBottom:8, color:"#f59e0b" }}>Tasks not updated 3+ days</div>
-            {allStale.slice(0,5).map(t=>{
-              const days=Math.round((now-new Date(t.status_changed_at))/86400000);
-              return <div key={t.id} style={{ display:"flex", justifyContent:"space-between", fontSize:12, padding:"3px 0", borderBottom:"1px solid var(--tk-border)", gap:8 }}>
-                <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", color:"var(--tk-text-secondary)" }}>{t.title}</span>
-                <span style={{ color:"#f59e0b", fontWeight:700, flexShrink:0 }}>{days}d</span>
-              </div>;
-            })}
-          </>}
-          {hoveredKpi==="unassigned" && <>
-            <div style={{ fontWeight:700, fontSize:12, marginBottom:8, color:"#f59e0b" }}>{unassignedCount} Unassigned Tasks</div>
-            <div style={{ display:"flex", gap:8, marginBottom:8 }}>
-              {[["High","#ef4444",unassignedByPriority.high],["Medium","#f59e0b",unassignedByPriority.medium],["Low","#22c55e",unassignedByPriority.low]].map(([l,c,v])=>(
-                <div key={l} style={{ flex:1, background:`${c}15`, borderRadius:7, padding:"6px 4px", textAlign:"center" }}>
-                  <div style={{ fontSize:16, fontWeight:800, color:c }}>{v}</div>
-                  <div style={{ fontSize:9, color:"var(--tk-text-muted)", fontWeight:600 }}>{l}</div>
-                </div>
-              ))}
-            </div>
-          </>}
-          {hoveredKpi==="risk" && <>
-            <div style={{ fontWeight:700, fontSize:12, marginBottom:8, color:"#ef4444" }}>Members at Risk</div>
-            {allAtRisk.map(m=><div key={m.user_id} style={{ padding:"4px 0", borderBottom:"1px solid var(--tk-border)", fontSize:12 }}>
-              <div style={{ fontWeight:700, color:"var(--tk-text-primary)" }}>{m.name}</div>
-              <div style={{ fontSize:10, color:"#ef4444" }}>
-                {[m.overdue.length>0&&`${m.overdue.length} overdue`, m.load_percent>=100&&`${m.load_percent}% load`, m.blocked.length>0&&`${m.blocked.length} blocked`].filter(Boolean).join(" · ")}
-              </div>
-            </div>)}
-          </>}
-          <div style={{ fontSize:10, color:"var(--tk-accent)", marginTop:8, fontWeight:600 }}>Click to open full view →</div>
-        </div>
-      )}
 
       {/* AI Insights */}
       {insights.map((ins, i) => {
@@ -1599,8 +1529,8 @@ export default function ManagerDashboard({ workspaceId, workspaceName, onNavigat
       try {
         const r = await api.get(`/capacity/predict/${workspaceId}?days=14`);
         setPredictions(r.data);
-      } catch (err) {
-        setPredError(err.response?.data?.message || "Failed to load predictions.");
+      } catch {
+        setPredictions([]);
       } finally { setPredLoading(false); }
     })();
 

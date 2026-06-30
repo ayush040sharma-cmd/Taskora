@@ -484,8 +484,10 @@ function TeamIntelPanel({ workspaceId, team }) {
       const r = await api.get(`/tasks/team-intel/${workspaceId}`);
       setTasks(r.data);
       setRefreshedAt(Date.now());
-    } catch {
-      if (!isRefresh) showToast("Failed to load team data", "error");
+    } catch (err) {
+      const detail = err?.response?.data?.detail || err?.response?.data?.message || err?.message || "unknown";
+      console.error("Team Intel failed:", detail, err);
+      if (!isRefresh) showToast(`Team Intel error: ${detail}`, "error");
     } finally {
       setLoading(false);
       setRefreshing(false);

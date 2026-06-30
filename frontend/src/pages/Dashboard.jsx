@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
+import { hasPermission } from "../utils/canAccess";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 import DashboardMobile from "../layouts/DashboardMobile";
@@ -742,7 +743,15 @@ export default function Dashboard() {
               <div className="board-header">
                 <div className="board-title-area"><h1>Manager</h1><p>Team workload, capacity, analytics, approvals & predictions</p></div>
               </div>
+              {!hasPermission("manager:view", user?.role) ? (
+                <div style={{ textAlign: "center", padding: "64px 0", color: "var(--text-secondary)" }}>
+                  <div style={{ fontSize: 40, marginBottom: 12 }}>🔒</div>
+                  <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Access restricted</div>
+                  <div style={{ fontSize: 13 }}>Manager View is available to managers and above.</div>
+                </div>
+              ) : (
               <ManagerDashboard workspaceId={currentWorkspace?.id} workspaceName={currentWorkspace?.name} onNavigate={setView} />
+              )}
             </>
           )}
 

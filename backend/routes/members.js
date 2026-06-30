@@ -12,7 +12,7 @@ const router  = express.Router();
 const pool    = require("../db");
 const auth    = require("../middleware/auth");
 const { validate, schemas } = require("../utils/validate");
-const { sendWorkspaceInvite } = require("../services/emailService");
+const { sendWorkspaceInvite, sendWorkspaceAddedNotification } = require("../services/emailService");
 
 const VALID_ROLES = ["manager", "member", "viewer"];
 
@@ -202,6 +202,16 @@ router.post("/", auth, validate(schemas.addMember), async (req, res) => {
       `INSERT INTO user_capacity (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`,
       [target.id]
     );
+
+    // Notify the added user by email (fire-and-forget — don't block response)
+    const wsInfo = await pool.query("SELECT name FROM workspaces WHERE id=$1", [workspace_id]);
+    sendWorkspaceAddedNotification({
+      toEmail:       target.email,
+      toName:        target.name,
+      inviterName:   req.user.name,
+      workspaceName: wsInfo.rows[0]?.name || "a workspace",
+      workspaceId:   workspace_id,
+    }).catch(() => {});
 
     res.status(201).json({
       ...result.rows[0],

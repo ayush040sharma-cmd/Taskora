@@ -1515,7 +1515,7 @@ export default function ManagerDashboard({ workspaceId, workspaceName, onNavigat
   const [activeTab,   setActiveTab]   = useState("team_intel");
   const [teamTasks,   setTeamTasks]   = useState([]);
 
-  const canManage = user?.role === "manager" || user?.role === "super_boss";
+  const canManage = ["manager","super_boss","super_admin","admin"].includes(user?.role);
 
   const loadTeam = useCallback(async () => {
     if (!workspaceId || !canManage) return;

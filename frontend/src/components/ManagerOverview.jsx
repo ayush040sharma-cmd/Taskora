@@ -518,6 +518,89 @@ function ActivityFeed({ workspaceId }) {
   );
 }
 
+// ─── ActiveTasksByMember ──────────────────────────────────────────────────────
+const STATUS_COLOR = {
+  inprogress:        "#3b82f6", in_progress: "#3b82f6",
+  review:            "#8b5cf6",
+  blocked:           "#ef4444",
+  todo:              "#64748b", pending_approval: "#64748b",
+  done:              "#22c55e",
+};
+const STATUS_LABEL = {
+  inprogress:"In Progress", in_progress:"In Progress",
+  review:"Review", blocked:"Blocked", todo:"To Do",
+  pending_approval:"Pending", done:"Done",
+};
+
+function ActiveTasksByMember({ tasks, team }) {
+  const [expanded, setExpanded] = useState({});
+  const active = tasks.filter(t => t.status !== "done");
+  if (!active.length) return null;
+
+  const byMember = {};
+  active.forEach(t => {
+    const key = t.assignee_name || "Unassigned";
+    if (!byMember[key]) byMember[key] = [];
+    byMember[key].push(t);
+  });
+
+  const entries = Object.entries(byMember).sort((a,b) => b[1].length - a[1].length);
+
+  return (
+    <div className="mo-card">
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+        <div>
+          <div className="mo-card-title">Active Tasks by Member</div>
+          <div className="mo-card-sub">All open tasks across the team</div>
+        </div>
+        <span style={{ fontSize:12, background:C.bg, color:C.secondary, padding:"3px 10px", borderRadius:20, border:`1px solid ${C.border}` }}>
+          {active.length} active
+        </span>
+      </div>
+      <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+        {entries.map(([name, memberTasks]) => {
+          const isOpen = expanded[name];
+          return (
+            <div key={name} style={{ border:`1px solid ${C.border}`, borderRadius:8, overflow:"hidden" }}>
+              <div onClick={() => setExpanded(p=>({...p,[name]:!p[name]}))}
+                style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px", cursor:"pointer", background:`${HC.accent}08`, userSelect:"none" }}>
+                <div style={{ width:30,height:30,borderRadius:"50%",background:HC.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"#fff",flexShrink:0 }}>
+                  {name.slice(0,2).toUpperCase()}
+                </div>
+                <span style={{ fontWeight:700, fontSize:13, color:C.text, flex:1 }}>{name}</span>
+                <span style={{ fontSize:12, color:C.secondary, marginRight:8 }}>{memberTasks.length} task{memberTasks.length!==1?"s":""}</span>
+                <span style={{ fontSize:13, color:C.muted, transform:isOpen?"rotate(90deg)":"rotate(0)", display:"inline-block", transition:"transform 0.15s" }}>›</span>
+              </div>
+              {isOpen && (
+                <div style={{ padding:"0 14px 10px" }}>
+                  {memberTasks.map(t => (
+                    <div key={t.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"7px 0", borderBottom:`1px solid ${C.border}` }}>
+                      <span style={{ fontSize:10, fontWeight:700, padding:"2px 7px", borderRadius:99, background:`${STATUS_COLOR[t.status]||HC.muted}20`, color:STATUS_COLOR[t.status]||HC.muted, flexShrink:0 }}>
+                        {STATUS_LABEL[t.status]||t.status}
+                      </span>
+                      <span style={{ flex:1, fontSize:13, color:C.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{t.title}</span>
+                      {t.priority && (
+                        <span style={{ fontSize:10, color:t.priority==="high"?HC.danger:t.priority==="medium"?HC.warn:HC.ok, fontWeight:700, flexShrink:0 }}>
+                          {t.priority}
+                        </span>
+                      )}
+                      {t.due_date && (
+                        <span style={{ fontSize:10, color:new Date(t.due_date)<new Date()?HC.danger:C.muted, flexShrink:0 }}>
+                          {new Date(t.due_date).toLocaleDateString("en-US",{month:"short",day:"numeric"})}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── CategoryChart ────────────────────────────────────────────────────────────
 function CategoryChart({ tasks, team }) {
   const TYPE_COLORS = {
@@ -812,6 +895,9 @@ export default function ManagerOverview({ workspaceId, team = [], tasks: propTas
           <AtRiskTasks tasks={tasks} />
         </div>
       </div>
+
+      {/* Active Tasks by Member */}
+      <ActiveTasksByMember tasks={tasks} team={team} />
 
       {/* Merged Team Activity Feed */}
       <div className="mo-card">

@@ -62,6 +62,8 @@ export default function Register() {
     setError("");
     if (form.password !== form.confirm) return setError("Passwords do not match.");
     if (form.password.length < 8) return setError("Password must be at least 8 characters.");
+    if (!/[A-Z]/.test(form.password)) return setError("Password must contain at least one uppercase letter.");
+    if (!/[0-9]/.test(form.password)) return setError("Password must contain at least one number.");
     setStep(2);
   };
 

@@ -16,13 +16,22 @@ const app        = express();
 const httpServer = createServer(app);
 const PORT       = process.env.PORT || 3001;
 
+// Trust the first proxy hop (Render's load balancer) so req.ip is the real
+// client IP and rate-limiters per IP work correctly.
+app.set("trust proxy", 1);
+
 // ── Allowed origins ───────────────────────────────────────────────────────────
+// FRONTEND_URL  — primary production frontend (Vercel deployment URL)
+// ADDITIONAL_ORIGINS — comma-separated extra origins (preview deploys, staging)
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
   "http://localhost:5174",
   "http://localhost:5175",
   "http://localhost:3000",
   ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
+  ...(process.env.ADDITIONAL_ORIGINS
+    ? process.env.ADDITIONAL_ORIGINS.split(",").map(o => o.trim()).filter(Boolean)
+    : []),
 ];
 
 // ── Security headers (helmet) ─────────────────────────────────────────────────

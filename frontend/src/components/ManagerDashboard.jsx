@@ -541,9 +541,9 @@ function TeamIntelPanel({ workspaceId, team }) {
     return true;
   });
 
-  // Exclude managers/owners from the team display — Team Intel is for viewing non-manager members
-  const MANAGER_ROLES = ["manager", "owner", "admin", "super_boss", "super_admin"];
-  const displayTeam = (team || []).filter(m => !MANAGER_ROLES.includes(m.role));
+  // Exclude only the logged-in manager from their own team list
+  const { user: currentUser } = useAuth();
+  const displayTeam = (team || []).filter(m => String(m.user_id || m.id) !== String(currentUser?.id));
 
   // Enrich each team member with their task breakdown
   // effective_assignee_id: backend sends this — falls back to workspace_owner_id for unassigned tasks

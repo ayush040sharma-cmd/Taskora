@@ -206,20 +206,17 @@ function startAgents() {
 
   // Agent 1: Risk Monitor — every hour at minute 5
   cron.schedule("5 * * * *", () => {
-    console.log("[Agent:RiskMonitor] Running…");
-    runRiskMonitor();
+    runRiskMonitor().catch(e => console.error("[Agent:RiskMonitor] uncaught:", e.message));
   });
 
   // Agent 2: Overdue Tagger — every 6 hours
   cron.schedule("0 */6 * * *", () => {
-    console.log("[Agent:OverdueTagger] Running…");
-    runOverdueTagger();
+    runOverdueTagger().catch(e => console.error("[Agent:OverdueTagger] uncaught:", e.message));
   });
 
   // Agent 3: Workload Sync — every 30 minutes
   cron.schedule("*/30 * * * *", () => {
-    console.log("[Agent:WorkloadSync] Running…");
-    runWorkloadSync();
+    runWorkloadSync().catch(e => console.error("[Agent:WorkloadSync] uncaught:", e.message));
   });
 
   console.log("✅ Background agents started (RiskMonitor, OverdueTagger, WorkloadSync)");

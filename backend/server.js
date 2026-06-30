@@ -46,7 +46,7 @@ app.use(helmet({
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true); // Same-origin / server-to-server
-    if (ALLOWED_ORIGINS.includes(origin) || /\.vercel\.app$/.test(origin)) {
+    if (ALLOWED_ORIGINS.includes(origin)) {
       return callback(null, true);
     }
     logger.warn(`CORS blocked origin: ${origin}`);
@@ -106,12 +106,24 @@ const io = new Server(httpServer, {
   },
 });
 
-// JWT authentication on every socket connection
+// JWT authentication on every socket connection.
+// Prefers the httpOnly cookie (immune to XSS), falls back to explicit auth token
+// (needed for OAuth callbacks and environments where cookies aren't forwarded).
 io.use((socket, next) => {
   try {
+    // Parse httpOnly cookie from the handshake request headers
+    const rawCookie = socket.handshake.headers?.cookie || "";
+    const cookieToken = rawCookie
+      .split(";")
+      .map(c => c.trim())
+      .find(c => c.startsWith("taskora_token="))
+      ?.slice("taskora_token=".length);
+
     const token =
+      cookieToken ||
       socket.handshake.auth?.token ||
       socket.handshake.headers?.authorization?.replace("Bearer ", "");
+
     if (!token) return next(new Error("Socket: authentication required"));
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     socket.user = decoded;
@@ -183,6 +195,7 @@ app.use("/api/user-mgmt",     require("./routes/user-management"));
 app.use("/api/approvals-engine", approvalEngine.router);
 app.use("/api/teams",         require("./routes/teams"));
 app.use("/api/import",        require("./routes/import"));
+app.use("/api/analytics",     require("./routes/analytics"));
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get("/health", async (req, res) => {

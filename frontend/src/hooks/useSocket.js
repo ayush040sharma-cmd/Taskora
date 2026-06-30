@@ -6,15 +6,19 @@ let socketInstance = null;
 
 function getSocket() {
   if (!socketInstance) {
-    const url   = import.meta.env.VITE_API_URL || "http://localhost:3001";
-    const token = localStorage.getItem("token");
+    const url = import.meta.env.VITE_API_URL || "http://localhost:3001";
+    // Prefer httpOnly cookie (sent automatically via withCredentials).
+    // Fall back to sessionStorage token for environments where cross-origin
+    // cookies aren't available (e.g. first connection before cookie is set).
+    const token = sessionStorage.getItem("_sk") || localStorage.getItem("token");
 
     socketInstance = io(url, {
       autoConnect: false,
+      withCredentials: true,
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 2000,
-      auth: token ? { token } : {},  // pass JWT so server auth middleware accepts it
+      auth: token ? { token } : {},
     });
   }
   return socketInstance;
@@ -50,7 +54,7 @@ export function useSocket(workspaceId, handlers = {}) {
     const socket = getSocket();
 
     // Refresh auth token in case it changed since singleton was created
-    const freshToken = localStorage.getItem("token") || "";
+    const freshToken = sessionStorage.getItem("_sk") || localStorage.getItem("token") || "";
     if (socket.auth && socket.auth.token !== freshToken) {
       socket.auth = { token: freshToken };
     }

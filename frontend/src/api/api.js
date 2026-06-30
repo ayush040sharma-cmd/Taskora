@@ -13,10 +13,11 @@ const api = axios.create({
   timeout: 40000, // Render free tier can take 30-60s to cold-start
 });
 
-// Also attach Bearer token from localStorage as a fallback
-// (supports existing sessions until cookie is set on next login)
+// Attach Bearer token as a fallback for environments where cross-origin cookies
+// aren't forwarded (e.g. some mobile browsers, SSR). Reads from sessionStorage
+// (_sk) which is cleared on tab close, not the persistent localStorage JWT.
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
+  const token = sessionStorage.getItem("_sk") || localStorage.getItem("token");
   if (token && !config.headers.Authorization) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -27,11 +28,13 @@ api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
-      // Clear any stale localStorage data; cookie will be cleared server-side
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       localStorage.removeItem("demo_session");
-      window.location.href = "/login";
+      const current = window.location.pathname + window.location.search;
+      window.location.href = current === "/" || current.startsWith("/login")
+        ? "/login"
+        : `/login?redirect=${encodeURIComponent(current)}`;
     }
     return Promise.reject(err);
   }

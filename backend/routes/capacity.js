@@ -17,15 +17,15 @@ const { requireMinRole } = require("../middleware/rbac");
 const wl = require("../services/workloadEngine");
 const { audit } = require("../services/auditService");
 
-// ── Helper: get or create capacity row ──────────────────────────────────────
+// ── Helper: get or create capacity row (atomic upsert — no TOCTOU race) ─────
 async function getOrCreate(userId) {
-  const r = await pool.query("SELECT * FROM user_capacity WHERE user_id = $1", [userId]);
-  if (r.rows.length) return r.rows[0];
-  const ins = await pool.query(
-    "INSERT INTO user_capacity (user_id) VALUES ($1) RETURNING *",
+  const r = await pool.query(
+    `INSERT INTO user_capacity (user_id) VALUES ($1)
+     ON CONFLICT (user_id) DO UPDATE SET user_id = EXCLUDED.user_id
+     RETURNING *`,
     [userId]
   );
-  return ins.rows[0];
+  return r.rows[0];
 }
 
 // ── GET /api/capacity/me ─────────────────────────────────────────────────────

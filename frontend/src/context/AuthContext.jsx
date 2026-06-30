@@ -84,8 +84,10 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const { data } = await api.post("/auth/login", { email, password });
-    localStorage.setItem("token", data.token);
+    // Token is now stored as an httpOnly cookie by the server — no localStorage
     localStorage.setItem("user", JSON.stringify(data.user));
+    // Keep token in sessionStorage ONLY for socket.io auth (not readable by XSS)
+    sessionStorage.setItem("_sk", data.token);
     resetSocket();
     setUser(data.user);
     fetchSidebarViews();
@@ -94,8 +96,8 @@ export function AuthProvider({ children }) {
 
   const register = async (name, email, password, role = "manager") => {
     const { data } = await api.post("/auth/register", { name, email, password, role });
-    localStorage.setItem("token", data.token);
     localStorage.setItem("user", JSON.stringify(data.user));
+    sessionStorage.setItem("_sk", data.token);
     setUser(data.user);
     fetchSidebarViews();
     return data.user;
@@ -103,8 +105,8 @@ export function AuthProvider({ children }) {
 
   // Used by OAuth callback — token + user already determined by backend
   const loginWithToken = (token, userData, isDemo = false) => {
-    localStorage.setItem("token", token);
     localStorage.setItem("user", JSON.stringify(userData));
+    sessionStorage.setItem("_sk", token);
     resetSocket();
     if (isDemo) {
       localStorage.setItem("demo_session", String(Date.now()));
@@ -126,10 +128,11 @@ export function AuthProvider({ children }) {
     clearDemoTimer();
     resetSocket();
     try { await api.post("/auth/logout"); } catch {}
-    localStorage.removeItem("token");
+    localStorage.removeItem("token");      // legacy cleanup
     localStorage.removeItem("user");
     localStorage.removeItem("demo_session");
     localStorage.removeItem("sidebar-views");
+    sessionStorage.removeItem("_sk");
     setUser(null);
     setSidebarViews(new Set());
   };

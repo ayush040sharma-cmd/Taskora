@@ -4,10 +4,10 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  /* Brand */
-  --primary:        #0052cc;
-  --primary-hover:  #0065ff;
-  --primary-dark:   #0747a6;
+  /* Brand — defer to design token; fallback for components not yet migrated */
+  --primary:        var(--tk-accent, #3B82F6);
+  --primary-hover:  #2563eb;
+  --primary-dark:   #1d4ed8;
 
   /* Sidebar */
   --sidebar-bg:     #1d2125;
@@ -22,14 +22,14 @@
   --card-bg:        #ffffff;
   --column-bg:      #f0f1f4;
 
-  /* Text */
-  --text-primary:   #172b4d;
-  --text-secondary: #5e6c84;
-  --text-muted:     #97a0af;
+  /* Text — defer to design tokens for dark-mode aware values */
+  --text-primary:   var(--tk-text-primary, #172b4d);
+  --text-secondary: var(--tk-text-secondary, #5e6c84);
+  --text-muted:     var(--tk-text-muted, #97a0af);
 
   /* Border */
-  --border:         #dfe1e6;
-  --border-focus:   #0052cc;
+  --border:         var(--tk-border, #dfe1e6);
+  --border-focus:   var(--tk-accent, #3B82F6);
 
   /* Status */
   --todo-accent:    #dfe1e6;
@@ -51,7 +51,7 @@
   --radius:     6px;
   --radius-lg:  10px;
 
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--tk-font-body, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
   font-size: 14px;
   line-height: 1.5;
   color: var(--text-primary);
@@ -4377,15 +4377,51 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
   padding: 9px 20px;
   border-radius: 8px;
   border: none;
-  background: #6366f1;
+  background: var(--primary);
   font-size: 14px;
   font-weight: 600;
   color: #fff;
   cursor: pointer;
   transition: background 0.15s, opacity 0.15s;
 }
-.btn-modal-save:hover:not(:disabled) { background: #4f46e5; }
+.btn-modal-save:hover:not(:disabled) { background: var(--primary-hover); }
 .btn-modal-save:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ── DS-002: Button variant consolidation ────────────────────────────────────
+   Canonical variants: .btn-primary (filled) / .btn-secondary (outlined) / .btn-ghost (transparent)
+   All aliases below share visual rules without requiring JSX changes.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* "Primary" aliases — same filled brand-blue appearance */
+.btn-create,
+.btn-modal-submit,
+.btn-modal-save-primary,
+.btn-members-add,
+.btn-sprint-end {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+.btn-create:hover,
+.btn-modal-submit:hover,
+.btn-modal-save-primary:hover,
+.btn-members-add:hover,
+.btn-sprint-end:hover { background: var(--primary-hover); opacity: 1; }
+
+/* "Secondary" aliases — same ghost-with-border appearance */
+.btn-sprint-action,
+.btn-modal-cancel {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1.5px solid var(--border);
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.btn-sprint-action:hover { border-color: var(--primary); color: var(--primary); background: rgba(59,130,246,0.05); }
 
 /* ══════════════════════════════════════════════════════════════
    NOTIFICATION BELL

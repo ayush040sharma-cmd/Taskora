@@ -7,21 +7,20 @@ const IS_PROD = process.env.NODE_ENV === "production";
 function setAuthCookie(res, token) {
   res.cookie("taskora_token", token, {
     httpOnly: true,
-    secure:   IS_PROD,              // HTTPS only in production
-    sameSite: IS_PROD ? "strict" : "lax",
-    maxAge:   7 * 24 * 60 * 60 * 1000, // 7 days (matches JWT expiry)
+    secure:   IS_PROD,
+    // "none" required for cross-origin (Vercel frontend → Render backend).
+    // "none" requires secure:true (HTTPS), which is always true in prod.
+    sameSite: IS_PROD ? "none" : "lax",
+    maxAge:   7 * 24 * 60 * 60 * 1000,
     path:     "/",
   });
 }
 
-/**
- * Clear the auth cookie (logout).
- */
 function clearAuthCookie(res) {
   res.clearCookie("taskora_token", {
     httpOnly: true,
     secure:   IS_PROD,
-    sameSite: IS_PROD ? "strict" : "lax",
+    sameSite: IS_PROD ? "none" : "lax",
     path:     "/",
   });
 }

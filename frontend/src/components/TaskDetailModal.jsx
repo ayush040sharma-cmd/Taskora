@@ -305,6 +305,7 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
   const [toast, setToast]           = useState(null);
   const [teams, setTeams]           = useState([]);
   const commentBoxRef               = useRef(null);
+  const saveAbortRef                = useRef(null);
 
   useEffect(() => {
     const wsId = workspaceId || initialTask.workspace_id;
@@ -329,11 +330,14 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
   };
 
   const saveField = async (field, value) => {
+    // Cancel any in-flight save to prevent out-of-order response overwrites
+    saveAbortRef.current?.abort();
+    const controller = new AbortController();
+    saveAbortRef.current = controller;
+
     setSaving(true);
     try {
-      const res = await api.put(`/tasks/${task.id}`, { [field]: value });
-      // Merge only the saved field + server-computed fields to avoid overwriting
-      // concurrent local edits (e.g. user changing date while another field saves)
+      const res = await api.put(`/tasks/${task.id}`, { [field]: value }, { signal: controller.signal });
       setTask(prev => ({
         ...prev,
         [field]: res.data[field],
@@ -342,8 +346,11 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
       }));
       onUpdate && onUpdate({ ...task, [field]: value });
       showMsg("Saved");
-    } catch { showMsg("Failed to save", "error"); }
-    finally  { setSaving(false); }
+    } catch (err) {
+      if (err.name !== "CanceledError" && err.code !== "ERR_CANCELED") {
+        showMsg("Failed to save", "error");
+      }
+    } finally { setSaving(false); }
   };
 
   const saveTitle = async () => {

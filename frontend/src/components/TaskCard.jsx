@@ -125,18 +125,25 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
   const [hovered, setHovered] = useState(false);
 
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [popupPos, setPopupPos] = useState({ top: 0, left: 0 });
   const deleteTimerRef = useRef(null);
+  const trashBtnRef = useRef(null);
 
-  const handleDeleteClick = (e) => {
+  const openDeletePopup = (e) => {
     e.stopPropagation();
-    if (deleteConfirm) {
-      clearTimeout(deleteTimerRef.current);
-      setDeleteConfirm(false);
-      onDelete(task.id);
-    } else {
-      setDeleteConfirm(true);
-      deleteTimerRef.current = setTimeout(() => setDeleteConfirm(false), 3000);
+    const rect = trashBtnRef.current?.getBoundingClientRect();
+    if (rect) {
+      setPopupPos({ top: rect.top - 8, left: rect.right });
     }
+    setDeleteConfirm(true);
+    deleteTimerRef.current = setTimeout(() => setDeleteConfirm(false), 5000);
+  };
+
+  const confirmDelete = (e) => {
+    e.stopPropagation();
+    clearTimeout(deleteTimerRef.current);
+    setDeleteConfirm(false);
+    onDelete(task.id);
   };
 
   const cancelDelete = (e) => {
@@ -204,7 +211,7 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
           className={`tk-task-card${snapshot.isDragging ? " dragging" : ""}${isBlocked ? " tk-task-card--blocked" : ""}`}
           style={provided.draggableProps.style}
           onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => { setHovered(false); cancelDelete(); }}
+          onMouseLeave={() => setHovered(false)}
         >
           {/* Status banner — overdue / stuck */}
           {overdue && (
@@ -256,44 +263,61 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
             )}
 
             <div className="tk-task-actions">
-              {!deleteConfirm && (
-                <button
-                  className="tk-task-action-btn"
-                  onClick={e => { e.stopPropagation(); onOpenDetail && onOpenDetail(task); }}
-                  title="Edit task"
-                >
-                  <IconEdit />
-                </button>
-              )}
-              {deleteConfirm ? (
-                <>
-                  <button
-                    className="tk-task-action-btn"
-                    onClick={cancelDelete}
-                    title="Cancel"
-                    style={{ color: "#64748b", fontSize: 11, fontWeight: 700 }}
-                  >
-                    ✕
-                  </button>
-                  <button
-                    className="tk-task-action-btn tk-task-action-btn--delete"
-                    onClick={handleDeleteClick}
-                    title="Confirm delete"
-                    style={{ color: "#ef4444", fontSize: 11, fontWeight: 700 }}
-                  >
-                    Delete?
-                  </button>
-                </>
-              ) : (
-                <button
-                  className="tk-task-action-btn tk-task-action-btn--delete"
-                  onClick={handleDeleteClick}
-                  title="Delete task"
-                >
-                  <IconTrash />
-                </button>
-              )}
+              <button
+                className="tk-task-action-btn"
+                onClick={e => { e.stopPropagation(); onOpenDetail && onOpenDetail(task); }}
+                title="Edit task"
+              >
+                <IconEdit />
+              </button>
+              <button
+                ref={trashBtnRef}
+                className="tk-task-action-btn tk-task-action-btn--delete"
+                onClick={openDeletePopup}
+                title="Delete task"
+              >
+                <IconTrash />
+              </button>
             </div>
+
+            {deleteConfirm && (
+              <div
+                onClick={e => e.stopPropagation()}
+                style={{
+                  position: "fixed",
+                  top: popupPos.top,
+                  left: popupPos.left,
+                  transform: "translate(-100%, -100%)",
+                  background: "#fff",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 10,
+                  padding: "12px 14px",
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.13), 0 1px 4px rgba(0,0,0,0.06)",
+                  zIndex: 9999,
+                  minWidth: 190,
+                  textAlign: "left",
+                }}
+              >
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 3 }}>Delete task?</div>
+                <div style={{ fontSize: 11, color: "#64748b", marginBottom: 10, lineHeight: 1.4 }}>
+                  This action cannot be undone.
+                </div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button
+                    onClick={cancelDelete}
+                    style={{ flex: 1, padding: "6px 0", border: "1px solid #e2e8f0", borderRadius: 6, fontSize: 12, fontWeight: 600, background: "#f8fafc", color: "#64748b", cursor: "pointer" }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDelete}
+                    style={{ flex: 1, padding: "6px 0", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, background: "#ef4444", color: "#fff", cursor: "pointer" }}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Type + Priority + Risk + Due date */}

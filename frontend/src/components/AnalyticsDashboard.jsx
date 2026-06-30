@@ -138,53 +138,18 @@ export default function AnalyticsDashboard({ workspaceId, onNavigate, onOpenDeta
   useEffect(() => {
     if (!workspaceId) return;
     setLoading(true);
+    setFetchError(false);
 
-    api.get(`/sprints?workspace_id=${workspaceId}`)
-      .catch(() => ({ data: [] }))
-      .then((sprintsRes) => {
+    // Fetch pre-aggregated analytics from server (avoids iterating full task list client-side)
+    // and sprint velocity (needs sprint membership per task, kept client-side for now)
+    Promise.all([
+      api.get(`/analytics/${workspaceId}`),
+      api.get(`/sprints?workspace_id=${workspaceId}`).catch(() => ({ data: [] })),
+    ]).then(([analyticsRes, sprintsRes]) => {
+      const agg     = analyticsRes.data;
       const sprints = sprintsRes.data;
 
-      // ── KPI cards ───────────────────────────────────────────────────
-      const total       = tasks.length;
-      const done        = tasks.filter(t => t.status === "done").length;
-      const inProgress  = tasks.filter(t => t.status === "inprogress" || t.status === "in_progress").length;
-      const overdue     = tasks.filter(t => t.due_date && new Date(t.due_date) < new Date() && t.status !== "done").length;
-      const unassigned  = tasks.filter(t => !t.assigned_user_id && t.status !== "done").length;
-      const completionRate = total > 0 ? Math.round((done / total) * 100) : 0;
-
-      // ── Average completion time (done tasks with start + updated) ───
-      const doneTasks  = tasks.filter(t => t.status === "done" && t.created_at && t.completed_at);
-      const avgDays    = doneTasks.length > 0
-        ? Math.round(doneTasks.reduce((s, t) => {
-            const diff = (new Date(t.completed_at) - new Date(t.created_at)) / (1000 * 60 * 60 * 24);
-            return s + diff;
-          }, 0) / doneTasks.length)
-        : null;
-
-      // ── Throughput: tasks completed per week (last 8 weeks) ─────────
-      const throughput = [];
-      for (let w = 7; w >= 0; w--) {
-        const weekStart = new Date();
-        weekStart.setDate(weekStart.getDate() - w * 7 - 6);
-        weekStart.setHours(0, 0, 0, 0);
-        const weekEnd = new Date();
-        weekEnd.setDate(weekEnd.getDate() - w * 7);
-        weekEnd.setHours(23, 59, 59, 999);
-
-        const count = tasks.filter(t =>
-          t.status === "done" && t.completed_at &&
-          new Date(t.completed_at) >= weekStart &&
-          new Date(t.completed_at) <= weekEnd
-        ).length;
-
-        throughput.push({
-          week: `W${8 - w}`,
-          count,
-          label: weekStart.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-        });
-      }
-
-      // ── Sprint velocity ──────────────────────────────────────────────
+      // Sprint velocity still computed client-side (needs sprint_id per task)
       const velocity = sprints.slice(-6).map(s => {
         const sprintTasks = tasks.filter(t => t.sprint_id === s.id);
         return {
@@ -194,36 +159,9 @@ export default function AnalyticsDashboard({ workspaceId, onNavigate, onOpenDeta
         };
       });
 
-      // ── Priority distribution ────────────────────────────────────────
-      const priorityCounts = ["critical", "high", "medium", "low"].map(p => ({
-        priority: p,
-        count: tasks.filter(t => t.priority === p && t.status !== "done").length,
-      }));
-
-      // ── Type distribution ────────────────────────────────────────────
-      const types = {};
-      tasks.filter(t => t.status !== "done").forEach(t => {
-        types[t.type || "task"] = (types[t.type || "task"] || 0) + 1;
-      });
-
-      // ── Trend: completion rate over last 7 days ─────────────────────
-      const trend = Array.from({ length: 7 }, (_, i) => {
-        const d = new Date();
-        d.setDate(d.getDate() - (6 - i));
-        d.setHours(23, 59, 59, 999);
-        const totalByDay = tasks.filter(t => new Date(t.created_at) <= d).length;
-        const doneByDay  = tasks.filter(t =>
-          t.status === "done" && t.completed_at && new Date(t.completed_at) <= d
-        ).length;
-        return totalByDay > 0 ? Math.round((doneByDay / totalByDay) * 100) : 0;
-      });
-
-      setData({
-        total, done, inProgress, overdue, unassigned, completionRate, avgDays,
-        throughput, velocity, priorityCounts, types, trend,
-      });
+      setData({ ...agg, velocity });
     }).catch(() => { setFetchError(true); }).finally(() => setLoading(false));
-  }, [workspaceId, tasks]);
+  }, [workspaceId]);
 
   if (!workspaceId) return null;
 

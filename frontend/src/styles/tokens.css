@@ -5,7 +5,6 @@
    / index.css) before any component styles.
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700;800&display=swap');
 
 :root {
   /* ---- Surfaces (darkest to lightest) ---- */
@@ -38,8 +37,8 @@
   --tk-status-danger-bg: rgba(239, 68, 68, 0.15);
 
   /* ---- Typography ---- */
-  --tk-font-display: 'Syne', sans-serif;   /* headings, KPI numbers, brand wordmark */
-  --tk-font-body:    'DM Sans', sans-serif; /* everything else */
+  --tk-font-display: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --tk-font-body:    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
   --tk-text-h1: 36px;
   --tk-text-h2: 24px;
@@ -93,6 +92,28 @@ body.tk-theme {
   border: 1px solid var(--tk-border);
   border-radius: var(--tk-radius-card);
   padding: var(--tk-space-4);
+}
+
+/* --- DS-005: Shared card surface for all app card variants ─────────────────
+   Ensures every card has consistent background / border / radius regardless
+   of which screen-specific class it uses. Layout (flex, grid, padding) stays
+   per-variant. Add new card classes here rather than copying these 4 rules.
+   ─────────────────────────────────────────────────────────────────────────── */
+.analytics-card,
+.cap-card,
+.ai-metric-card,
+.integration-card,
+.collab-card,
+.mgr-member-card,
+.mgr-approval-card,
+.wl-card,
+.sum-stat-card,
+.sum-card,
+.sim-metric-card,
+.sim-user-card {
+  background: var(--tk-card);
+  border: 1px solid var(--tk-border);
+  border-radius: var(--tk-radius-card);
 }
 
 /* --- Card: AI / insight variant. This is THE signature motif —

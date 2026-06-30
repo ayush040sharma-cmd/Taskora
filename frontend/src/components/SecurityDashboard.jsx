@@ -80,9 +80,10 @@ export default function SecurityDashboard() {
   useEffect(() => {
     load();
 
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("_sk") || localStorage.getItem("token");
     const socket = io(import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:3001", {
-      auth: { token },
+      withCredentials: true,
+      auth: token ? { token } : {},
       transports: ["websocket"],
     });
 

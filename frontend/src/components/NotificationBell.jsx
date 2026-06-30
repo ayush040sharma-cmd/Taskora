@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import api from "../api/api";
 import { getSocket } from "../hooks/useSocket";
+import { useAuth } from "../context/AuthContext";
 
 const IconBell = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -29,6 +30,7 @@ function timeAgo(ts) {
 }
 
 export default function NotificationBell() {
+  const { user } = useAuth();
   const [open,   setOpen]   = useState(false);
   const [items,  setItems]  = useState([]);
   const [count,  setCount]  = useState(0);
@@ -50,15 +52,16 @@ export default function NotificationBell() {
   };
 
   useEffect(() => {
+    if (!user) return;
     fetchCount();
-    const interval = setInterval(fetchCount, 30000);
+    // Poll every 2 min as a fallback only — socket handles real-time delivery
+    const interval = setInterval(fetchCount, 120000);
     return () => clearInterval(interval);
-  }, []);
+  }, [user]);
 
   // Real-time: listen on personal socket room for instant notification delivery
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
+    if (!user) return;
     const socket = getSocket();
     if (!socket.connected) socket.connect();
     const handler = (notif) => {

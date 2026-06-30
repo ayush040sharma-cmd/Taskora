@@ -20,8 +20,16 @@ router.post("/assign", auth, requireMinRole("manager"), async (req, res) => {
     return res.status(400).json({ message: "task_id, user_id, workspace_id required" });
   }
   try {
-    // Fetch task
-    const taskR = await pool.query("SELECT * FROM tasks WHERE id=$1", [task_id]);
+    // Verify requesting user is a member or owner of this workspace
+    const accessR = await pool.query(
+      `SELECT 1 FROM workspaces WHERE id=$1 AND user_id=$2
+       UNION SELECT 1 FROM workspace_members WHERE workspace_id=$1 AND user_id=$2`,
+      [workspace_id, req.user.id]
+    );
+    if (!accessR.rows.length) return res.status(403).json({ message: "Access denied" });
+
+    // Fetch task — must belong to the given workspace
+    const taskR = await pool.query("SELECT * FROM tasks WHERE id=$1 AND workspace_id=$2", [task_id, workspace_id]);
     if (!taskR.rows.length) return res.status(404).json({ message: "Task not found" });
     const task = { ...taskR.rows[0], estimated_hours: estimated_hours || taskR.rows[0].estimated_hours };
 
@@ -63,7 +71,15 @@ router.post("/assign", auth, requireMinRole("manager"), async (req, res) => {
 router.get("/suggest/:wsId/:taskId", auth, requireMinRole("manager"), async (req, res) => {
   const { wsId, taskId } = req.params;
   try {
-    const taskR = await pool.query("SELECT * FROM tasks WHERE id=$1", [taskId]);
+    // Verify requester is owner or member
+    const accessR = await pool.query(
+      `SELECT 1 FROM workspaces WHERE id=$1 AND user_id=$2
+       UNION SELECT 1 FROM workspace_members WHERE workspace_id=$1 AND user_id=$2`,
+      [wsId, req.user.id]
+    );
+    if (!accessR.rows.length) return res.status(403).json({ message: "Access denied" });
+
+    const taskR = await pool.query("SELECT * FROM tasks WHERE id=$1 AND workspace_id=$2", [taskId, wsId]);
     if (!taskR.rows.length) return res.status(404).json({ message: "Task not found" });
     const task = taskR.rows[0];
 

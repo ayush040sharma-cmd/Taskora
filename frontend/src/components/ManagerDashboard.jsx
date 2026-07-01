@@ -505,6 +505,7 @@ function TeamIntelPanel({ workspaceId, team }) {
   const [exportFmt,   setExportFmt]   = useState("csv");
   const [exportScope, setExportScope] = useState("all");
   const [bulkAction,  setBulkAction]  = useState("");
+  const [taskDrawer,  setTaskDrawer]  = useState(null);
   const timerRef = useRef(null);
 
   const showToast = useCallback((msg, type = "success") => {
@@ -878,36 +879,35 @@ function TeamIntelPanel({ workspaceId, team }) {
                   </div>
                 )}
                 {/* Column headers */}
-                <div style={{ display:"grid", gridTemplateColumns:"28px 1fr 110px 90px 70px 70px 90px 80px 200px", padding:"5px 16px", background:"rgba(0,0,0,0.06)", borderBottom:"1px solid var(--tk-border)" }}>
+                <div style={{ display:"grid", gridTemplateColumns:"28px 1fr 90px 70px 100px 180px", padding:"5px 16px", background:"rgba(0,0,0,0.06)", borderBottom:"1px solid var(--tk-border)" }}>
                   <input type="checkbox" checked={memberTasks.every(t=>selectedTasks.has(t.id))}
                     onChange={e => setSelectedTasks(prev => { const n=new Set(prev); if(e.target.checked) memberTasks.forEach(t=>n.add(t.id)); else memberTasks.forEach(t=>n.delete(t.id)); return n; })}
                     style={{ cursor:"pointer" }} />
-                  {["Task","Project","Sprint","Status","Priority","Due","Updated","Actions"].map(h=>(
+                  {["Task","Status","Priority","Due","Actions"].map(h=>(
                     <span key={h} style={{ fontSize:10, fontWeight:700, color:"var(--tk-text-muted)", textTransform:"uppercase", letterSpacing:0.5 }}>{h}</span>
                   ))}
                 </div>
                 {memberTasks.map(t => {
-                  const due   = formatDue(t.due_date);
+                  const due       = formatDue(t.due_date);
                   const isOverdue = t.due_date && new Date(t.due_date) < today && t.status !== "done";
-                  const isStale   = t.status_changed_at && new Date(t.status_changed_at) < staleThreshold;
                   const isSelected = selectedTasks.has(t.id);
 
                   return (
-                    <div key={t.id} style={{ display:"grid", gridTemplateColumns:"28px 1fr 110px 90px 70px 70px 90px 80px 200px", padding:"8px 16px", borderBottom:"1px solid var(--tk-border)", background: isSelected?"rgba(59,130,246,0.07)":isOverdue?"rgba(239,68,68,0.04)":"transparent", alignItems:"center" }}>
+                    <div key={t.id} style={{ display:"grid", gridTemplateColumns:"28px 1fr 90px 70px 100px 180px", padding:"8px 16px", borderBottom:"1px solid var(--tk-border)", background: isSelected?"rgba(59,130,246,0.07)":isOverdue?"rgba(239,68,68,0.04)":"transparent", alignItems:"center" }}>
                       {/* Checkbox */}
                       <input type="checkbox" checked={isSelected}
                         onChange={e => setSelectedTasks(prev => { const n=new Set(prev); e.target.checked?n.add(t.id):n.delete(t.id); return n; })}
                         onClick={e => e.stopPropagation()} style={{ cursor:"pointer" }} />
-                      {/* Task name */}
-                      <div style={{ paddingRight:8, minWidth:0 }}>
-                        <div style={{ fontSize:13, fontWeight:500, color:"var(--tk-text-primary)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{t.title}</div>
+                      {/* Task name — click opens drawer */}
+                      <div style={{ paddingRight:8, minWidth:0, cursor:"pointer" }} onClick={() => setTaskDrawer(t)}>
+                        <div style={{ fontSize:13, fontWeight:500, color:"var(--tk-accent)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", textDecoration:"underline", textDecorationStyle:"dotted", textUnderlineOffset:3 }}>{t.title}</div>
                         {t.blocked_reason && <div style={{ fontSize:11, color:"#ef4444", marginTop:2 }}>⛔ {t.blocked_reason}</div>}
-                        {t.comment_count>0 && <span style={{ fontSize:10, color:"var(--tk-text-muted)" }}>💬 {t.comment_count}</span>}
+                        <div style={{ display:"flex", gap:6, marginTop:2 }}>
+                          {t.comment_count>0 && <span style={{ fontSize:10, color:"var(--tk-text-muted)" }}>💬 {t.comment_count}</span>}
+                          {t.sprint_name && <span style={{ fontSize:10, color:"var(--tk-text-muted)" }}>🏃 {t.sprint_name}</span>}
+                          {t.workspace_name && <span style={{ fontSize:10, color:"var(--tk-text-muted)", opacity:0.7 }}>{t.workspace_name}</span>}
+                        </div>
                       </div>
-                      {/* Project */}
-                      <div style={{ fontSize:11, color:"var(--tk-text-secondary)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={t.workspace_name}>{t.workspace_name||"—"}</div>
-                      {/* Sprint */}
-                      <div style={{ fontSize:11, color:"var(--tk-text-muted)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{t.sprint_name||"—"}</div>
                       {/* Status */}
                       <div>
                         <span style={{ padding:"2px 7px", borderRadius:99, background:`${STATUS_COLOR[t.status]||"#64748b"}20`, color:STATUS_COLOR[t.status]||"#64748b", fontSize:10, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" }}
@@ -918,29 +918,27 @@ function TeamIntelPanel({ workspaceId, team }) {
                       {/* Priority */}
                       <div style={{ fontSize:13 }}>{PRIORITY_ICON[t.priority]||"—"}</div>
                       {/* Due */}
-                      <div style={{ fontSize:11, color:due.color, fontWeight: due.bold?700:400, whiteSpace:"nowrap" }}>{due.label}</div>
-                      {/* Updated */}
-                      <div style={{ fontSize:11, color: isStale?"#f59e0b":"var(--tk-text-muted)" }} title={t.status_changed_at ? new Date(t.status_changed_at).toLocaleString() : ""}>
-                        {t.status_changed_at ? timeAgoShort(t.status_changed_at) : "—"}
-                      </div>
+                      <div style={{ fontSize:11, color:due.color, fontWeight:due.bold?700:400, whiteSpace:"nowrap" }}>{due.label}</div>
                       {/* Actions */}
                       <div style={{ display:"flex", gap:3, flexWrap:"wrap" }}>
+                        <button onClick={() => setTaskDrawer(t)}
+                          style={actionBtn("#3b82f6","rgba(59,130,246,0.1)")}>📋 Open</button>
                         <button onClick={() => { setReassignTask(t); setReassignTo(""); }}
-                          style={actionBtn("#64748b")}>↪ Reassign</button>
+                          style={actionBtn("#64748b")}>↪</button>
                         {t.priority !== "high" && (
                           <button onClick={() => updateTask(t.id, { priority:"high" })} disabled={saving}
-                            style={actionBtn("#ef4444", "rgba(239,68,68,0.12)")}>🔴</button>
+                            style={actionBtn("#ef4444","rgba(239,68,68,0.12)")}>🔴</button>
                         )}
                         {t.status !== "blocked" ? (
                           <button onClick={() => updateTask(t.id, { status:"blocked" })} disabled={saving}
-                            style={actionBtn("#ef4444", "rgba(239,68,68,0.08)")}>🚫</button>
+                            style={actionBtn("#ef4444","rgba(239,68,68,0.08)")}>🚫</button>
                         ) : (
                           <button onClick={() => updateTask(t.id, { status:"inprogress" })} disabled={saving}
-                            style={actionBtn("#22c55e", "rgba(34,197,94,0.12)")}>▶ Unblock</button>
+                            style={actionBtn("#22c55e","rgba(34,197,94,0.12)")}>▶</button>
                         )}
                         {t.status === "inprogress" && (
                           <button onClick={() => updateTask(t.id, { status:"done", progress:100 })} disabled={saving}
-                            style={actionBtn("#22c55e", "rgba(34,197,94,0.1)")}>✓</button>
+                            style={actionBtn("#22c55e","rgba(34,197,94,0.1)")}>✓</button>
                         )}
                       </div>
                     </div>
@@ -1260,6 +1258,17 @@ function TeamIntelPanel({ workspaceId, team }) {
           </div>
         </div>
       )}
+
+      {/* Task Drawer */}
+      {taskDrawer && (
+        <TaskIntelDrawer
+          task={taskDrawer}
+          team={team}
+          workspaceId={workspaceId}
+          onClose={() => setTaskDrawer(null)}
+          onUpdated={() => loadIntel()}
+        />
+      )}
     </div>
   );
 }
@@ -1312,6 +1321,339 @@ function relativeDueDate(dateStr) {
   if (diff < 86400)      return "Yesterday";
   if (diff < 86400 * 7)  return `${Math.floor(diff / 86400)} days ago`;
   return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+// ── Task Intel Drawer ─────────────────────────────────────────────────────────
+const DRAWER_STATUS_COLOR = {
+  todo: "#64748b", inprogress: "#3b82f6", in_progress: "#3b82f6",
+  review: "#8b5cf6", blocked: "#ef4444", done: "#22c55e", pending_approval: "#f59e0b"
+};
+const DRAWER_STATUS_LABEL = {
+  todo: "To Do", inprogress: "In Progress", in_progress: "In Progress",
+  review: "In Review", blocked: "Blocked", done: "Done", pending_approval: "Pending Approval"
+};
+
+function TaskIntelDrawer({ task, team = [], workspaceId, onClose, onUpdated }) {
+  const [subtasks,    setSubtasks]    = useState([]);
+  const [comments,    setComments]    = useState([]);
+  const [activity,    setActivity]    = useState([]);
+  const [newSub,      setNewSub]      = useState("");
+  const [subAssignTo, setSubAssignTo] = useState("");
+  const [subDue,      setSubDue]      = useState("");
+  const [newComment,  setNewComment]  = useState("");
+  const [saving,      setSaving]      = useState(false);
+  const [tab,         setTab]         = useState("overview");
+  const [editDesc,    setEditDesc]    = useState(false);
+  const [descVal,     setDescVal]     = useState(task.description || "");
+  const [dueDateEdit, setDueDateEdit] = useState(false);
+  const [newDue,      setNewDue]      = useState(task.due_date ? task.due_date.split("T")[0] : "");
+  const [notifSent,   setNotifSent]   = useState(false);
+
+  const loadSubtasks = useCallback(async () => {
+    try { const r = await api.get(`/subtasks/${task.id}`); setSubtasks(r.data || []); } catch {}
+  }, [task.id]);
+
+  const loadComments = useCallback(async () => {
+    try { const r = await api.get(`/tasks/${task.id}/comments`); setComments(r.data || []); } catch {}
+  }, [task.id]);
+
+  const loadActivity = useCallback(async () => {
+    try { const r = await api.get(`/audit?task_id=${task.id}&limit=20`); setActivity(r.data || []); } catch {}
+  }, [task.id]);
+
+  useEffect(() => { loadSubtasks(); loadComments(); loadActivity(); }, [loadSubtasks, loadComments, loadActivity]);
+
+  const addSubtask = async () => {
+    if (!newSub.trim()) return;
+    setSaving(true);
+    try {
+      const r = await api.post(`/subtasks/${task.id}`, {
+        title: newSub.trim(),
+        assigned_to: subAssignTo || task.assigned_user_id || null,
+        due_date: subDue || null,
+        priority: "medium",
+      });
+      setSubtasks(prev => [...prev, r.data]);
+      setNewSub(""); setSubAssignTo(""); setSubDue("");
+      onUpdated?.();
+    } catch (e) { console.error(e); }
+    finally { setSaving(false); }
+  };
+
+  const toggleSubtask = async (s) => {
+    try {
+      await api.patch(`/subtasks/${s.id}/toggle`);
+      setSubtasks(prev => prev.map(x => x.id === s.id ? { ...x, done: !x.done } : x));
+    } catch {}
+  };
+
+  const addComment = async () => {
+    if (!newComment.trim()) return;
+    setSaving(true);
+    try {
+      const r = await api.post(`/tasks/${task.id}/comments`, { content: newComment.trim() });
+      setComments(prev => [...prev, r.data]);
+      setNewComment("");
+    } catch {}
+    finally { setSaving(false); }
+  };
+
+  const saveDescription = async () => {
+    try {
+      await api.put(`/tasks/${task.id}`, { description: descVal });
+      setEditDesc(false);
+      onUpdated?.();
+    } catch {}
+  };
+
+  const saveDueDate = async () => {
+    try {
+      await api.put(`/tasks/${task.id}`, { due_date: newDue || null });
+      setDueDateEdit(false);
+      onUpdated?.();
+    } catch {}
+  };
+
+  const notifyAssignee = async () => {
+    if (!task.assigned_user_id) return;
+    try {
+      await api.post(`/notifications/send`, { user_id: task.assigned_user_id, message: `Reminder: "${task.title}" needs your attention.` });
+      setNotifSent(true);
+      setTimeout(() => setNotifSent(false), 3000);
+    } catch {}
+  };
+
+  const TABS = ["overview","subtasks","comments","activity"];
+  const TAB_LABEL = { overview:"Overview", subtasks:`Subtasks (${subtasks.length})`, comments:`Comments (${comments.length})`, activity:"Activity" };
+
+  const due = task.due_date ? new Date(task.due_date) : null;
+  const isOverdue = due && due < new Date() && task.status !== "done";
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div onClick={onClose} style={{ position:"fixed", inset:0, zIndex:8000, background:"rgba(0,0,0,0.4)" }} />
+      {/* Drawer */}
+      <div style={{ position:"fixed", top:0, right:0, bottom:0, width:520, zIndex:8001, background:"var(--tk-card)", borderLeft:"1px solid var(--tk-border)", display:"flex", flexDirection:"column", boxShadow:"-8px 0 32px rgba(0,0,0,0.3)", animation:"slideInRight 0.2s ease" }}>
+        <style>{`@keyframes slideInRight{from{transform:translateX(100%)}to{transform:translateX(0)}}`}</style>
+
+        {/* Header */}
+        <div style={{ padding:"16px 20px", borderBottom:"1px solid var(--tk-border)", display:"flex", alignItems:"flex-start", gap:12 }}>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ display:"flex", gap:8, marginBottom:6, flexWrap:"wrap" }}>
+              <span style={{ padding:"2px 8px", borderRadius:99, background:`${DRAWER_STATUS_COLOR[task.status]||"#64748b"}20`, color:DRAWER_STATUS_COLOR[task.status]||"#64748b", fontSize:11, fontWeight:700 }}>
+                {DRAWER_STATUS_LABEL[task.status]||task.status}
+              </span>
+              <span style={{ padding:"2px 8px", borderRadius:99, background: task.priority==="high"?"rgba(239,68,68,0.12)":task.priority==="medium"?"rgba(245,158,11,0.12)":"rgba(100,116,139,0.12)", color: task.priority==="high"?"#ef4444":task.priority==="medium"?"#f59e0b":"#64748b", fontSize:11, fontWeight:700 }}>
+                {task.priority||"—"} priority
+              </span>
+              {task.sprint_name && <span style={{ padding:"2px 8px", borderRadius:99, background:"rgba(139,92,246,0.12)", color:"#8b5cf6", fontSize:11 }}>🏃 {task.sprint_name}</span>}
+            </div>
+            <div style={{ fontSize:16, fontWeight:700, color:"var(--tk-text-primary)", lineHeight:1.3 }}>{task.title}</div>
+            <div style={{ fontSize:12, color:"var(--tk-text-muted)", marginTop:4 }}>
+              {task.workspace_name && <span>📁 {task.workspace_name}</span>}
+              {task.assignee_name && <span style={{ marginLeft:10 }}>👤 {task.assignee_name}</span>}
+              {due && <span style={{ marginLeft:10, color:isOverdue?"#ef4444":"var(--tk-text-muted)" }}>📅 {due.toLocaleDateString("en-US",{month:"short",day:"numeric"})}{isOverdue?" (overdue)":""}</span>}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:"var(--tk-text-muted)", flexShrink:0, lineHeight:1 }}>✕</button>
+        </div>
+
+        {/* Manager Quick Actions */}
+        <div style={{ padding:"10px 20px", borderBottom:"1px solid var(--tk-border)", display:"flex", gap:6, flexWrap:"wrap" }}>
+          <button onClick={() => setTab("subtasks")} style={{ ...actionBtn("#8b5cf6","rgba(139,92,246,0.1)"), fontSize:11 }}>+ Subtask</button>
+          <button onClick={() => setEditDesc(true)} style={{ ...actionBtn("#3b82f6","rgba(59,130,246,0.1)"), fontSize:11 }}>✏️ Edit Desc</button>
+          <button onClick={() => setDueDateEdit(true)} style={{ ...actionBtn("#f59e0b","rgba(245,158,11,0.1)"), fontSize:11 }}>📅 Change Due</button>
+          <button onClick={async () => { await api.put(`/tasks/${task.id}`,{priority:"high"}); onUpdated?.(); }}
+            style={{ ...actionBtn("#ef4444","rgba(239,68,68,0.1)"), fontSize:11, opacity: task.priority==="high"?0.4:1 }} disabled={task.priority==="high"}>🔴 High Priority</button>
+          <button onClick={notifyAssignee} style={{ ...actionBtn("#22c55e","rgba(34,197,94,0.1)"), fontSize:11 }}>
+            {notifSent ? "✅ Sent!" : "🔔 Notify"}
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display:"flex", borderBottom:"1px solid var(--tk-border)", padding:"0 20px" }}>
+          {TABS.map(t => (
+            <button key={t} onClick={() => setTab(t)}
+              style={{ padding:"8px 14px", border:"none", background:"none", cursor:"pointer", fontSize:12, fontWeight:700, color: tab===t?"var(--tk-accent)":"var(--tk-text-muted)", borderBottom: tab===t?"2px solid var(--tk-accent)":"2px solid transparent", transition:"all 0.15s" }}>
+              {TAB_LABEL[t]}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab content */}
+        <div style={{ flex:1, overflowY:"auto", padding:"16px 20px" }}>
+
+          {/* OVERVIEW */}
+          {tab === "overview" && (
+            <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+              {/* Description */}
+              <div>
+                <div style={{ fontSize:11, fontWeight:700, color:"var(--tk-text-muted)", textTransform:"uppercase", marginBottom:6 }}>Description</div>
+                {editDesc ? (
+                  <div>
+                    <textarea value={descVal} onChange={e=>setDescVal(e.target.value)}
+                      style={{ width:"100%", minHeight:100, padding:"8px 10px", borderRadius:8, border:"1px solid var(--tk-accent)", background:"var(--tk-surface)", color:"var(--tk-text-primary)", fontSize:13, resize:"vertical", boxSizing:"border-box" }} />
+                    <div style={{ display:"flex", gap:8, marginTop:6 }}>
+                      <button onClick={saveDescription} style={{ ...actionBtn("#3b82f6","rgba(59,130,246,0.12)") }}>Save</button>
+                      <button onClick={()=>setEditDesc(false)} style={{ ...actionBtn("#64748b") }}>Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div onClick={()=>setEditDesc(true)} style={{ fontSize:13, color: descVal?"var(--tk-text-primary)":"var(--tk-text-muted)", cursor:"pointer", padding:"8px 10px", borderRadius:8, border:"1px dashed var(--tk-border)", minHeight:60, lineHeight:1.6 }}>
+                    {descVal || "Click to add description…"}
+                  </div>
+                )}
+              </div>
+
+              {/* Due date */}
+              <div>
+                <div style={{ fontSize:11, fontWeight:700, color:"var(--tk-text-muted)", textTransform:"uppercase", marginBottom:6 }}>Due Date</div>
+                {dueDateEdit ? (
+                  <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                    <input type="date" value={newDue} onChange={e=>setNewDue(e.target.value)}
+                      style={{ padding:"5px 8px", borderRadius:7, border:"1px solid var(--tk-border)", background:"var(--tk-surface)", color:"var(--tk-text-primary)", fontSize:13 }} />
+                    <button onClick={saveDueDate} style={actionBtn("#3b82f6","rgba(59,130,246,0.12)")}>Save</button>
+                    <button onClick={()=>setDueDateEdit(false)} style={actionBtn("#64748b")}>Cancel</button>
+                  </div>
+                ) : (
+                  <div onClick={()=>setDueDateEdit(true)} style={{ fontSize:13, color:isOverdue?"#ef4444":"var(--tk-text-primary)", cursor:"pointer" }}>
+                    {due ? due.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"}) : "No due date set — click to add"}
+                    {isOverdue && <span style={{ fontSize:11, marginLeft:8, color:"#ef4444" }}>⚠️ Overdue</span>}
+                  </div>
+                )}
+              </div>
+
+              {/* Acceptance criteria */}
+              {task.acceptance_criteria && (
+                <div>
+                  <div style={{ fontSize:11, fontWeight:700, color:"var(--tk-text-muted)", textTransform:"uppercase", marginBottom:6 }}>Acceptance Criteria</div>
+                  <div style={{ fontSize:13, color:"var(--tk-text-primary)", lineHeight:1.6, padding:"8px 10px", borderRadius:8, background:"rgba(34,197,94,0.06)", border:"1px solid rgba(34,197,94,0.15)" }}>
+                    {task.acceptance_criteria}
+                  </div>
+                </div>
+              )}
+
+              {/* Metadata grid */}
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                {[
+                  ["Owner", task.assignee_name || "Unassigned"],
+                  ["Status", DRAWER_STATUS_LABEL[task.status] || task.status],
+                  ["Priority", task.priority || "—"],
+                  ["Type", task.task_type || task.type || "—"],
+                  ["Workspace", task.workspace_name || "—"],
+                  ["Sprint", task.sprint_name || "None"],
+                  ["Blockers", task.blocking_dep_count > 0 ? `${task.blocking_dep_count} blocking deps` : "None"],
+                  ["Comments", task.comment_count || 0],
+                ].map(([l,v]) => (
+                  <div key={l} style={{ padding:"10px 12px", borderRadius:8, background:"var(--tk-surface)", border:"1px solid var(--tk-border)" }}>
+                    <div style={{ fontSize:10, color:"var(--tk-text-muted)", fontWeight:700, marginBottom:3, textTransform:"uppercase" }}>{l}</div>
+                    <div style={{ fontSize:13, color:"var(--tk-text-primary)", fontWeight:600 }}>{String(v)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* SUBTASKS */}
+          {tab === "subtasks" && (
+            <div>
+              {/* Add subtask form */}
+              <div style={{ padding:"12px", borderRadius:10, background:"rgba(139,92,246,0.06)", border:"1px solid rgba(139,92,246,0.2)", marginBottom:16 }}>
+                <div style={{ fontSize:12, fontWeight:700, color:"#8b5cf6", marginBottom:8 }}>+ New Subtask</div>
+                <input value={newSub} onChange={e=>setNewSub(e.target.value)}
+                  placeholder="Subtask title…"
+                  onKeyDown={e => e.key==="Enter" && addSubtask()}
+                  style={{ width:"100%", padding:"7px 10px", borderRadius:7, border:"1px solid var(--tk-border)", background:"var(--tk-surface)", color:"var(--tk-text-primary)", fontSize:13, marginBottom:8, boxSizing:"border-box" }} />
+                <div style={{ display:"flex", gap:8, marginBottom:8 }}>
+                  <select value={subAssignTo} onChange={e=>setSubAssignTo(e.target.value)}
+                    style={{ flex:1, padding:"6px 8px", borderRadius:7, border:"1px solid var(--tk-border)", background:"var(--tk-surface)", color:"var(--tk-text-primary)", fontSize:12 }}>
+                    <option value="">Assign to (default: task owner)</option>
+                    {team.map(m=><option key={m.user_id} value={m.user_id}>{m.name}</option>)}
+                  </select>
+                  <input type="date" value={subDue} onChange={e=>setSubDue(e.target.value)}
+                    style={{ padding:"6px 8px", borderRadius:7, border:"1px solid var(--tk-border)", background:"var(--tk-surface)", color:"var(--tk-text-primary)", fontSize:12 }} />
+                </div>
+                <button onClick={addSubtask} disabled={saving||!newSub.trim()}
+                  style={{ ...actionBtn("#8b5cf6","rgba(139,92,246,0.15)"), opacity:saving||!newSub.trim()?0.5:1 }}>
+                  {saving ? "Adding…" : "Add Subtask"}
+                </button>
+              </div>
+
+              {/* Subtask list */}
+              {subtasks.length === 0 ? (
+                <div style={{ color:"var(--tk-text-muted)", textAlign:"center", padding:"32px 0", fontSize:13 }}>No subtasks yet</div>
+              ) : (
+                <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                  {subtasks.map(s => (
+                    <div key={s.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 12px", borderRadius:8, background:"var(--tk-surface)", border:"1px solid var(--tk-border)", opacity:s.done?0.6:1 }}>
+                      <input type="checkbox" checked={!!s.done} onChange={()=>toggleSubtask(s)} style={{ cursor:"pointer", flexShrink:0 }} />
+                      <span style={{ flex:1, fontSize:13, textDecoration:s.done?"line-through":"none", color:"var(--tk-text-primary)" }}>{s.title}</span>
+                      {s.created_by_name && <span style={{ fontSize:10, color:"var(--tk-text-muted)" }}>by {s.created_by_name}</span>}
+                    </div>
+                  ))}
+                  <div style={{ fontSize:11, color:"var(--tk-text-muted)", textAlign:"center", marginTop:4 }}>
+                    {subtasks.filter(s=>s.done).length}/{subtasks.length} completed
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* COMMENTS */}
+          {tab === "comments" && (
+            <div>
+              <div style={{ marginBottom:16 }}>
+                <textarea value={newComment} onChange={e=>setNewComment(e.target.value)}
+                  placeholder="Add a comment…"
+                  style={{ width:"100%", minHeight:72, padding:"8px 10px", borderRadius:8, border:"1px solid var(--tk-border)", background:"var(--tk-surface)", color:"var(--tk-text-primary)", fontSize:13, resize:"vertical", boxSizing:"border-box" }} />
+                <button onClick={addComment} disabled={saving||!newComment.trim()}
+                  style={{ ...actionBtn("#3b82f6","rgba(59,130,246,0.12)"), marginTop:6, opacity:saving||!newComment.trim()?0.5:1 }}>
+                  {saving ? "Posting…" : "Post Comment"}
+                </button>
+              </div>
+              {comments.length === 0 ? (
+                <div style={{ color:"var(--tk-text-muted)", textAlign:"center", padding:"32px 0", fontSize:13 }}>No comments yet</div>
+              ) : (
+                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                  {[...comments].reverse().map((c,i) => (
+                    <div key={c.id||i} style={{ padding:"10px 12px", borderRadius:8, background:"var(--tk-surface)", border:"1px solid var(--tk-border)" }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
+                        <span style={{ fontSize:12, fontWeight:700, color:"var(--tk-accent)" }}>{c.author_name||c.user_name||"User"}</span>
+                        <span style={{ fontSize:11, color:"var(--tk-text-muted)" }}>{c.created_at ? timeAgoShort(c.created_at) : ""}</span>
+                      </div>
+                      <div style={{ fontSize:13, color:"var(--tk-text-primary)", lineHeight:1.5 }}>{c.content||c.body||c.text}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ACTIVITY */}
+          {tab === "activity" && (
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {activity.length === 0 ? (
+                <div style={{ color:"var(--tk-text-muted)", textAlign:"center", padding:"32px 0", fontSize:13 }}>No activity recorded</div>
+              ) : activity.map((a,i) => (
+                <div key={a.id||i} style={{ display:"flex", gap:10, padding:"8px 0", borderBottom:"1px solid var(--tk-border)" }}>
+                  <div style={{ width:28, height:28, borderRadius:"50%", background:"rgba(59,130,246,0.15)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, flexShrink:0 }}>📝</div>
+                  <div>
+                    <div style={{ fontSize:12, color:"var(--tk-text-primary)" }}>
+                      <strong>{a.actor_name||"System"}</strong>{" "}
+                      <span style={{ color:"var(--tk-text-secondary)" }}>{a.action?.replace(/_/g," ")}</span>
+                    </div>
+                    <div style={{ fontSize:11, color:"var(--tk-text-muted)", marginTop:2 }}>{a.created_at ? timeAgoShort(a.created_at) : ""}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+        </div>
+      </div>
+    </>
+  );
 }
 
 // ── Manager Overview Dashboard View ──────────────────────────────────────────

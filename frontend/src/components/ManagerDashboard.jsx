@@ -1526,37 +1526,81 @@ const WORK_TYPE_COLORS = {
 function TaskDistributionChart({ tasks, team, onOpenDrawer }) {
   const [selectedMember,   setSelectedMember]   = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [search,           setSearch]           = useState("");
+
+  const CHART_HEIGHT = 260;
 
   const activeTasks = tasks.filter(t => t.status !== "done");
 
-  // Build per-member data map
+  // ── DEBUG: log raw data on every render ──────────────────────────────────
+  console.group("[TDC] render");
+  console.log("tasks.length:", tasks.length, "| activeTasks.length:", activeTasks.length);
+  console.log("selectedMember:", selectedMember, "| selectedCategory:", selectedCategory);
+  if (team.length) {
+    console.log("team[0] keys:", Object.keys(team[0]));
+    console.log("team members:", team.map(m => ({ user_id: m.user_id, id: m.id, name: m.name })));
+  }
+  if (activeTasks.length) {
+    const t0 = activeTasks[0];
+    console.log("task[0] key fields:", {
+      id: t0.id,
+      assigned_user_id:    t0.assigned_user_id,
+      effective_assignee_id: t0.effective_assignee_id,
+      workspace_owner_id:  t0.workspace_owner_id,
+      assignee_name:       t0.assignee_name,
+      type:                t0.type,
+      task_type:           t0.task_type,
+      status:              t0.status,
+    });
+  }
+  console.groupEnd();
+  // ── END DEBUG ─────────────────────────────────────────────────────────────
+
+  // Build per-member data
   const memberMap = {};
   activeTasks.forEach(t => {
-    const uid  = String(t.assigned_user_id || "unassigned");
+    const uid  = String(t.effective_assignee_id || t.assigned_user_id || "unassigned");
     const name = t.assignee_name || "Unassigned";
     const cat  = (t.task_type || t.type || "task").toLowerCase();
     if (!memberMap[uid]) memberMap[uid] = { name, uid, cats: {} };
     memberMap[uid].cats[cat] = (memberMap[uid].cats[cat] || 0) + 1;
   });
 
-  const allCats = [...new Set(activeTasks.map(t => (t.task_type || t.type || "task").toLowerCase()))].sort();
+  console.log("[TDC] memberMap keys:", Object.keys(memberMap));
+  console.log("[TDC] memberMap entries:", Object.values(memberMap).map(m => ({ uid: m.uid, name: m.name, taskCount: Object.values(m.cats).reduce((s,v)=>s+v,0) })));
 
+  // All categories present across visible tasks
+  const allCats = [...new Set(activeTasks.map(t =>
+    (t.task_type || t.type || "task").toLowerCase()
+  ))].sort();
+
+  // Bars: when a member is selected show only that member, else all
   const entries = Object.values(memberMap).filter(m =>
-    (!search || m.name.toLowerCase().includes(search.toLowerCase())) &&
-    (!selectedMember || m.uid === selectedMember)
+    !selectedMember || m.uid === selectedMember
   );
 
+  console.log("[TDC] entries after filter:", entries.map(m => ({ uid: m.uid, name: m.name })));
+
+  // Y-axis max — scale to category max when a type is filtered
+  const globalMax = Math.max(1, ...Object.values(memberMap).map(m =>
+    selectedCategory
+      ? (m.cats[selectedCategory] || 0)
+      : Object.values(m.cats).reduce((s, v) => s + v, 0)
+  ));
+  const yMax  = Math.ceil(globalMax / 5) * 5 || 5;
+  const yStep = yMax <= 10 ? 2 : yMax <= 25 ? 5 : 10;
+  const yTicks = [];
+  for (let v = 0; v <= yMax; v += yStep) yTicks.push(v);
+
+  // Filtered tasks for the drill-down list
   const filteredTasks = activeTasks.filter(t => {
-    const matchMember = !selectedMember || String(t.assigned_user_id || "unassigned") === selectedMember;
+    const matchMember = !selectedMember || String(t.effective_assignee_id || t.assigned_user_id || "unassigned") === selectedMember;
     const matchCat    = !selectedCategory || (t.task_type || t.type || "task").toLowerCase() === selectedCategory;
     return matchMember && matchCat;
   });
 
-  const hasFilter = selectedMember || selectedCategory || search;
-  const clearFilters = () => { setSelectedMember(null); setSelectedCategory(null); setSearch(""); };
+  const hasFilter = selectedMember || selectedCategory;
+  const clearFilters = () => { setSelectedMember(null); setSelectedCategory(null); };
 
-  // Resolve member name for the filter pill display
   const selectedMemberName = selectedMember
     ? (team.find(m => String(m.user_id) === selectedMember)?.name
        || Object.values(memberMap).find(m => m.uid === selectedMember)?.name
@@ -1565,54 +1609,59 @@ function TaskDistributionChart({ tasks, team, onOpenDrawer }) {
 
   return (
     <div style={{ background: "var(--tk-card)", border: "1px solid var(--tk-border)", borderRadius: 12, padding: "20px 24px" }}>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+
+      {/* ── Header ── */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}>
         <div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--tk-text-primary)" }}>Task Distribution by Work Type</div>
-          <div style={{ fontSize: 12, color: "var(--tk-text-muted)", marginTop: 2 }}>Select a member · select a work type · or both for a combined filter</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--tk-text-primary)" }}>
+            Task Distribution by Work Type
+          </div>
+          <div style={{ fontSize: 12, color: "var(--tk-text-muted)", marginTop: 2 }}>
+            Click a member pill or bar to filter · click a segment or work type chip to filter by type
+          </div>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search members…"
-            style={{ padding: "5px 10px", borderRadius: 7, border: "1px solid var(--tk-border)", background: "var(--tk-surface)", color: "var(--tk-text-primary)", fontSize: 12, width: 150 }} />
-          {hasFilter && (
-            <button onClick={clearFilters}
-              style={{ padding: "5px 12px", borderRadius: 7, border: "1px solid var(--tk-border)", background: "transparent", color: "var(--tk-text-muted)", fontSize: 12, cursor: "pointer" }}>
-              Reset
-            </button>
-          )}
-        </div>
+        {hasFilter && (
+          <button onClick={clearFilters} style={{
+            padding: "5px 14px", borderRadius: 7,
+            border: "1px solid var(--tk-border)", background: "transparent",
+            color: "var(--tk-text-muted)", fontSize: 12, cursor: "pointer", whiteSpace: "nowrap",
+          }}>
+            Reset
+          </button>
+        )}
       </div>
 
       {/* ── Member filter pills ── */}
       {team.length > 0 && (
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
-          <span
-            onClick={() => setSelectedMember(null)}
-            style={{
-              padding: "4px 12px", borderRadius: 99, cursor: "pointer", fontSize: 12, fontWeight: 600,
-              border: `1px solid ${!selectedMember ? "var(--tk-accent)" : "var(--tk-border)"}`,
-              background: !selectedMember ? "rgba(59,130,246,0.12)" : "transparent",
-              color: !selectedMember ? "var(--tk-accent)" : "var(--tk-text-secondary)",
-              transition: "all 0.15s",
-            }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+          <span onClick={() => setSelectedMember(null)} style={{
+            padding: "4px 12px", borderRadius: 99, cursor: "pointer", fontSize: 12, fontWeight: 600,
+            border: `1px solid ${!selectedMember ? "var(--tk-accent)" : "var(--tk-border)"}`,
+            background: !selectedMember ? "rgba(59,130,246,0.12)" : "transparent",
+            color: !selectedMember ? "var(--tk-accent)" : "var(--tk-text-secondary)",
+            transition: "all 0.15s",
+          }}>
             All Members
           </span>
           {team.map(m => {
             const uid = String(m.user_id);
-            const isActive = selectedMember === uid;
+            const active = selectedMember === uid;
             return (
-              <span key={uid}
-                onClick={() => setSelectedMember(isActive ? null : uid)}
-                style={{
-                  display: "flex", alignItems: "center", gap: 6,
-                  padding: "4px 12px", borderRadius: 99, cursor: "pointer", fontSize: 12, fontWeight: 600,
-                  border: `1px solid ${isActive ? "var(--tk-accent)" : "var(--tk-border)"}`,
-                  background: isActive ? "rgba(59,130,246,0.12)" : "transparent",
-                  color: isActive ? "var(--tk-accent)" : "var(--tk-text-secondary)",
-                  transition: "all 0.15s",
+              <span key={uid} onClick={() => setSelectedMember(active ? null : uid)} style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "4px 12px", borderRadius: 99, cursor: "pointer", fontSize: 12, fontWeight: 600,
+                border: `1px solid ${active ? "var(--tk-accent)" : "var(--tk-border)"}`,
+                background: active ? "rgba(59,130,246,0.12)" : "transparent",
+                color: active ? "var(--tk-accent)" : "var(--tk-text-secondary)",
+                transition: "all 0.15s",
+              }}>
+                <span style={{
+                  width: 18, height: 18, borderRadius: "50%",
+                  background: active ? "var(--tk-accent)" : "#475569",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 9, fontWeight: 800, color: "#fff", flexShrink: 0,
                 }}>
-                <span style={{ width: 18, height: 18, borderRadius: "50%", background: isActive ? "var(--tk-accent)" : "#475569", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, color: "#fff", flexShrink: 0 }}>
-                  {m.name.slice(0,2).toUpperCase()}
+                  {m.name.slice(0, 2).toUpperCase()}
                 </span>
                 {m.name.split(" ")[0]}
               </span>
@@ -1621,36 +1670,18 @@ function TaskDistributionChart({ tasks, team, onOpenDrawer }) {
         </div>
       )}
 
-      {/* Active filter chips */}
-      {(selectedMember || selectedCategory) && (
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-          {selectedMember && (
-            <span onClick={() => setSelectedMember(null)}
-              style={{ padding: "3px 10px", borderRadius: 99, background: "rgba(59,130,246,0.15)", color: "var(--tk-accent)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-              👤 {selectedMemberName} ✕
-            </span>
-          )}
-          {selectedCategory && (
-            <span onClick={() => setSelectedCategory(null)}
-              style={{ padding: "3px 10px", borderRadius: 99, background: `${WORK_TYPE_COLORS[selectedCategory] || "#64748b"}25`, color: WORK_TYPE_COLORS[selectedCategory] || "#64748b", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-              {selectedCategory} ✕
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Category legend (clickable chips) */}
+      {/* ── Work type chips ── */}
       {allCats.length > 0 && (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
           {allCats.map(cat => (
-            <span key={cat} onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
-              style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer", padding: "3px 10px", borderRadius: 99,
-                border: `1px solid ${selectedCategory === cat ? WORK_TYPE_COLORS[cat] || "#64748b" : "var(--tk-border)"}`,
-                background: selectedCategory === cat ? `${WORK_TYPE_COLORS[cat] || "#64748b"}20` : "transparent",
-                fontSize: 11, fontWeight: 600,
-                color: selectedCategory === cat ? WORK_TYPE_COLORS[cat] || "#64748b" : "var(--tk-text-secondary)",
-                transition: "all 0.15s",
-              }}>
+            <span key={cat} onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)} style={{
+              display: "flex", alignItems: "center", gap: 5, cursor: "pointer",
+              padding: "3px 10px", borderRadius: 99, fontSize: 11, fontWeight: 600,
+              border: `1px solid ${selectedCategory === cat ? WORK_TYPE_COLORS[cat] || "#64748b" : "var(--tk-border)"}`,
+              background: selectedCategory === cat ? `${WORK_TYPE_COLORS[cat] || "#64748b"}20` : "transparent",
+              color: selectedCategory === cat ? WORK_TYPE_COLORS[cat] || "#64748b" : "var(--tk-text-secondary)",
+              transition: "all 0.15s",
+            }}>
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: WORK_TYPE_COLORS[cat] || "#64748b", flexShrink: 0 }} />
               {cat}
             </span>
@@ -1658,102 +1689,261 @@ function TaskDistributionChart({ tasks, team, onOpenDrawer }) {
         </div>
       )}
 
-      {/* Stacked bars per member */}
-      {entries.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "32px 0", color: "var(--tk-text-muted)", fontSize: 13 }}>
-          {search ? "No members match your search" : "No active tasks yet"}
+      {/* ── Active filter badges ── */}
+      {hasFilter && (
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+          {selectedMember && (
+            <span onClick={() => setSelectedMember(null)} style={{
+              padding: "3px 10px", borderRadius: 99,
+              background: "rgba(59,130,246,0.15)", color: "var(--tk-accent)",
+              fontSize: 12, fontWeight: 600, cursor: "pointer",
+            }}>
+              👤 {selectedMemberName} ✕
+            </span>
+          )}
+          {selectedCategory && (
+            <span onClick={() => setSelectedCategory(null)} style={{
+              padding: "3px 10px", borderRadius: 99,
+              background: `${WORK_TYPE_COLORS[selectedCategory] || "#64748b"}25`,
+              color: WORK_TYPE_COLORS[selectedCategory] || "#64748b",
+              fontSize: 12, fontWeight: 600, cursor: "pointer",
+            }}>
+              {selectedCategory} ✕
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* ── Bar Chart ── */}
+      {activeTasks.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "60px 0", color: "var(--tk-text-muted)", fontSize: 13 }}>
+          No active tasks yet
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {entries.map(m => {
-            const total      = Object.values(m.cats).reduce((s, v) => s + v, 0);
-            const isSelected = selectedMember === m.uid;
-            return (
-              <div key={m.uid} onClick={() => setSelectedMember(isSelected ? null : m.uid)}
-                style={{ cursor: "pointer", padding: "10px 14px", borderRadius: 10,
-                  border: `1px solid ${isSelected ? "var(--tk-accent)" : "var(--tk-border)"}`,
-                  background: isSelected ? "rgba(59,130,246,0.06)" : "var(--tk-surface)",
-                  transition: "all 0.15s",
-                }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff", background: isSelected ? "var(--tk-accent)" : "#475569" }}>
-                      {m.name.slice(0, 2).toUpperCase()}
-                    </div>
-                    <span style={{ fontWeight: 700, fontSize: 13, color: "var(--tk-text-primary)" }}>{m.name}</span>
-                  </div>
-                  <span style={{ fontSize: 12, color: "var(--tk-text-muted)" }}>{total} task{total !== 1 ? "s" : ""}</span>
-                </div>
+        <div style={{ display: "flex", gap: 0, alignItems: "stretch" }}>
 
-                {/* Stacked bar — clicking a segment selects BOTH that member AND that category */}
-                <div style={{ display: "flex", height: 22, borderRadius: 6, overflow: "hidden", gap: 2 }}>
-                  {Object.entries(m.cats).map(([cat, count]) => {
-                    const catSelected = selectedCategory === cat;
-                    return (
-                      <div key={cat}
-                        onClick={e => {
-                          e.stopPropagation();
-                          const newCat = catSelected ? null : cat;
-                          setSelectedCategory(newCat);
-                          // Also select this member so the drill-down is scoped
-                          setSelectedMember(m.uid);
-                        }}
-                        title={`${cat}: ${count} task${count !== 1 ? "s" : ""} — click to filter`}
-                        style={{
-                          width: `${(count / total) * 100}%`, minWidth: count > 0 ? 6 : 0,
-                          background: WORK_TYPE_COLORS[cat] || "#64748b",
-                          opacity: selectedCategory && !catSelected ? 0.25 : 1,
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          outline: catSelected ? "2px solid rgba(255,255,255,0.8)" : "none",
-                          outlineOffset: -2, transition: "opacity 0.2s",
-                          cursor: "pointer",
-                        }}>
-                        {count > 1 && (count / total) > 0.12 && (
-                          <span style={{ fontSize: 10, color: "#fff", fontWeight: 800 }}>{count}</span>
+          {/* Y-axis labels */}
+          <div style={{ width: 28, flexShrink: 0, position: "relative", height: CHART_HEIGHT + 28 }}>
+            {yTicks.map(v => (
+              <div key={v} style={{
+                position: "absolute",
+                bottom: `${4 + (v / yMax) * CHART_HEIGHT}px`,
+                right: 6,
+                fontSize: 10,
+                color: "var(--tk-text-muted)",
+                transform: "translateY(50%)",
+                lineHeight: 1,
+              }}>
+                {v}
+              </div>
+            ))}
+          </div>
+
+          {/* Chart body */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+
+            {/* Chart area: gridlines + bars, no labels inside */}
+            <div style={{ position: "relative", height: CHART_HEIGHT }}>
+
+              {/* Gridlines */}
+              {yTicks.map(v => (
+                <div key={v} style={{
+                  position: "absolute",
+                  bottom: `${(v / yMax) * 100}%`,
+                  left: 0, right: 0, height: 1,
+                  background: v === 0 ? "var(--tk-border)" : "rgba(148,163,184,0.18)",
+                  pointerEvents: "none",
+                }} />
+              ))}
+
+              {/* Bars — absolutely fills chart area, bottom-aligned */}
+              <div style={{
+                position: "absolute", left: 0, right: 0, top: 0, bottom: 0,
+                display: "flex", alignItems: "flex-end",
+                gap: entries.length > 8 ? 4 : entries.length > 5 ? 8 : 14,
+                padding: "0 6px",
+              }}>
+                {entries.map(m => {
+                  const total        = Object.values(m.cats).reduce((s, v) => s + v, 0);
+                  const isSelected   = selectedMember === m.uid;
+                  const visibleCount = selectedCategory ? (m.cats[selectedCategory] || 0) : total;
+                  const barH         = Math.max(visibleCount > 0 ? 4 : 0, Math.round((visibleCount / yMax) * (CHART_HEIGHT - 28)));
+                  const segments     = Object.entries(m.cats).sort(([, a], [, b]) => b - a);
+
+                  return (
+                    <div key={m.uid}
+                      onClick={() => setSelectedMember(isSelected ? null : m.uid)}
+                      style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer", minWidth: 0 }}>
+
+                      {/* Count label above bar */}
+                      <div style={{
+                        fontSize: 11, fontWeight: 700, marginBottom: 3, lineHeight: 1,
+                        color: isSelected ? "var(--tk-accent)" : "var(--tk-text-secondary)",
+                        minHeight: 14,
+                      }}>
+                        {visibleCount > 0 ? visibleCount : ""}
+                      </div>
+
+                      {/* The bar — single color when category filtered, stacked when not */}
+                      <div style={{
+                        width: "min(100%, 68px)",
+                        height: barH,
+                        borderRadius: "5px 5px 0 0",
+                        overflow: "hidden",
+                        display: "flex",
+                        flexDirection: selectedCategory ? "column" : "column-reverse",
+                        outline: isSelected ? "2px solid var(--tk-accent)" : "none",
+                        outlineOffset: 2,
+                        transition: "height 0.25s ease, outline 0.15s",
+                        flexShrink: 0,
+                      }}>
+                        {selectedCategory ? (
+                          visibleCount > 0 ? (
+                            <div
+                              onClick={e => { e.stopPropagation(); setSelectedCategory(null); }}
+                              style={{
+                                height: "100%",
+                                background: WORK_TYPE_COLORS[selectedCategory] || "#64748b",
+                                cursor: "pointer",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                              }}>
+                              {visibleCount > 0 && barH > 18 && (
+                                <span style={{ fontSize: 10, color: "#fff", fontWeight: 800, lineHeight: 1 }}>{visibleCount}</span>
+                              )}
+                            </div>
+                          ) : null
+                        ) : (
+                          segments.map(([cat, count]) => {
+                            const catSelected = selectedCategory === cat;
+                            const pct = (count / total) * 100;
+                            return (
+                              <div key={cat}
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setSelectedCategory(cat);
+                                  setSelectedMember(m.uid);
+                                }}
+                                title={`${cat}: ${count} task${count !== 1 ? "s" : ""}`}
+                                style={{
+                                  height: `${pct}%`,
+                                  minHeight: 4,
+                                  background: WORK_TYPE_COLORS[cat] || "#64748b",
+                                  cursor: "pointer",
+                                  display: "flex", alignItems: "center", justifyContent: "center",
+                                }}>
+                                {pct > 20 && (
+                                  <span style={{ fontSize: 10, color: "#fff", fontWeight: 800, lineHeight: 1 }}>{count}</span>
+                                )}
+                              </div>
+                            );
+                          })
                         )}
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
 
-                {/* Per-cat mini labels */}
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 5 }}>
-                  {Object.entries(m.cats).map(([cat, count]) => (
-                    <span key={cat} style={{ fontSize: 10, color: WORK_TYPE_COLORS[cat] || "#64748b", fontWeight: 600 }}>
-                      {cat} {count}
-                    </span>
-                  ))}
-                </div>
+            {/* X-axis baseline */}
+            <div style={{ height: 1, background: "var(--tk-border)", margin: "0 6px" }} />
+
+            {/* Member name labels row — separate from chart area */}
+            <div style={{
+              display: "flex",
+              gap: entries.length > 8 ? 4 : entries.length > 5 ? 8 : 14,
+              padding: "6px 6px 0",
+            }}>
+              {entries.map(m => {
+                const isSelected = selectedMember === m.uid;
+                return (
+                  <div key={m.uid}
+                    onClick={() => setSelectedMember(selectedMember === m.uid ? null : m.uid)}
+                    style={{
+                      flex: 1, textAlign: "center", fontSize: 11, cursor: "pointer",
+                      fontWeight: isSelected ? 700 : 500,
+                      color: isSelected ? "var(--tk-accent)" : "var(--tk-text-secondary)",
+                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    }}>
+                    {m.name.split(" ")[0]}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Legend ── */}
+      {allCats.length > 0 && activeTasks.length > 0 && (
+        <div style={{
+          display: "flex", gap: 14, flexWrap: "wrap",
+          marginTop: 14, paddingTop: 12,
+          borderTop: "1px solid var(--tk-border)",
+        }}>
+          {allCats.map(cat => {
+            const countInFilter = filteredTasks.filter(t =>
+              (t.task_type || t.type || "task").toLowerCase() === cat
+            ).length;
+            return (
+              <div key={cat} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <span style={{ width: 10, height: 10, borderRadius: 2, background: WORK_TYPE_COLORS[cat] || "#64748b", flexShrink: 0 }} />
+                <span style={{ fontSize: 11, color: "var(--tk-text-secondary)" }}>{cat}</span>
+                {hasFilter && countInFilter > 0 && (
+                  <span style={{ fontSize: 11, fontWeight: 700, color: WORK_TYPE_COLORS[cat] || "#64748b" }}>
+                    ({countInFilter})
+                  </span>
+                )}
               </div>
             );
           })}
         </div>
       )}
 
-      {/* Filtered task drill-down — appears when any filter is active */}
-      {(selectedMember || selectedCategory) && filteredTasks.length > 0 && (
+      {/* ── Filtered task drill-down ── */}
+      {hasFilter && filteredTasks.length > 0 && (
         <div style={{ marginTop: 18, borderTop: "1px solid var(--tk-border)", paddingTop: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--tk-text-muted)", marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.5 }}>
-            Filtered Tasks — {filteredTasks.length}
+          <div style={{
+            fontSize: 11, fontWeight: 700, color: "var(--tk-text-muted)",
+            marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.5,
+          }}>
+            {filteredTasks.length} Matching Task{filteredTasks.length !== 1 ? "s" : ""}
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {filteredTasks.slice(0, 15).map(t => (
               <div key={t.id}
                 onClick={() => onOpenDrawer && onOpenDrawer(t)}
-                style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 12px", borderRadius: 8,
+                style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "7px 12px", borderRadius: 8,
                   background: "var(--tk-surface)", border: "1px solid var(--tk-border)",
                   cursor: onOpenDrawer ? "pointer" : "default",
                   transition: "background 0.12s",
                 }}
                 onMouseEnter={e => { if (onOpenDrawer) e.currentTarget.style.background = "rgba(59,130,246,0.06)"; }}
                 onMouseLeave={e => { if (onOpenDrawer) e.currentTarget.style.background = "var(--tk-surface)"; }}>
-                <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 99, background: `${DRAWER_STATUS_COLOR[t.status] || "#64748b"}20`, color: DRAWER_STATUS_COLOR[t.status] || "#64748b", flexShrink: 0 }}>
+                <span style={{
+                  width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
+                  background: WORK_TYPE_COLORS[(t.task_type||t.type||"task").toLowerCase()] || "#64748b",
+                }} />
+                <span style={{
+                  fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 99, flexShrink: 0,
+                  background: `${DRAWER_STATUS_COLOR[t.status] || "#64748b"}20`,
+                  color: DRAWER_STATUS_COLOR[t.status] || "#64748b",
+                }}>
                   {DRAWER_STATUS_LABEL[t.status] || t.status}
                 </span>
-                <span style={{ flex: 1, fontSize: 13, color: "var(--tk-text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.title}</span>
-                <span style={{ fontSize: 11, color: "var(--tk-text-muted)", flexShrink: 0 }}>{t.assignee_name || "Unassigned"}</span>
+                <span style={{ flex: 1, fontSize: 13, color: "var(--tk-text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {t.title}
+                </span>
+                <span style={{ fontSize: 11, color: "var(--tk-text-muted)", flexShrink: 0 }}>
+                  {t.assignee_name || "Unassigned"}
+                </span>
                 {t.priority && (
-                  <span style={{ fontSize: 10, fontWeight: 700, flexShrink: 0, color: t.priority === "high" ? "#ef4444" : t.priority === "medium" ? "#f59e0b" : "#22c55e" }}>
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, flexShrink: 0,
+                    color: t.priority === "high" ? "#ef4444" : t.priority === "medium" ? "#f59e0b" : "#22c55e",
+                  }}>
                     {t.priority}
                   </span>
                 )}
@@ -1762,10 +1952,16 @@ function TaskDistributionChart({ tasks, team, onOpenDrawer }) {
             ))}
             {filteredTasks.length > 15 && (
               <div style={{ textAlign: "center", fontSize: 12, color: "var(--tk-text-muted)", padding: "6px 0" }}>
-                +{filteredTasks.length - 15} more — refine your filters to narrow down
+                +{filteredTasks.length - 15} more — narrow your filters
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {hasFilter && filteredTasks.length === 0 && (
+        <div style={{ marginTop: 16, textAlign: "center", color: "var(--tk-text-muted)", fontSize: 13, padding: "12px 0" }}>
+          No tasks match the current filters
         </div>
       )}
     </div>

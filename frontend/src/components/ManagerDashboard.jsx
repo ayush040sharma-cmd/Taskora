@@ -1640,74 +1640,6 @@ function WorkloadActivityFeed({ tasks, workspaceId }) {
 }
 
 // ── Active Tasks by Member (moved from ManagerOverview) ───────────────────────
-function ActiveTasksByMember({ tasks, team }) {
-  const [expanded, setExpanded] = useState({});
-  const active = tasks.filter(t => t.status !== "done");
-  if (!active.length) return null;
-
-  const byMember = {};
-  active.forEach(t => {
-    const key = t.assignee_name || "Unassigned";
-    if (!byMember[key]) byMember[key] = [];
-    byMember[key].push(t);
-  });
-  const entries = Object.entries(byMember).sort((a, b) => b[1].length - a[1].length);
-
-  return (
-    <div style={{ background: "var(--tk-card)", border: "1px solid var(--tk-border)", borderRadius: 12, padding: "20px 24px" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-        <div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--tk-text-primary)" }}>Active Tasks by Member</div>
-          <div style={{ fontSize: 12, color: "var(--tk-text-muted)", marginTop: 2 }}>All open tasks across the team</div>
-        </div>
-        <span style={{ fontSize: 12, background: "var(--tk-surface)", color: "var(--tk-text-secondary)", padding: "3px 10px", borderRadius: 20, border: "1px solid var(--tk-border)" }}>
-          {active.length} active
-        </span>
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {entries.map(([name, memberTasks]) => {
-          const isOpen = expanded[name];
-          return (
-            <div key={name} style={{ border: "1px solid var(--tk-border)", borderRadius: 8, overflow: "hidden" }}>
-              <div onClick={() => setExpanded(p => ({ ...p, [name]: !p[name] }))}
-                style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", cursor: "pointer", background: "rgba(59,130,246,0.05)", userSelect: "none" }}>
-                <div style={{ width: 30, height: 30, borderRadius: "50%", background: "var(--tk-accent)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#fff", flexShrink: 0 }}>
-                  {name.slice(0, 2).toUpperCase()}
-                </div>
-                <span style={{ fontWeight: 700, fontSize: 13, color: "var(--tk-text-primary)", flex: 1 }}>{name}</span>
-                <span style={{ fontSize: 12, color: "var(--tk-text-secondary)", marginRight: 8 }}>{memberTasks.length} task{memberTasks.length !== 1 ? "s" : ""}</span>
-                <span style={{ fontSize: 13, color: "var(--tk-text-muted)", transform: isOpen ? "rotate(90deg)" : "rotate(0)", display: "inline-block", transition: "transform 0.15s" }}>›</span>
-              </div>
-              {isOpen && (
-                <div style={{ padding: "0 14px 10px" }}>
-                  {memberTasks.map(t => (
-                    <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: "1px solid var(--tk-border)" }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 99, background: `${DRAWER_STATUS_COLOR[t.status] || "#64748b"}20`, color: DRAWER_STATUS_COLOR[t.status] || "#64748b", flexShrink: 0 }}>
-                        {DRAWER_STATUS_LABEL[t.status] || t.status}
-                      </span>
-                      <span style={{ flex: 1, fontSize: 13, color: "var(--tk-text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.title}</span>
-                      {t.priority && (
-                        <span style={{ fontSize: 10, color: t.priority === "high" ? "#ef4444" : t.priority === "medium" ? "#f59e0b" : "#22c55e", fontWeight: 700, flexShrink: 0 }}>
-                          {t.priority}
-                        </span>
-                      )}
-                      {t.due_date && (
-                        <span style={{ fontSize: 10, color: new Date(t.due_date) < new Date() ? "#ef4444" : "var(--tk-text-muted)", flexShrink: 0 }}>
-                          {new Date(t.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 // ── Task Distribution by Work Type (new interactive chart) ────────────────────
 const WORK_TYPE_COLORS = {
   rfp:           "#f59e0b",
@@ -1725,13 +1657,14 @@ const WORK_TYPE_COLORS = {
   proposal:      "#f97316",
 };
 
-function TaskDistributionChart({ tasks, team }) {
+function TaskDistributionChart({ tasks, team, onOpenDrawer }) {
   const [selectedMember,   setSelectedMember]   = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [search,           setSearch]           = useState("");
 
   const activeTasks = tasks.filter(t => t.status !== "done");
 
+  // Build per-member data map
   const memberMap = {};
   activeTasks.forEach(t => {
     const uid  = String(t.assigned_user_id || "unassigned");
@@ -1756,13 +1689,20 @@ function TaskDistributionChart({ tasks, team }) {
   const hasFilter = selectedMember || selectedCategory || search;
   const clearFilters = () => { setSelectedMember(null); setSelectedCategory(null); setSearch(""); };
 
+  // Resolve member name for the filter pill display
+  const selectedMemberName = selectedMember
+    ? (team.find(m => String(m.user_id) === selectedMember)?.name
+       || Object.values(memberMap).find(m => m.uid === selectedMember)?.name
+       || selectedMember)
+    : null;
+
   return (
     <div style={{ background: "var(--tk-card)", border: "1px solid var(--tk-border)", borderRadius: 12, padding: "20px 24px" }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <div>
           <div style={{ fontSize: 15, fontWeight: 700, color: "var(--tk-text-primary)" }}>Task Distribution by Work Type</div>
-          <div style={{ fontSize: 12, color: "var(--tk-text-muted)", marginTop: 2 }}>Click a member bar or category label to filter Â· Click both for a combined view</div>
+          <div style={{ fontSize: 12, color: "var(--tk-text-muted)", marginTop: 2 }}>Select a member · select a work type · or both for a combined filter</div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search members…"
@@ -1776,13 +1716,51 @@ function TaskDistributionChart({ tasks, team }) {
         </div>
       </div>
 
+      {/* ── Member filter pills ── */}
+      {team.length > 0 && (
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+          <span
+            onClick={() => setSelectedMember(null)}
+            style={{
+              padding: "4px 12px", borderRadius: 99, cursor: "pointer", fontSize: 12, fontWeight: 600,
+              border: `1px solid ${!selectedMember ? "var(--tk-accent)" : "var(--tk-border)"}`,
+              background: !selectedMember ? "rgba(59,130,246,0.12)" : "transparent",
+              color: !selectedMember ? "var(--tk-accent)" : "var(--tk-text-secondary)",
+              transition: "all 0.15s",
+            }}>
+            All Members
+          </span>
+          {team.map(m => {
+            const uid = String(m.user_id);
+            const isActive = selectedMember === uid;
+            return (
+              <span key={uid}
+                onClick={() => setSelectedMember(isActive ? null : uid)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 6,
+                  padding: "4px 12px", borderRadius: 99, cursor: "pointer", fontSize: 12, fontWeight: 600,
+                  border: `1px solid ${isActive ? "var(--tk-accent)" : "var(--tk-border)"}`,
+                  background: isActive ? "rgba(59,130,246,0.12)" : "transparent",
+                  color: isActive ? "var(--tk-accent)" : "var(--tk-text-secondary)",
+                  transition: "all 0.15s",
+                }}>
+                <span style={{ width: 18, height: 18, borderRadius: "50%", background: isActive ? "var(--tk-accent)" : "#475569", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, color: "#fff", flexShrink: 0 }}>
+                  {m.name.slice(0,2).toUpperCase()}
+                </span>
+                {m.name.split(" ")[0]}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
       {/* Active filter chips */}
       {(selectedMember || selectedCategory) && (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
           {selectedMember && (
             <span onClick={() => setSelectedMember(null)}
               style={{ padding: "3px 10px", borderRadius: 99, background: "rgba(59,130,246,0.15)", color: "var(--tk-accent)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-              👤 {Object.values(memberMap).find(m => m.uid === selectedMember)?.name || selectedMember} ✕
+              👤 {selectedMemberName} ✕
             </span>
           )}
           {selectedCategory && (
@@ -1794,7 +1772,7 @@ function TaskDistributionChart({ tasks, team }) {
         </div>
       )}
 
-      {/* Category legend (clickable) */}
+      {/* Category legend (clickable chips) */}
       {allCats.length > 0 && (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
           {allCats.map(cat => (
@@ -1840,14 +1818,20 @@ function TaskDistributionChart({ tasks, team }) {
                   <span style={{ fontSize: 12, color: "var(--tk-text-muted)" }}>{total} task{total !== 1 ? "s" : ""}</span>
                 </div>
 
-                {/* Stacked bar */}
+                {/* Stacked bar — clicking a segment selects BOTH that member AND that category */}
                 <div style={{ display: "flex", height: 22, borderRadius: 6, overflow: "hidden", gap: 2 }}>
                   {Object.entries(m.cats).map(([cat, count]) => {
                     const catSelected = selectedCategory === cat;
                     return (
                       <div key={cat}
-                        onClick={e => { e.stopPropagation(); setSelectedCategory(catSelected ? null : cat); }}
-                        title={`${cat}: ${count} task${count !== 1 ? "s" : ""}`}
+                        onClick={e => {
+                          e.stopPropagation();
+                          const newCat = catSelected ? null : cat;
+                          setSelectedCategory(newCat);
+                          // Also select this member so the drill-down is scoped
+                          setSelectedMember(m.uid);
+                        }}
+                        title={`${cat}: ${count} task${count !== 1 ? "s" : ""} — click to filter`}
                         style={{
                           width: `${(count / total) * 100}%`, minWidth: count > 0 ? 6 : 0,
                           background: WORK_TYPE_COLORS[cat] || "#64748b",
@@ -1879,7 +1863,7 @@ function TaskDistributionChart({ tasks, team }) {
         </div>
       )}
 
-      {/* Filtered task drill-down */}
+      {/* Filtered task drill-down — appears when any filter is active */}
       {(selectedMember || selectedCategory) && filteredTasks.length > 0 && (
         <div style={{ marginTop: 18, borderTop: "1px solid var(--tk-border)", paddingTop: 16 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "var(--tk-text-muted)", marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.5 }}>
@@ -1887,7 +1871,15 @@ function TaskDistributionChart({ tasks, team }) {
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {filteredTasks.slice(0, 15).map(t => (
-              <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 12px", borderRadius: 8, background: "var(--tk-surface)", border: "1px solid var(--tk-border)" }}>
+              <div key={t.id}
+                onClick={() => onOpenDrawer && onOpenDrawer(t)}
+                style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 12px", borderRadius: 8,
+                  background: "var(--tk-surface)", border: "1px solid var(--tk-border)",
+                  cursor: onOpenDrawer ? "pointer" : "default",
+                  transition: "background 0.12s",
+                }}
+                onMouseEnter={e => { if (onOpenDrawer) e.currentTarget.style.background = "rgba(59,130,246,0.06)"; }}
+                onMouseLeave={e => { if (onOpenDrawer) e.currentTarget.style.background = "var(--tk-surface)"; }}>
                 <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 99, background: `${DRAWER_STATUS_COLOR[t.status] || "#64748b"}20`, color: DRAWER_STATUS_COLOR[t.status] || "#64748b", flexShrink: 0 }}>
                   {DRAWER_STATUS_LABEL[t.status] || t.status}
                 </span>
@@ -1898,6 +1890,7 @@ function TaskDistributionChart({ tasks, team }) {
                     {t.priority}
                   </span>
                 )}
+                {onOpenDrawer && <span style={{ fontSize: 11, color: "var(--tk-text-muted)", flexShrink: 0 }}>→</span>}
               </div>
             ))}
             {filteredTasks.length > 15 && (
@@ -1920,6 +1913,7 @@ export default function ManagerDashboard({ workspaceId, workspaceName, onNavigat
   const [editMember, setEditMember] = useState(null);
   const [activeTab,  setActiveTab]  = useState("team_intel");
   const [teamTasks,  setTeamTasks]  = useState([]);
+  const [workloadDrawer, setWorkloadDrawer] = useState(null);
 
   const canManage = ["manager","super_boss","super_admin","admin"].includes(user?.role);
 
@@ -2041,16 +2035,11 @@ export default function ManagerDashboard({ workspaceId, workspaceName, onNavigat
           </div>
 
           {/* Task Distribution chart */}
-          <TaskDistributionChart tasks={teamTasks} team={team} />
+          <TaskDistributionChart tasks={teamTasks} team={team} onOpenDrawer={setWorkloadDrawer} />
 
           {/* Workload per-member cards */}
           <div style={{ marginTop: 28 }}>
             <WorkloadDashboard workspaceId={workspaceId} teamTasks={teamTasks} teamMembers={team} />
-          </div>
-
-          {/* Active tasks grouped by member */}
-          <div style={{ marginTop: 28 }}>
-            <ActiveTasksByMember tasks={teamTasks} team={team} />
           </div>
 
           {/* Team Capacity edit cards */}
@@ -2085,6 +2074,16 @@ export default function ManagerDashboard({ workspaceId, workspaceName, onNavigat
 
       {activeTab === "channel" && (
         <ChannelView workspaceId={workspaceId} workspaceName={workspaceName} onNavigate={onNavigate} />
+      )}
+
+      {workloadDrawer && (
+        <TaskIntelDrawer
+          task={workloadDrawer}
+          team={team}
+          workspaceId={workspaceId}
+          onClose={() => setWorkloadDrawer(null)}
+          onUpdated={loadTeamTasks}
+        />
       )}
 
       {editMember && (

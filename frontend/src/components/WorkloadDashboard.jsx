@@ -38,14 +38,19 @@ export default function WorkloadDashboard({ workspaceId, teamTasks = [], teamMem
       const today = new Date(); today.setHours(0,0,0,0);
       const synthetic = teamMembers.map(m => {
         const mine    = teamTasks.filter(t => (String(t.assigned_user_id)===String(m.user_id)||String(t.effective_assignee_id)===String(m.user_id)) && t.status!=="done");
-        const overdue = mine.filter(t => t.due_date && new Date(t.due_date)<today);
-        const blocked = mine.filter(t => t.status==="blocked");
         const load    = m.load_percent || Math.min(140, mine.length*11);
+        const dailyCap = m.daily_capacity || m.daily_hours || 8;
+        const committed = Math.min(dailyCap, mine.length * 2);
+        const free = Math.max(0, Math.round((dailyCap - committed) * 10) / 10);
         return {
           user_id: m.user_id, name: m.name, role: m.role,
           on_leave: m.on_leave, travel_mode: m.travel_mode,
-          task_count: mine.length, total_remaining_hours: mine.length*2,
-          daily_hours: m.daily_hours||8, load_percent: load,
+          task_count: mine.length, total_remaining_hours: mine.length * 2,
+          daily_hours: dailyCap,
+          total_hours: dailyCap,
+          allocated_hours: committed,
+          remaining_hours: free,
+          load_percent: load,
           days_until_free: load>=100?5:load>=80?2:0,
           status: load>=100?"overloaded":load>=70?"moderate":"available",
           tasks: mine.slice(0,5).map(t=>({ id:t.id, title:t.title, type:t.task_type||"task", priority:t.priority, status:t.status, remaining_hours:2, due_date:t.due_date })),

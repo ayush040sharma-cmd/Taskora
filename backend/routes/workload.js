@@ -20,9 +20,12 @@ router.get("/", auth, requireMinRole("manager"), async (req, res) => {
   if (!workspace_id) return res.status(400).json({ message: "workspace_id required" });
 
   try {
-    // Verify workspace access
+    // Verify workspace access — owner OR member with manager+ role
     const ws = await pool.query(
-      "SELECT id FROM workspaces WHERE id=$1 AND user_id=$2",
+      `SELECT 1 FROM workspaces WHERE id=$1 AND user_id=$2
+       UNION ALL
+       SELECT 1 FROM workspace_members WHERE workspace_id=$1 AND user_id=$2
+       LIMIT 1`,
       [workspace_id, req.user.id]
     );
     if (!ws.rows.length) return res.status(403).json({ message: "Access denied" });

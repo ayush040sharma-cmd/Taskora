@@ -42,141 +42,7 @@ function LoadBar({ pct }) {
   );
 }
 
-function MemberCard({ m, onEdit }) {
-  const color = STATUS_COLOR[m.status] || "var(--tk-accent)";
-  return (
-    <div className="mgr-member-card" style={{ borderLeft: `4px solid ${color}` }}>
-      <div className="mgr-member-top">
-        <div className="tk-avatar" style={{ width: 36, height: 36, fontSize: 13 }}>
-          {m.name.slice(0, 2).toUpperCase()}
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            <span className="mgr-member-name">{m.name}</span>
-            <span className={`mgr-role-pill mgr-role-pill--${m.role}`}>
-              {m.role?.replace("_", " ")}
-            </span>
-            {m.travel_mode && <span className="mgr-badge mgr-badge--travel">✈ Travel</span>}
-            {m.on_leave    && <span className="mgr-badge mgr-badge--leave">🏖 Leave</span>}
-          </div>
-          <div style={{ fontSize: 12, color: "var(--tk-text-muted)", marginTop: 2 }}>{m.email}</div>
-        </div>
-        <button className="mgr-edit-btn" onClick={() => onEdit(m)} title="Edit capacity">⚙</button>
-      </div>
 
-      <div style={{ marginTop: 12 }}>
-        <LoadBar pct={m.load_percent} />
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--tk-text-muted)", marginTop: 6 }}>
-          <span>{m.task_count} active task{m.task_count !== 1 ? "s" : ""}</span>
-          <span>{m.total_remaining_hours}h remaining Â· {m.daily_capacity}h/day capacity</span>
-        </div>
-      </div>
-
-      {m.by_type && Object.keys(m.by_type).length > 0 && (
-        <div className="mgr-type-row">
-          {Object.entries(m.by_type).map(([type, info]) => (
-            <span key={type} className="mgr-type-chip">
-              {type} <strong>{info.count}</strong>
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Capacity Edit Modal ───────────────────────────────────────────────────────
-function CapacityEditModal({ member, workspaceId, onClose, onSaved }) {
-  const [form, setForm] = useState({
-    daily_hours:       member.daily_capacity || 8,
-    travel_mode:       member.travel_mode || false,
-    travel_hours:      2,
-    on_leave:          member.on_leave || false,
-    leave_start:       member.leave_start || "",
-    leave_end:         member.leave_end   || "",
-    max_rfp:           member.limits?.max_rfp || 1,
-    max_proposals:     member.limits?.max_proposals || 2,
-    max_presentations: member.limits?.max_presentations || 2,
-    max_upgrades:      member.limits?.max_upgrades || 2,
-  });
-  const [saving, setSaving] = useState(false);
-  const [error,  setError]  = useState("");
-
-  const set = (k) => (e) => {
-    const v = e.target.type === "checkbox" ? e.target.checked : e.target.value;
-    setForm(f => ({ ...f, [k]: v }));
-  };
-
-  const save = async () => {
-    setSaving(true); setError("");
-    try {
-      await api.put(`/capacity/team/${workspaceId}/${member.user_id}`, form);
-      onSaved(); onClose();
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to save");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 460 }}>
-        <div className="modal-header">
-          <h2 className="modal-title">Capacity — {member.name}</h2>
-          <button className="modal-close" onClick={onClose}>✕</button>
-        </div>
-        <div className="modal-form" style={{ gap: 14 }}>
-          <div className="mgr-edit-row">
-            <label className="modal-label">Daily capacity (hours)</label>
-            <input className="modal-input" type="number" min={0} max={24} step={0.5} value={form.daily_hours} onChange={set("daily_hours")} />
-          </div>
-
-          <div className="mgr-edit-section">Status</div>
-          <label className="mgr-toggle">
-            <input type="checkbox" checked={form.travel_mode} onChange={set("travel_mode")} />
-            <span>✈ Travel mode</span>
-            {form.travel_mode && (
-              <input className="modal-input" type="number" min={0} max={24} step={0.5}
-                value={form.travel_hours} onChange={set("travel_hours")}
-                style={{ width: 80, marginLeft: 8 }} placeholder="hrs/day" />
-            )}
-          </label>
-          <label className="mgr-toggle">
-            <input type="checkbox" checked={form.on_leave} onChange={set("on_leave")} />
-            <span>🏖 On leave</span>
-          </label>
-          {form.on_leave && (
-            <div style={{ display: "flex", gap: 10 }}>
-              <div className="modal-field" style={{ flex: 1 }}>
-                <label className="modal-label">From</label>
-                <input className="modal-input" type="date" value={form.leave_start} onChange={set("leave_start")} />
-              </div>
-              <div className="modal-field" style={{ flex: 1 }}>
-                <label className="modal-label">To</label>
-                <input className="modal-input" type="date" value={form.leave_end} onChange={set("leave_end")} />
-              </div>
-            </div>
-          )}
-
-          <div className="mgr-edit-section">Allocation limits</div>
-          {[["max_rfp","Max RFPs"],["max_proposals","Max proposals"],["max_presentations","Max presentations"],["max_upgrades","Max upgrades"]].map(([k, label]) => (
-            <div className="mgr-edit-row" key={k}>
-              <label className="modal-label">{label}</label>
-              <input className="modal-input" type="number" min={0} max={20} value={form[k]} onChange={set(k)} style={{ width: 80 }} />
-            </div>
-          ))}
-
-          {error && <div className="modal-error">{error}</div>}
-          <div className="modal-actions">
-            <button className="btn-modal-cancel" onClick={onClose}>Cancel</button>
-            <button className="btn-modal-save" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ── Approvals Panel ───────────────────────────────────────────────────────────
 function ApprovalsPanel({ workspaceId, onRefresh }) {
@@ -1677,7 +1543,8 @@ function TaskDistributionChart({ tasks, team, onOpenDrawer }) {
   const allCats = [...new Set(activeTasks.map(t => (t.task_type || t.type || "task").toLowerCase()))].sort();
 
   const entries = Object.values(memberMap).filter(m =>
-    !search || m.name.toLowerCase().includes(search.toLowerCase())
+    (!search || m.name.toLowerCase().includes(search.toLowerCase())) &&
+    (!selectedMember || m.uid === selectedMember)
   );
 
   const filteredTasks = activeTasks.filter(t => {
@@ -1910,7 +1777,6 @@ export default function ManagerDashboard({ workspaceId, workspaceName, onNavigat
   const { user } = useAuth();
   const [team,       setTeam]       = useState([]);
   const [loading,    setLoading]    = useState(true);
-  const [editMember, setEditMember] = useState(null);
   const [activeTab,  setActiveTab]  = useState("team_intel");
   const [teamTasks,  setTeamTasks]  = useState([]);
   const [workloadDrawer, setWorkloadDrawer] = useState(null);
@@ -2042,16 +1908,7 @@ export default function ManagerDashboard({ workspaceId, workspaceName, onNavigat
             <WorkloadDashboard workspaceId={workspaceId} teamTasks={teamTasks} teamMembers={team} />
           </div>
 
-          {/* Team Capacity edit cards */}
-          <div style={{ marginTop: 28 }}>
-            <div className="mgr-panel-title" style={{ marginBottom: 12, paddingLeft: 4 }}>⚙️ Team Capacity</div>
-            <div className="mgr-team-grid">
-              {team.map(m => <MemberCard key={m.user_id} m={m} onEdit={setEditMember} />)}
-              {team.length === 0 && <div className="mgr-empty-note">No team members found. Invite people to your workspace.</div>}
-            </div>
-          </div>
-
-          {/* Recent activity feed */}
+{/* Recent activity feed */}
           <div style={{ marginTop: 28 }}>
             <div className="mgr-panel" style={{ padding: 20 }}>
               <div className="mgr-panel-title" style={{ marginBottom: 12 }}>📋 Recent Activity</div>
@@ -2086,14 +1943,6 @@ export default function ManagerDashboard({ workspaceId, workspaceName, onNavigat
         />
       )}
 
-      {editMember && (
-        <CapacityEditModal
-          member={editMember}
-          workspaceId={workspaceId}
-          onClose={() => setEditMember(null)}
-          onSaved={loadTeam}
-        />
-      )}
     </div>
   );
 }

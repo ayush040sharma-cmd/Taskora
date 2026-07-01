@@ -36,7 +36,7 @@ function LoadBar({ pct }) {
         <div className={`tk-progress-fill ${fillClass}`} style={{ width: `${Math.min(pct || 0, 100)}%`, height: "100%" }} />
       </div>
       <span style={{ fontSize: 12, fontWeight: 700, color: textColor, minWidth: 36 }}>
-        {pct ?? "â€”"}%
+        {pct ?? "—"}%
       </span>
     </div>
   );
@@ -56,12 +56,12 @@ function MemberCard({ m, onEdit }) {
             <span className={`mgr-role-pill mgr-role-pill--${m.role}`}>
               {m.role?.replace("_", " ")}
             </span>
-            {m.travel_mode && <span className="mgr-badge mgr-badge--travel">âœˆ Travel</span>}
-            {m.on_leave    && <span className="mgr-badge mgr-badge--leave">ðŸ– Leave</span>}
+            {m.travel_mode && <span className="mgr-badge mgr-badge--travel">✈ Travel</span>}
+            {m.on_leave    && <span className="mgr-badge mgr-badge--leave">🏖 Leave</span>}
           </div>
           <div style={{ fontSize: 12, color: "var(--tk-text-muted)", marginTop: 2 }}>{m.email}</div>
         </div>
-        <button className="mgr-edit-btn" onClick={() => onEdit(m)} title="Edit capacity">âš™</button>
+        <button className="mgr-edit-btn" onClick={() => onEdit(m)} title="Edit capacity">⚙</button>
       </div>
 
       <div style={{ marginTop: 12 }}>
@@ -85,7 +85,7 @@ function MemberCard({ m, onEdit }) {
   );
 }
 
-// â”€â”€ Capacity Edit Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Capacity Edit Modal ───────────────────────────────────────────────────────
 function CapacityEditModal({ member, workspaceId, onClose, onSaved }) {
   const [form, setForm] = useState({
     daily_hours:       member.daily_capacity || 8,
@@ -123,8 +123,8 @@ function CapacityEditModal({ member, workspaceId, onClose, onSaved }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 460 }}>
         <div className="modal-header">
-          <h2 className="modal-title">Capacity â€” {member.name}</h2>
-          <button className="modal-close" onClick={onClose}>âœ•</button>
+          <h2 className="modal-title">Capacity — {member.name}</h2>
+          <button className="modal-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-form" style={{ gap: 14 }}>
           <div className="mgr-edit-row">
@@ -135,7 +135,7 @@ function CapacityEditModal({ member, workspaceId, onClose, onSaved }) {
           <div className="mgr-edit-section">Status</div>
           <label className="mgr-toggle">
             <input type="checkbox" checked={form.travel_mode} onChange={set("travel_mode")} />
-            <span>âœˆ Travel mode</span>
+            <span>✈ Travel mode</span>
             {form.travel_mode && (
               <input className="modal-input" type="number" min={0} max={24} step={0.5}
                 value={form.travel_hours} onChange={set("travel_hours")}
@@ -144,7 +144,7 @@ function CapacityEditModal({ member, workspaceId, onClose, onSaved }) {
           </label>
           <label className="mgr-toggle">
             <input type="checkbox" checked={form.on_leave} onChange={set("on_leave")} />
-            <span>ðŸ– On leave</span>
+            <span>🏖 On leave</span>
           </label>
           {form.on_leave && (
             <div style={{ display: "flex", gap: 10 }}>
@@ -170,7 +170,7 @@ function CapacityEditModal({ member, workspaceId, onClose, onSaved }) {
           {error && <div className="modal-error">{error}</div>}
           <div className="modal-actions">
             <button className="btn-modal-cancel" onClick={onClose}>Cancel</button>
-            <button className="btn-modal-save" onClick={save} disabled={saving}>{saving ? "Savingâ€¦" : "Save"}</button>
+            <button className="btn-modal-save" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</button>
           </div>
         </div>
       </div>
@@ -178,7 +178,7 @@ function CapacityEditModal({ member, workspaceId, onClose, onSaved }) {
   );
 }
 
-// â”€â”€ Approvals Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Approvals Panel ───────────────────────────────────────────────────────────
 function ApprovalsPanel({ workspaceId, onRefresh }) {
   const [approvals,       setApprovals]       = useState([]);
   const [capRequests,     setCapRequests]     = useState([]);
@@ -230,7 +230,7 @@ function ApprovalsPanel({ workspaceId, onRefresh }) {
     }
   };
 
-  if (loading) return <div className="mgr-loading">Loading approvalsâ€¦</div>;
+  if (loading) return <div className="mgr-loading">Loading approvals…</div>;
   if (loadError) return (
     <div className="mgr-empty-note" style={{ color: "var(--tk-status-danger)" }}>
       Could not load approvals.{" "}
@@ -257,10 +257,10 @@ function ApprovalsPanel({ workspaceId, onRefresh }) {
     <div>
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
         <button onClick={() => setActiveTab("tasks")} style={tabStyle(activeTab === "tasks")}>
-          ðŸ“‹ Task Approvals {approvals.length > 0 && <span style={badgeStyle}>{approvals.length}</span>}
+          📋 Task Approvals {approvals.length > 0 && <span style={badgeStyle}>{approvals.length}</span>}
         </button>
         <button onClick={() => setActiveTab("capacity")} style={tabStyle(activeTab === "capacity")}>
-          ðŸ–ï¸ Leave & Travel {capRequests.length > 0 && <span style={badgeStyle}>{capRequests.length}</span>}
+          🏖️ Leave & Travel {capRequests.length > 0 && <span style={badgeStyle}>{capRequests.length}</span>}
         </button>
       </div>
 
@@ -279,7 +279,7 @@ function ApprovalsPanel({ workspaceId, onRefresh }) {
               <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
                 <div className="modal-header">
                   <h2 className="modal-title">Reject assignment</h2>
-                  <button className="modal-close" onClick={() => { setRejectId(null); setRejectReason(""); }}>âœ•</button>
+                  <button className="modal-close" onClick={() => { setRejectId(null); setRejectReason(""); }}>✕</button>
                 </div>
                 <div style={{ padding: "0 0 16px" }}>
                   <label className="modal-label">Reason (optional)</label>
@@ -296,15 +296,15 @@ function ApprovalsPanel({ workspaceId, onRefresh }) {
           {approvals.map(a => (
             <div key={a.id} className="mgr-approval-card">
               <div className="mgr-approval-info">
-                <div className="mgr-approval-task">ðŸ“‹ {a.task_title}</div>
+                <div className="mgr-approval-task">📋 {a.task_title}</div>
                 <div className="mgr-approval-meta">
-                  {a.requested_by_name} â†’ assign to <strong>{a.assigned_to_name}</strong>
+                  {a.requested_by_name} → assign to <strong>{a.assigned_to_name}</strong>
                   {a.justification && <span className="mgr-justification">"{a.justification}"</span>}
                 </div>
               </div>
               <div className="mgr-approval-actions">
-                <button className="mgr-btn-approve" onClick={() => resolve(a.id, "approve")}>âœ“ Approve</button>
-                <button className="mgr-btn-reject" onClick={() => setRejectId(a.id)}>âœ— Reject</button>
+                <button className="mgr-btn-approve" onClick={() => resolve(a.id, "approve")}>✓ Approve</button>
+                <button className="mgr-btn-reject" onClick={() => setRejectId(a.id)}>✗ Reject</button>
               </div>
             </div>
           ))}
@@ -318,7 +318,7 @@ function ApprovalsPanel({ workspaceId, onRefresh }) {
               <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
                 <div className="modal-header">
                   <h2 className="modal-title">Reject request</h2>
-                  <button className="modal-close" onClick={() => { setRejectCapId(null); setRejectCapReason(""); }}>âœ•</button>
+                  <button className="modal-close" onClick={() => { setRejectCapId(null); setRejectCapReason(""); }}>✕</button>
                 </div>
                 <div style={{ padding: "0 0 16px" }}>
                   <label className="modal-label">Reason (optional)</label>
@@ -336,12 +336,12 @@ function ApprovalsPanel({ workspaceId, onRefresh }) {
             <div key={cr.id} className="mgr-approval-card">
               <div className="mgr-approval-info">
                 <div className="mgr-approval-task">
-                  {cr.request_type === "leave" ? "ðŸ–ï¸ Leave Request" : "âœˆï¸ Travel Mode Request"}
+                  {cr.request_type === "leave" ? "🏖️ Leave Request" : "✈️ Travel Mode Request"}
                 </div>
                 <div className="mgr-approval-meta">
                   <strong>{cr.requester_name}</strong>
                   {cr.request_type === "leave" && cr.leave_start && (
-                    <span> Â· {cr.leave_start}{cr.leave_end ? ` â†’ ${cr.leave_end}` : ""}</span>
+                    <span> Â· {cr.leave_start}{cr.leave_end ? ` → ${cr.leave_end}` : ""}</span>
                   )}
                   {cr.request_type === "travel" && cr.travel_hours && (
                     <span> Â· {cr.travel_hours}h/day while travelling</span>
@@ -353,8 +353,8 @@ function ApprovalsPanel({ workspaceId, onRefresh }) {
                 </div>
               </div>
               <div className="mgr-approval-actions">
-                <button className="mgr-btn-approve" onClick={() => resolveCapacity(cr.id, "approve")}>âœ“ Approve</button>
-                <button className="mgr-btn-reject" onClick={() => setRejectCapId(cr.id)}>âœ— Reject</button>
+                <button className="mgr-btn-approve" onClick={() => resolveCapacity(cr.id, "approve")}>✓ Approve</button>
+                <button className="mgr-btn-reject" onClick={() => setRejectCapId(cr.id)}>✗ Reject</button>
               </div>
             </div>
           ))}
@@ -364,7 +364,7 @@ function ApprovalsPanel({ workspaceId, onRefresh }) {
   );
 }
 
-// â”€â”€ Audit Log â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Audit Log ─────────────────────────────────────────────────────────────────
 function AuditLog({ workspaceId }) {
   const [logs,    setLogs]    = useState([]);
   const [loading, setLoading] = useState(true);
@@ -376,19 +376,19 @@ function AuditLog({ workspaceId }) {
       .finally(() => setLoading(false));
   }, [workspaceId]);
 
-  if (loading) return <div className="mgr-loading">Loading audit logâ€¦</div>;
+  if (loading) return <div className="mgr-loading">Loading audit log…</div>;
   if (!logs.length) return <div className="mgr-empty-note">No audit records yet</div>;
 
   const ACTION_ICON = {
-    task_assigned: "ðŸ“‹", approval_requested: "â³", approval_approved: "âœ…",
-    approval_rejected: "âŒ", capacity_changed: "âš™ï¸", travel_mode_on: "âœˆï¸", leave_started: "ðŸ–ï¸",
+    task_assigned: "📋", approval_requested: "⏳", approval_approved: "✅",
+    approval_rejected: "❌", capacity_changed: "⚙️", travel_mode_on: "✈️", leave_started: "🏖️",
   };
 
   return (
     <div className="mgr-audit-list">
       {logs.map(l => (
         <div key={l.id} className="mgr-audit-row">
-          <span className="mgr-audit-icon">{ACTION_ICON[l.action] || "ðŸ“"}</span>
+          <span className="mgr-audit-icon">{ACTION_ICON[l.action] || "📝"}</span>
           <div className="mgr-audit-body">
             <span className="mgr-audit-actor">{l.actor_name}</span>
             <span className="mgr-audit-action"> {l.action?.replace(/_/g, " ")}</span>
@@ -403,7 +403,7 @@ function AuditLog({ workspaceId }) {
   );
 }
 
-// â”€â”€ Team Intel â€” Single Pane of Glass â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Team Intel — Single Pane of Glass ────────────────────────────────────────
 function TeamIntelPanel({ workspaceId, team }) {
   const [tasks,       setTasks]       = useState([]);
   const [loading,     setLoading]     = useState(true);
@@ -504,7 +504,7 @@ function TeamIntelPanel({ workspaceId, team }) {
   const displayTeam = (team || []).filter(m => String(m.user_id || m.id) !== String(currentUser?.id));
 
   // Enrich each team member with their task breakdown
-  // effective_assignee_id: backend sends this â€” falls back to workspace_owner_id for unassigned tasks
+  // effective_assignee_id: backend sends this — falls back to workspace_owner_id for unassigned tasks
   const matchesMember = (t, uid) =>
     String(t.assigned_user_id) === String(uid) ||
     String(t.effective_assignee_id) === String(uid) ||
@@ -534,7 +534,7 @@ function TeamIntelPanel({ workspaceId, team }) {
   if (filterMember !== "all") rows = rows.filter(m => String(m.user_id) === filterMember);
   if (filterRisk   !== "all") rows = rows.filter(m => m.risk === filterRisk);
 
-  // Unassigned active tasks â€” only those with no effective assignee and no workspace owner match
+  // Unassigned active tasks — only those with no effective assignee and no workspace owner match
   const memberIdSet = new Set((team || []).map(m => String(m.user_id)));
   const unassigned = visibleTasks.filter(t =>
     !t.assigned_user_id &&
@@ -559,9 +559,9 @@ function TeamIntelPanel({ workspaceId, team }) {
     insights.push({ type: "danger", text: `Needs attention: ${desc.join(" Â· ")}` });
   }
   if (overloaded.length && available.length)
-    insights.push({ type: "warn", text: `Imbalance: ${overloaded.map(m=>m.name).join(", ")} overloaded â€” ${available.map(m=>m.name).join(", ")} have capacity` });
+    insights.push({ type: "warn", text: `Imbalance: ${overloaded.map(m=>m.name).join(", ")} overloaded — ${available.map(m=>m.name).join(", ")} have capacity` });
   if (unassigned.length)
-    insights.push({ type: "info", text: `${unassigned.length} unassigned task${unassigned.length !== 1?"s":""} â€” distribute to available members` });
+    insights.push({ type: "info", text: `${unassigned.length} unassigned task${unassigned.length !== 1?"s":""} — distribute to available members` });
 
   // KPIs from full task list (not filtered)
   const activeTasks  = tasks.filter(t => t.status !== "done").length;
@@ -602,7 +602,7 @@ function TeamIntelPanel({ workspaceId, team }) {
         if (s < 60)  return `${s}s ago`;
         return `${Math.floor(s/60)}m ago`;
       })()
-    : "â€”";
+    : "—";
 
   const RISK_COLOR = { high: "#ef4444", medium: "#f59e0b", low: "#22c55e" };
   const RISK_BG    = { high: "rgba(239,68,68,0.1)", medium: "rgba(245,158,11,0.1)", low: "rgba(34,197,94,0.1)" };
@@ -614,10 +614,10 @@ function TeamIntelPanel({ workspaceId, team }) {
     todo: "To Do", inprogress: "In Progress", in_progress: "In Progress",
     review: "In Review", blocked: "Blocked", done: "Done", pending_approval: "Pending Approval"
   };
-  const PRIORITY_ICON  = { high: "ðŸ”´", medium: "ðŸŸ¡", low: "ðŸŸ¢" };
+  const PRIORITY_ICON  = { high: "🔴", medium: "🟡", low: "🟢" };
 
   const formatDue = (d) => {
-    if (!d) return { label: "â€”", color: "var(--tk-text-muted)" };
+    if (!d) return { label: "—", color: "var(--tk-text-muted)" };
     const dt   = new Date(d);
     const diff = Math.round((dt - today) / 86400000);
     if (diff < 0)  return { label: `${Math.abs(diff)}d overdue`, color: "#ef4444", bold: true };
@@ -634,7 +634,7 @@ function TeamIntelPanel({ workspaceId, team }) {
   if (loading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "64px 0", gap: 12, color: "var(--tk-text-muted)", flexDirection: "column" }}>
       <div style={{ width: 32, height: 32, border: "3px solid var(--tk-border)", borderTopColor: "var(--tk-accent)", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-      <span style={{ fontSize: 14 }}>Loading team intelligenceâ€¦</span>
+      <span style={{ fontSize: 14 }}>Loading team intelligence…</span>
     </div>
   );
 
@@ -650,12 +650,12 @@ function TeamIntelPanel({ workspaceId, team }) {
       {/* Interactive KPI strip */}
       <div style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap" }}>
         {[
-          { key:"active",    label:"Active Tasks",    value:activeTasks,     color: "var(--tk-text-primary)",                                icon:"ðŸ“‹" },
-          { key:"overdue",   label:"Overdue",         value:overdueCount,    color: overdueCount   > 0 ? "#ef4444" : "var(--tk-text-primary)", icon:"ðŸ”´" },
-          { key:"blocked",   label:"Blocked",         value:blockedCount,    color: blockedCount   > 0 ? "#ef4444" : "var(--tk-text-primary)", icon:"ðŸš«" },
-          { key:"stale",     label:"Stale (3d+)",     value:staleCount,      color: staleCount     > 0 ? "#f59e0b" : "var(--tk-text-primary)", icon:"â¸" },
-          { key:"unassigned",label:"Unassigned",      value:unassignedCount, color: unassignedCount> 0 ? "#f59e0b" : "var(--tk-text-primary)", icon:"ðŸ‘¤" },
-          { key:"risk",      label:"Members at Risk", value:highRiskCount,   color: highRiskCount  > 0 ? "#ef4444" : "var(--tk-text-primary)", icon:"âš ï¸" },
+          { key:"active",    label:"Active Tasks",    value:activeTasks,     color: "var(--tk-text-primary)",                                icon:"📋" },
+          { key:"overdue",   label:"Overdue",         value:overdueCount,    color: overdueCount   > 0 ? "#ef4444" : "var(--tk-text-primary)", icon:"🔴" },
+          { key:"blocked",   label:"Blocked",         value:blockedCount,    color: blockedCount   > 0 ? "#ef4444" : "var(--tk-text-primary)", icon:"🚫" },
+          { key:"stale",     label:"Stale (3d+)",     value:staleCount,      color: staleCount     > 0 ? "#f59e0b" : "var(--tk-text-primary)", icon:"⏸" },
+          { key:"unassigned",label:"Unassigned",      value:unassignedCount, color: unassignedCount> 0 ? "#f59e0b" : "var(--tk-text-primary)", icon:"👤" },
+          { key:"risk",      label:"Members at Risk", value:highRiskCount,   color: highRiskCount  > 0 ? "#ef4444" : "var(--tk-text-primary)", icon:"⚠️" },
         ].map(k => (
           <div key={k.key}
             onClick={() => { setDrawerType(k.key); setDrawerSearch(""); setSelectedTasks(new Set()); }}
@@ -670,7 +670,7 @@ function TeamIntelPanel({ workspaceId, team }) {
 
       {/* AI Insights */}
       {insights.map((ins, i) => {
-        const c = { danger: { bg:"rgba(239,68,68,0.1)", border:"rgba(239,68,68,0.3)", text:"#ef4444", icon:"ðŸš¨" }, warn: { bg:"rgba(245,158,11,0.1)", border:"rgba(245,158,11,0.3)", text:"#f59e0b", icon:"âš ï¸" }, info: { bg:"rgba(59,130,246,0.1)", border:"rgba(59,130,246,0.3)", text:"#3b82f6", icon:"ðŸ’¡" } }[ins.type];
+        const c = { danger: { bg:"rgba(239,68,68,0.1)", border:"rgba(239,68,68,0.3)", text:"#ef4444", icon:"🚨" }, warn: { bg:"rgba(245,158,11,0.1)", border:"rgba(245,158,11,0.3)", text:"#f59e0b", icon:"⚠️" }, info: { bg:"rgba(59,130,246,0.1)", border:"rgba(59,130,246,0.3)", text:"#3b82f6", icon:"💡" } }[ins.type];
         return (
           <div key={i} style={{ display:"flex", alignItems:"flex-start", gap:10, background:c.bg, border:`1px solid ${c.border}`, borderRadius:8, padding:"9px 14px", marginBottom:8, fontSize:13 }}>
             <span>{c.icon}</span>
@@ -699,9 +699,9 @@ function TeamIntelPanel({ workspaceId, team }) {
         {/* Priority filter */}
         <select value={filterPriority} onChange={e=>setFilterPriority(e.target.value)} style={sel}>
           <option value="all">All Priorities</option>
-          <option value="high">ðŸ”´ High</option>
-          <option value="medium">ðŸŸ¡ Medium</option>
-          <option value="low">ðŸŸ¢ Low</option>
+          <option value="high">🔴 High</option>
+          <option value="medium">🟡 Medium</option>
+          <option value="low">🟢 Low</option>
         </select>
         {/* Risk filter */}
         <select value={filterRisk} onChange={e=>setFilterRisk(e.target.value)} style={sel}>
@@ -716,13 +716,13 @@ function TeamIntelPanel({ workspaceId, team }) {
           disabled={refreshing}
           style={{ padding:"6px 14px", borderRadius:8, border:"1px solid var(--tk-border)", background: refreshing ? "var(--tk-accent)" : "var(--tk-surface)", color: refreshing ? "#fff" : "var(--tk-text-secondary)", fontSize:13, cursor:"pointer", display:"flex", alignItems:"center", gap:6, transition:"all 0.2s" }}
         >
-          <span style={{ display:"inline-block", animation: refreshing ? "spin 0.8s linear infinite" : "none" }}>â†»</span>
-          {refreshing ? "Refreshingâ€¦" : "Refresh"}
+          <span style={{ display:"inline-block", animation: refreshing ? "spin 0.8s linear infinite" : "none" }}>↻</span>
+          {refreshing ? "Refreshing…" : "Refresh"}
         </button>
         {/* Export */}
         <button onClick={() => setExportOpen(true)}
           style={{ padding:"6px 14px", borderRadius:8, border:"1px solid var(--tk-border)", background:"var(--tk-surface)", color:"var(--tk-text-secondary)", fontSize:13, cursor:"pointer", display:"flex", alignItems:"center", gap:6 }}>
-          â†“ Export
+          ↓ Export
         </button>
         <span style={{ marginLeft:"auto", fontSize:11, color:"var(--tk-text-muted)" }}>
           {rows.length} member{rows.length!==1?"s":""} Â· refreshed {refreshLabel}
@@ -758,21 +758,21 @@ function TeamIntelPanel({ workspaceId, team }) {
               </div>
               {/* Status chips */}
               <div style={{ display:"flex", gap:5, flex:1, flexWrap:"wrap" }}>
-                {m.inProgress.length>0 && <Chip color="#3b82f6" bg="rgba(59,130,246,0.12)">ðŸ”µ {m.inProgress.length} in progress</Chip>}
-                {m.inReview.length>0   && <Chip color="#8b5cf6" bg="rgba(139,92,246,0.12)">ðŸŸ£ {m.inReview.length} in review</Chip>}
-                {m.todo.length>0       && <Chip color="#64748b" bg="rgba(100,116,139,0.12)">âšª {m.todo.length} to do</Chip>}
-                {m.overdue.length>0    && <Chip color="#ef4444" bg="rgba(239,68,68,0.12)" bold>ðŸ”´ {m.overdue.length} overdue</Chip>}
-                {m.blocked.length>0    && <Chip color="#ef4444" bg="rgba(239,68,68,0.1)" border="rgba(239,68,68,0.4)" bold>ðŸš« {m.blocked.length} blocked</Chip>}
-                {m.stale.length>0      && <Chip color="#f59e0b" bg="rgba(245,158,11,0.1)">â¸ {m.stale.length} stale</Chip>}
-                {m.dueToday.length>0   && <Chip color="#f59e0b" bg="rgba(245,158,11,0.12)">ðŸ“… {m.dueToday.length} due today</Chip>}
-                {m.on_leave            && <Chip color="#94a3b8" bg="rgba(100,116,139,0.1)">ðŸ– On leave</Chip>}
-                {m.travel_mode         && <Chip color="#94a3b8" bg="rgba(100,116,139,0.1)">âœˆ Travel</Chip>}
-                {m.allMine.length===0 && !m.on_leave && <Chip color="#22c55e" bg="rgba(34,197,94,0.1)">âœ“ Available</Chip>}
+                {m.inProgress.length>0 && <Chip color="#3b82f6" bg="rgba(59,130,246,0.12)">🔵 {m.inProgress.length} in progress</Chip>}
+                {m.inReview.length>0   && <Chip color="#8b5cf6" bg="rgba(139,92,246,0.12)">🟣 {m.inReview.length} in review</Chip>}
+                {m.todo.length>0       && <Chip color="#64748b" bg="rgba(100,116,139,0.12)">⚪ {m.todo.length} to do</Chip>}
+                {m.overdue.length>0    && <Chip color="#ef4444" bg="rgba(239,68,68,0.12)" bold>🔴 {m.overdue.length} overdue</Chip>}
+                {m.blocked.length>0    && <Chip color="#ef4444" bg="rgba(239,68,68,0.1)" border="rgba(239,68,68,0.4)" bold>🚫 {m.blocked.length} blocked</Chip>}
+                {m.stale.length>0      && <Chip color="#f59e0b" bg="rgba(245,158,11,0.1)">⏸ {m.stale.length} stale</Chip>}
+                {m.dueToday.length>0   && <Chip color="#f59e0b" bg="rgba(245,158,11,0.12)">📅 {m.dueToday.length} due today</Chip>}
+                {m.on_leave            && <Chip color="#94a3b8" bg="rgba(100,116,139,0.1)">🏖 On leave</Chip>}
+                {m.travel_mode         && <Chip color="#94a3b8" bg="rgba(100,116,139,0.1)">✈ Travel</Chip>}
+                {m.allMine.length===0 && !m.on_leave && <Chip color="#22c55e" bg="rgba(34,197,94,0.1)">✓ Available</Chip>}
               </div>
               {/* Risk badge + arrow */}
               <div style={{ display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
                 <span style={{ padding:"2px 8px", borderRadius:99, background:RISK_BG[m.risk], color:RISK_COLOR[m.risk], fontSize:11, fontWeight:700, width:52, textAlign:"center" }}>{m.risk}</span>
-                <span style={{ fontSize:14, color:"var(--tk-text-muted)", transform: open?"rotate(90deg)":"rotate(0)", display:"inline-block", transition:"transform 0.15s" }}>â€º</span>
+                <span style={{ fontSize:14, color:"var(--tk-text-muted)", transform: open?"rotate(90deg)":"rotate(0)", display:"inline-block", transition:"transform 0.15s" }}>›</span>
               </div>
             </div>
 
@@ -784,7 +784,7 @@ function TeamIntelPanel({ workspaceId, team }) {
                   <div style={{ display:"flex", alignItems:"center", gap:8, padding:"7px 16px", background:"rgba(59,130,246,0.08)", borderBottom:"1px solid rgba(59,130,246,0.2)" }}>
                     <span style={{ fontSize:12, fontWeight:700, color:"var(--tk-accent)" }}>{selectedTasks.size} selected</span>
                     <select value={bulkAction} onChange={e=>setBulkAction(e.target.value)} style={{ ...sel, padding:"3px 8px", fontSize:12 }}>
-                      <option value="">Bulk actionâ€¦</option>
+                      <option value="">Bulk action…</option>
                       <option value="reassign">Reassign</option>
                       <option value="high">Set High Priority</option>
                       <option value="done">Mark Done</option>
@@ -819,13 +819,13 @@ function TeamIntelPanel({ workspaceId, team }) {
                       <input type="checkbox" checked={isSelected}
                         onChange={e => setSelectedTasks(prev => { const n=new Set(prev); e.target.checked?n.add(t.id):n.delete(t.id); return n; })}
                         onClick={e => e.stopPropagation()} style={{ cursor:"pointer" }} />
-                      {/* Task name â€” click opens drawer */}
+                      {/* Task name — click opens drawer */}
                       <div style={{ paddingRight:8, minWidth:0, cursor:"pointer" }} onClick={() => setTaskDrawer(t)}>
                         <div style={{ fontSize:13, fontWeight:500, color:"var(--tk-accent)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", textDecoration:"underline", textDecorationStyle:"dotted", textUnderlineOffset:3 }}>{t.title}</div>
-                        {t.blocked_reason && <div style={{ fontSize:11, color:"#ef4444", marginTop:2 }}>â›” {t.blocked_reason}</div>}
+                        {t.blocked_reason && <div style={{ fontSize:11, color:"#ef4444", marginTop:2 }}>⛔ {t.blocked_reason}</div>}
                         <div style={{ display:"flex", gap:6, marginTop:2 }}>
-                          {t.comment_count>0 && <span style={{ fontSize:10, color:"var(--tk-text-muted)" }}>ðŸ’¬ {t.comment_count}</span>}
-                          {t.sprint_name && <span style={{ fontSize:10, color:"var(--tk-text-muted)" }}>ðŸƒ {t.sprint_name}</span>}
+                          {t.comment_count>0 && <span style={{ fontSize:10, color:"var(--tk-text-muted)" }}>💬 {t.comment_count}</span>}
+                          {t.sprint_name && <span style={{ fontSize:10, color:"var(--tk-text-muted)" }}>🏃 {t.sprint_name}</span>}
                           {t.workspace_name && <span style={{ fontSize:10, color:"var(--tk-text-muted)", opacity:0.7 }}>{t.workspace_name}</span>}
                         </div>
                       </div>
@@ -837,29 +837,29 @@ function TeamIntelPanel({ workspaceId, team }) {
                         </span>
                       </div>
                       {/* Priority */}
-                      <div style={{ fontSize:13 }}>{PRIORITY_ICON[t.priority]||"â€”"}</div>
+                      <div style={{ fontSize:13 }}>{PRIORITY_ICON[t.priority]||"—"}</div>
                       {/* Due */}
                       <div style={{ fontSize:11, color:due.color, fontWeight:due.bold?700:400, whiteSpace:"nowrap" }}>{due.label}</div>
                       {/* Actions */}
                       <div style={{ display:"flex", gap:3, flexWrap:"wrap" }}>
                         <button onClick={() => setTaskDrawer(t)}
-                          style={actionBtn("#3b82f6","rgba(59,130,246,0.1)")}>ðŸ“‹ Open</button>
+                          style={actionBtn("#3b82f6","rgba(59,130,246,0.1)")}>📋 Open</button>
                         <button onClick={() => { setReassignTask(t); setReassignTo(""); }}
-                          style={actionBtn("#64748b")}>â†ª</button>
+                          style={actionBtn("#64748b")}>↪</button>
                         {t.priority !== "high" && (
                           <button onClick={() => updateTask(t.id, { priority:"high" })} disabled={saving}
-                            style={actionBtn("#ef4444","rgba(239,68,68,0.12)")}>ðŸ”´</button>
+                            style={actionBtn("#ef4444","rgba(239,68,68,0.12)")}>🔴</button>
                         )}
                         {t.status !== "blocked" ? (
                           <button onClick={() => updateTask(t.id, { status:"blocked" })} disabled={saving}
-                            style={actionBtn("#ef4444","rgba(239,68,68,0.08)")}>ðŸš«</button>
+                            style={actionBtn("#ef4444","rgba(239,68,68,0.08)")}>🚫</button>
                         ) : (
                           <button onClick={() => updateTask(t.id, { status:"inprogress" })} disabled={saving}
-                            style={actionBtn("#22c55e","rgba(34,197,94,0.12)")}>â–¶</button>
+                            style={actionBtn("#22c55e","rgba(34,197,94,0.12)")}>▶</button>
                         )}
                         {t.status === "inprogress" && (
                           <button onClick={() => updateTask(t.id, { status:"done", progress:100 })} disabled={saving}
-                            style={actionBtn("#22c55e","rgba(34,197,94,0.1)")}>âœ“</button>
+                            style={actionBtn("#22c55e","rgba(34,197,94,0.1)")}>✓</button>
                         )}
                       </div>
                     </div>
@@ -869,7 +869,7 @@ function TeamIntelPanel({ workspaceId, team }) {
             )}
             {open && memberTasks.length === 0 && (
               <div style={{ padding:"14px 16px", color:"var(--tk-text-muted)", fontSize:13 }}>
-                {m.allMine.length === 0 ? "No tasks assigned â€” member is available." : "No tasks match the current filters."}
+                {m.allMine.length === 0 ? "No tasks assigned — member is available." : "No tasks match the current filters."}
               </div>
             )}
           </div>
@@ -892,7 +892,7 @@ function TeamIntelPanel({ workspaceId, team }) {
                 <div style={{ fontSize:13 }}>{PRIORITY_ICON[t.priority]||""}</div>
                 <button onClick={() => { setReassignTask(t); setReassignTo(""); }}
                   style={{ padding:"4px 12px", borderRadius:7, border:"1px solid var(--tk-accent)", background:"rgba(59,130,246,0.1)", color:"var(--tk-accent)", fontSize:11, cursor:"pointer", fontWeight:600 }}>
-                  Assign â†’
+                  Assign →
                 </button>
               </div>
             ))}
@@ -906,17 +906,17 @@ function TeamIntelPanel({ workspaceId, team }) {
           <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth:440 }}>
             <div className="modal-header">
               <h2 className="modal-title">Reassign Task</h2>
-              <button className="modal-close" onClick={() => setReassignTask(null)}>âœ•</button>
+              <button className="modal-close" onClick={() => setReassignTask(null)}>✕</button>
             </div>
             <div style={{ padding:"12px 0 4px" }}>
               <div style={{ fontSize:14, fontWeight:600, color:"var(--tk-text-primary)", marginBottom:14 }}>"{reassignTask.title}"</div>
               <label className="modal-label">Assign to</label>
               <select className="modal-input" value={reassignTo} onChange={e => setReassignTo(e.target.value)} autoFocus>
-                <option value="">Select memberâ€¦</option>
+                <option value="">Select member…</option>
                 <option value="__unassigned__">Unassigned</option>
                 {(team||[]).map(m => (
                   <option key={m.user_id} value={String(m.user_id)}>
-                    {m.name} â€” {m.load_percent??0}% load
+                    {m.name} — {m.load_percent??0}% load
                   </option>
                 ))}
               </select>
@@ -929,7 +929,7 @@ function TeamIntelPanel({ workspaceId, team }) {
                   await updateTask(reassignTask.id, { assigned_user_id: newId });
                   setReassignTask(null);
                 }}>
-                {saving ? "Savingâ€¦" : "Reassign"}
+                {saving ? "Saving…" : "Reassign"}
               </button>
             </div>
           </div>
@@ -942,7 +942,7 @@ function TeamIntelPanel({ workspaceId, team }) {
           <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth:380 }}>
             <div className="modal-header">
               <h2 className="modal-title">Change Status</h2>
-              <button className="modal-close" onClick={() => setStatusTask(null)}>âœ•</button>
+              <button className="modal-close" onClick={() => setStatusTask(null)}>✕</button>
             </div>
             <div style={{ padding:"12px 0 4px" }}>
               <div style={{ fontSize:13, color:"var(--tk-text-secondary)", marginBottom:12 }}>"{statusTask.title}"</div>
@@ -962,7 +962,7 @@ function TeamIntelPanel({ workspaceId, team }) {
         </div>
       )}
 
-      {/* â”€â”€ KPI Right-side Drawer â”€â”€ */}
+      {/* ── KPI Right-side Drawer ── */}
       {drawerType && (() => {
         const drawerTitles = { active:"Active Tasks", overdue:"Overdue Tasks", blocked:"Blocked Tasks", stale:"Stale Tasks (3d+)", unassigned:"Unassigned Tasks", risk:"Members at Risk" };
         const drawerDatasets = { active:allActive, overdue:allOverdue, blocked:allBlocked, stale:allStale, unassigned:allUnassigned };
@@ -988,12 +988,12 @@ function TeamIntelPanel({ workspaceId, team }) {
                     {isTaskDrawer ? `${drawerTasks.length} task${drawerTasks.length!==1?"s":""} Â· click to act` : `${drawerMembers.length} member${drawerMembers.length!==1?"s":""} at risk`}
                   </div>
                 </div>
-                <button onClick={() => setDrawerType(null)} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:"var(--tk-text-muted)", padding:"4px 8px" }}>âœ•</button>
+                <button onClick={() => setDrawerType(null)} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:"var(--tk-text-muted)", padding:"4px 8px" }}>✕</button>
               </div>
 
               {/* Search bar */}
               <div style={{ padding:"10px 20px", borderBottom:"1px solid var(--tk-border)" }}>
-                <input value={drawerSearch} onChange={e=>setDrawerSearch(e.target.value)} placeholder="Search tasks, members, projectsâ€¦"
+                <input value={drawerSearch} onChange={e=>setDrawerSearch(e.target.value)} placeholder="Search tasks, members, projects…"
                   style={{ width:"100%", padding:"7px 12px", borderRadius:8, border:"1px solid var(--tk-border)", background:"var(--tk-surface)", color:"var(--tk-text-primary)", fontSize:13, boxSizing:"border-box" }} />
               </div>
 
@@ -1002,8 +1002,8 @@ function TeamIntelPanel({ workspaceId, team }) {
                 <div style={{ margin:"10px 20px 0", padding:"9px 14px", background:"rgba(239,68,68,0.08)", border:"1px solid rgba(239,68,68,0.2)", borderRadius:8, fontSize:12 }}>
                   <span style={{ fontWeight:700, color:"#ef4444" }}>AI Insight: </span>
                   <span style={{ color:"var(--tk-text-secondary)" }}>
-                    {allOverdue.length} overdue tasks â€” top overdue owner: {
-                      (() => { const cnt={}; allOverdue.forEach(t=>{const n=t.assignee_name||"Unassigned"; cnt[n]=(cnt[n]||0)+1;}); return Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0]?.[0]||"â€”"; })()
+                    {allOverdue.length} overdue tasks — top overdue owner: {
+                      (() => { const cnt={}; allOverdue.forEach(t=>{const n=t.assignee_name||"Unassigned"; cnt[n]=(cnt[n]||0)+1;}); return Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0]?.[0]||"—"; })()
                     }. Consider redistributing to members below 60% load.
                   </span>
                 </div>
@@ -1012,7 +1012,7 @@ function TeamIntelPanel({ workspaceId, team }) {
                 <div style={{ margin:"10px 20px 0", padding:"9px 14px", background:"rgba(59,130,246,0.08)", border:"1px solid rgba(59,130,246,0.2)", borderRadius:8, fontSize:12 }}>
                   <span style={{ fontWeight:700, color:"var(--tk-accent)" }}>AI Suggestion: </span>
                   <span style={{ color:"var(--tk-text-secondary)" }}>
-                    Assign to <strong>{suggestedOwner.name}</strong> (currently {suggestedOwner.load_percent||0}% load â€” lowest available capacity).
+                    Assign to <strong>{suggestedOwner.name}</strong> (currently {suggestedOwner.load_percent||0}% load — lowest available capacity).
                   </span>
                   <button onClick={() => { allUnassigned.forEach(t => updateTask(t.id, { assigned_user_id: suggestedOwner.user_id })); setDrawerType(null); showToast(`All unassigned tasks assigned to ${suggestedOwner.name}`); }}
                     style={{ marginLeft:8, padding:"2px 10px", borderRadius:6, border:"1px solid var(--tk-accent)", background:"rgba(59,130,246,0.15)", color:"var(--tk-accent)", fontSize:11, cursor:"pointer", fontWeight:700 }}>Auto-Assign All</button>
@@ -1057,10 +1057,10 @@ function TeamIntelPanel({ workspaceId, team }) {
                         </div>
                       </div>
                       <div style={{ display:"flex", flexDirection:"column", gap:4, flexShrink:0 }}>
-                        <button onClick={() => { setReassignTask(t); setReassignTo(""); }} style={{ ...actionBtn("#64748b"), padding:"4px 10px", fontSize:11 }}>â†ª Reassign</button>
-                        <button onClick={() => setStatusTask(t)} style={{ ...actionBtn("#3b82f6","rgba(59,130,246,0.1)"), padding:"4px 10px", fontSize:11 }}>âœ Status</button>
+                        <button onClick={() => { setReassignTask(t); setReassignTo(""); }} style={{ ...actionBtn("#64748b"), padding:"4px 10px", fontSize:11 }}>↪ Reassign</button>
+                        <button onClick={() => setStatusTask(t)} style={{ ...actionBtn("#3b82f6","rgba(59,130,246,0.1)"), padding:"4px 10px", fontSize:11 }}>✏ Status</button>
                         {t.status==="blocked" && (
-                          <button onClick={() => updateTask(t.id, { status:"inprogress" })} style={{ ...actionBtn("#22c55e","rgba(34,197,94,0.1)"), padding:"4px 10px", fontSize:11 }}>â–¶ Unblock</button>
+                          <button onClick={() => updateTask(t.id, { status:"inprogress" })} style={{ ...actionBtn("#22c55e","rgba(34,197,94,0.1)"), padding:"4px 10px", fontSize:11 }}>▶ Unblock</button>
                         )}
                         {drawerType==="overdue" && (
                           <button onClick={() => updateTask(t.id, { due_date: new Date(Date.now()+7*86400000).toISOString().split("T")[0] })}
@@ -1068,14 +1068,14 @@ function TeamIntelPanel({ workspaceId, team }) {
                         )}
                         {(drawerType==="unassigned" || !t.assigned_user_id) && suggestedOwner && (
                           <button onClick={() => updateTask(t.id, { assigned_user_id: suggestedOwner.user_id })}
-                            style={{ ...actionBtn("#22c55e","rgba(34,197,94,0.1)"), padding:"4px 10px", fontSize:11 }}>â†’ {suggestedOwner.name?.split(" ")[0]}</button>
+                            style={{ ...actionBtn("#22c55e","rgba(34,197,94,0.1)"), padding:"4px 10px", fontSize:11 }}>→ {suggestedOwner.name?.split(" ")[0]}</button>
                         )}
                       </div>
                     </div>
                   );
                 })}
 
-                {/* Risk drawer â€” member cards */}
+                {/* Risk drawer — member cards */}
                 {!isTaskDrawer && drawerMembers.map(m => (
                   <div key={m.user_id} style={{ margin:"10px 20px", background:"var(--tk-surface)", border:"1px solid rgba(239,68,68,0.25)", borderRadius:10, padding:"14px 16px" }}>
                     <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
@@ -1106,16 +1106,16 @@ function TeamIntelPanel({ workspaceId, team }) {
                     <div style={{ padding:"8px 10px", background:"rgba(245,158,11,0.08)", borderRadius:7, fontSize:12, color:"var(--tk-text-secondary)", marginBottom:10 }}>
                       <span style={{ fontWeight:700, color:"#f59e0b" }}>AI: </span>
                       {m.load_percent>=100&&m.overdue.length>0 ? `Move ${Math.min(2,m.overdue.length)} overdue tasks to reduce load below 80%.` :
-                       m.overdue.length>0 ? `${m.overdue.length} overdue task${m.overdue.length>1?"s":""} â€” schedule a review or extend deadlines.` :
-                       m.blocked.length>0 ? `${m.blocked.length} blocked task${m.blocked.length>1?"s":""} â€” unblock or reassign to keep sprint on track.` :
-                       "Monitor closely â€” stale tasks indicate possible blockers."}
+                       m.overdue.length>0 ? `${m.overdue.length} overdue task${m.overdue.length>1?"s":""} — schedule a review or extend deadlines.` :
+                       m.blocked.length>0 ? `${m.blocked.length} blocked task${m.blocked.length>1?"s":""} — unblock or reassign to keep sprint on track.` :
+                       "Monitor closely — stale tasks indicate possible blockers."}
                     </div>
                     {/* Manager actions */}
                     <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
                       <button onClick={() => { setFilterMember(String(m.user_id)); setDrawerType(null); }} style={{ ...actionBtn("#64748b"), padding:"5px 12px", fontSize:12 }}>View Tasks</button>
                       {m.overdue.length>0 && available.length>0 && (
                         <button onClick={async () => { for(const t of m.overdue.slice(0,2)) await updateTask(t.id, { assigned_user_id: available[0].user_id }); showToast(`Moved ${Math.min(2,m.overdue.length)} tasks to ${available[0].name}`); }}
-                          style={{ ...actionBtn("#f59e0b","rgba(245,158,11,0.1)"), padding:"5px 12px", fontSize:12 }}>â†ª Move 2 Tasks</button>
+                          style={{ ...actionBtn("#f59e0b","rgba(245,158,11,0.1)"), padding:"5px 12px", fontSize:12 }}>↪ Move 2 Tasks</button>
                       )}
                     </div>
                   </div>
@@ -1125,7 +1125,7 @@ function TeamIntelPanel({ workspaceId, team }) {
               {/* Drawer footer */}
               <div style={{ padding:"12px 20px", borderTop:"1px solid var(--tk-border)", display:"flex", gap:8, justifyContent:"flex-end" }}>
                 <button onClick={() => exportData(drawerType, isTaskDrawer?drawerTasks:drawerMembers, "csv")}
-                  style={{ padding:"7px 16px", borderRadius:8, border:"1px solid var(--tk-border)", background:"var(--tk-surface)", color:"var(--tk-text-secondary)", fontSize:13, cursor:"pointer" }}>â†“ Export CSV</button>
+                  style={{ padding:"7px 16px", borderRadius:8, border:"1px solid var(--tk-border)", background:"var(--tk-surface)", color:"var(--tk-text-secondary)", fontSize:13, cursor:"pointer" }}>↓ Export CSV</button>
                 <button onClick={() => setDrawerType(null)}
                   style={{ padding:"7px 16px", borderRadius:8, border:"none", background:"var(--tk-accent)", color:"#fff", fontSize:13, cursor:"pointer", fontWeight:600 }}>Done</button>
               </div>
@@ -1134,13 +1134,13 @@ function TeamIntelPanel({ workspaceId, team }) {
         );
       })()}
 
-      {/* â”€â”€ Export Modal â”€â”€ */}
+      {/* ── Export Modal ── */}
       {exportOpen && (
         <div className="modal-overlay" onClick={() => setExportOpen(false)}>
           <div className="modal-box" onClick={e=>e.stopPropagation()} style={{ maxWidth:460 }}>
             <div className="modal-header">
               <h2 className="modal-title">Export Team Report</h2>
-              <button className="modal-close" onClick={() => setExportOpen(false)}>âœ•</button>
+              <button className="modal-close" onClick={() => setExportOpen(false)}>✕</button>
             </div>
             <div style={{ padding:"14px 0 4px", display:"flex", flexDirection:"column", gap:14 }}>
               <div>
@@ -1227,7 +1227,7 @@ const actionBtn = (color, bg) => ({
   padding:"3px 8px", borderRadius:6, border:`1px solid ${color}40`, background:bg||`${color}10`, color, fontSize:10, cursor:"pointer", fontWeight:600, whiteSpace:"nowrap"
 });
 
-// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function timeAgoShort(dateStr) {
   const diff = (Date.now() - new Date(dateStr)) / 1000;
   if (diff < 60)         return "just now";
@@ -1244,7 +1244,7 @@ function relativeDueDate(dateStr) {
   return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-// â”€â”€ Task Intel Drawer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Task Intel Drawer ─────────────────────────────────────────────────────────
 const DRAWER_STATUS_COLOR = {
   todo: "#64748b", inprogress: "#3b82f6", in_progress: "#3b82f6",
   review: "#8b5cf6", blocked: "#ef4444", done: "#22c55e", pending_approval: "#f59e0b"
@@ -1366,29 +1366,29 @@ function TaskIntelDrawer({ task, team = [], workspaceId, onClose, onUpdated }) {
                 {DRAWER_STATUS_LABEL[task.status]||task.status}
               </span>
               <span style={{ padding:"2px 8px", borderRadius:99, background: task.priority==="high"?"rgba(239,68,68,0.12)":task.priority==="medium"?"rgba(245,158,11,0.12)":"rgba(100,116,139,0.12)", color: task.priority==="high"?"#ef4444":task.priority==="medium"?"#f59e0b":"#64748b", fontSize:11, fontWeight:700 }}>
-                {task.priority||"â€”"} priority
+                {task.priority||"—"} priority
               </span>
-              {task.sprint_name && <span style={{ padding:"2px 8px", borderRadius:99, background:"rgba(139,92,246,0.12)", color:"#8b5cf6", fontSize:11 }}>ðŸƒ {task.sprint_name}</span>}
+              {task.sprint_name && <span style={{ padding:"2px 8px", borderRadius:99, background:"rgba(139,92,246,0.12)", color:"#8b5cf6", fontSize:11 }}>🏃 {task.sprint_name}</span>}
             </div>
             <div style={{ fontSize:16, fontWeight:700, color:"var(--tk-text-primary)", lineHeight:1.3 }}>{task.title}</div>
             <div style={{ fontSize:12, color:"var(--tk-text-muted)", marginTop:4 }}>
-              {task.workspace_name && <span>ðŸ“ {task.workspace_name}</span>}
-              {task.assignee_name && <span style={{ marginLeft:10 }}>ðŸ‘¤ {task.assignee_name}</span>}
-              {due && <span style={{ marginLeft:10, color:isOverdue?"#ef4444":"var(--tk-text-muted)" }}>ðŸ“… {due.toLocaleDateString("en-US",{month:"short",day:"numeric"})}{isOverdue?" (overdue)":""}</span>}
+              {task.workspace_name && <span>📁 {task.workspace_name}</span>}
+              {task.assignee_name && <span style={{ marginLeft:10 }}>👤 {task.assignee_name}</span>}
+              {due && <span style={{ marginLeft:10, color:isOverdue?"#ef4444":"var(--tk-text-muted)" }}>📅 {due.toLocaleDateString("en-US",{month:"short",day:"numeric"})}{isOverdue?" (overdue)":""}</span>}
             </div>
           </div>
-          <button onClick={onClose} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:"var(--tk-text-muted)", flexShrink:0, lineHeight:1 }}>âœ•</button>
+          <button onClick={onClose} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:"var(--tk-text-muted)", flexShrink:0, lineHeight:1 }}>✕</button>
         </div>
 
         {/* Manager Quick Actions */}
         <div style={{ padding:"10px 20px", borderBottom:"1px solid var(--tk-border)", display:"flex", gap:6, flexWrap:"wrap" }}>
           <button onClick={() => setTab("subtasks")} style={{ ...actionBtn("#8b5cf6","rgba(139,92,246,0.1)"), fontSize:11 }}>+ Subtask</button>
-          <button onClick={() => setEditDesc(true)} style={{ ...actionBtn("#3b82f6","rgba(59,130,246,0.1)"), fontSize:11 }}>âœï¸ Edit Desc</button>
-          <button onClick={() => setDueDateEdit(true)} style={{ ...actionBtn("#f59e0b","rgba(245,158,11,0.1)"), fontSize:11 }}>ðŸ“… Change Due</button>
+          <button onClick={() => setEditDesc(true)} style={{ ...actionBtn("#3b82f6","rgba(59,130,246,0.1)"), fontSize:11 }}>✏️ Edit Desc</button>
+          <button onClick={() => setDueDateEdit(true)} style={{ ...actionBtn("#f59e0b","rgba(245,158,11,0.1)"), fontSize:11 }}>📅 Change Due</button>
           <button onClick={async () => { await api.put(`/tasks/${task.id}`,{priority:"high"}); onUpdated?.(); }}
-            style={{ ...actionBtn("#ef4444","rgba(239,68,68,0.1)"), fontSize:11, opacity: task.priority==="high"?0.4:1 }} disabled={task.priority==="high"}>ðŸ”´ High Priority</button>
+            style={{ ...actionBtn("#ef4444","rgba(239,68,68,0.1)"), fontSize:11, opacity: task.priority==="high"?0.4:1 }} disabled={task.priority==="high"}>🔴 High Priority</button>
           <button onClick={notifyAssignee} style={{ ...actionBtn("#22c55e","rgba(34,197,94,0.1)"), fontSize:11 }}>
-            {notifSent ? "âœ… Sent!" : "ðŸ”” Notify"}
+            {notifSent ? "✅ Sent!" : "🔔 Notify"}
           </button>
         </div>
 
@@ -1422,7 +1422,7 @@ function TaskIntelDrawer({ task, team = [], workspaceId, onClose, onUpdated }) {
                   </div>
                 ) : (
                   <div onClick={()=>setEditDesc(true)} style={{ fontSize:13, color: descVal?"var(--tk-text-primary)":"var(--tk-text-muted)", cursor:"pointer", padding:"8px 10px", borderRadius:8, border:"1px dashed var(--tk-border)", minHeight:60, lineHeight:1.6 }}>
-                    {descVal || "Click to add descriptionâ€¦"}
+                    {descVal || "Click to add description…"}
                   </div>
                 )}
               </div>
@@ -1439,8 +1439,8 @@ function TaskIntelDrawer({ task, team = [], workspaceId, onClose, onUpdated }) {
                   </div>
                 ) : (
                   <div onClick={()=>setDueDateEdit(true)} style={{ fontSize:13, color:isOverdue?"#ef4444":"var(--tk-text-primary)", cursor:"pointer" }}>
-                    {due ? due.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"}) : "No due date set â€” click to add"}
-                    {isOverdue && <span style={{ fontSize:11, marginLeft:8, color:"#ef4444" }}>âš ï¸ Overdue</span>}
+                    {due ? due.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"}) : "No due date set — click to add"}
+                    {isOverdue && <span style={{ fontSize:11, marginLeft:8, color:"#ef4444" }}>⚠️ Overdue</span>}
                   </div>
                 )}
               </div>
@@ -1460,9 +1460,9 @@ function TaskIntelDrawer({ task, team = [], workspaceId, onClose, onUpdated }) {
                 {[
                   ["Owner", task.assignee_name || "Unassigned"],
                   ["Status", DRAWER_STATUS_LABEL[task.status] || task.status],
-                  ["Priority", task.priority || "â€”"],
-                  ["Type", task.task_type || task.type || "â€”"],
-                  ["Workspace", task.workspace_name || "â€”"],
+                  ["Priority", task.priority || "—"],
+                  ["Type", task.task_type || task.type || "—"],
+                  ["Workspace", task.workspace_name || "—"],
                   ["Sprint", task.sprint_name || "None"],
                   ["Blockers", task.blocking_dep_count > 0 ? `${task.blocking_dep_count} blocking deps` : "None"],
                   ["Comments", task.comment_count || 0],
@@ -1483,7 +1483,7 @@ function TaskIntelDrawer({ task, team = [], workspaceId, onClose, onUpdated }) {
               <div style={{ padding:"12px", borderRadius:10, background:"rgba(139,92,246,0.06)", border:"1px solid rgba(139,92,246,0.2)", marginBottom:16 }}>
                 <div style={{ fontSize:12, fontWeight:700, color:"#8b5cf6", marginBottom:8 }}>+ New Subtask</div>
                 <input value={newSub} onChange={e=>setNewSub(e.target.value)}
-                  placeholder="Subtask titleâ€¦"
+                  placeholder="Subtask title…"
                   onKeyDown={e => e.key==="Enter" && addSubtask()}
                   style={{ width:"100%", padding:"7px 10px", borderRadius:7, border:"1px solid var(--tk-border)", background:"var(--tk-surface)", color:"var(--tk-text-primary)", fontSize:13, marginBottom:8, boxSizing:"border-box" }} />
                 <div style={{ display:"flex", gap:8, marginBottom:8 }}>
@@ -1497,7 +1497,7 @@ function TaskIntelDrawer({ task, team = [], workspaceId, onClose, onUpdated }) {
                 </div>
                 <button onClick={addSubtask} disabled={saving||!newSub.trim()}
                   style={{ ...actionBtn("#8b5cf6","rgba(139,92,246,0.15)"), opacity:saving||!newSub.trim()?0.5:1 }}>
-                  {saving ? "Addingâ€¦" : "Add Subtask"}
+                  {saving ? "Adding…" : "Add Subtask"}
                 </button>
               </div>
 
@@ -1526,11 +1526,11 @@ function TaskIntelDrawer({ task, team = [], workspaceId, onClose, onUpdated }) {
             <div>
               <div style={{ marginBottom:16 }}>
                 <textarea value={newComment} onChange={e=>setNewComment(e.target.value)}
-                  placeholder="Add a commentâ€¦"
+                  placeholder="Add a comment…"
                   style={{ width:"100%", minHeight:72, padding:"8px 10px", borderRadius:8, border:"1px solid var(--tk-border)", background:"var(--tk-surface)", color:"var(--tk-text-primary)", fontSize:13, resize:"vertical", boxSizing:"border-box" }} />
                 <button onClick={addComment} disabled={saving||!newComment.trim()}
                   style={{ ...actionBtn("#3b82f6","rgba(59,130,246,0.12)"), marginTop:6, opacity:saving||!newComment.trim()?0.5:1 }}>
-                  {saving ? "Postingâ€¦" : "Post Comment"}
+                  {saving ? "Posting…" : "Post Comment"}
                 </button>
               </div>
               {comments.length === 0 ? (
@@ -1558,7 +1558,7 @@ function TaskIntelDrawer({ task, team = [], workspaceId, onClose, onUpdated }) {
                 <div style={{ color:"var(--tk-text-muted)", textAlign:"center", padding:"32px 0", fontSize:13 }}>No activity recorded</div>
               ) : activity.map((a,i) => (
                 <div key={a.id||i} style={{ display:"flex", gap:10, padding:"8px 0", borderBottom:"1px solid var(--tk-border)" }}>
-                  <div style={{ width:28, height:28, borderRadius:"50%", background:"rgba(59,130,246,0.15)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, flexShrink:0 }}>ðŸ“</div>
+                  <div style={{ width:28, height:28, borderRadius:"50%", background:"rgba(59,130,246,0.15)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, flexShrink:0 }}>📝</div>
                   <div>
                     <div style={{ fontSize:12, color:"var(--tk-text-primary)" }}>
                       <strong>{a.actor_name||"System"}</strong>{" "}
@@ -1577,7 +1577,7 @@ function TaskIntelDrawer({ task, team = [], workspaceId, onClose, onUpdated }) {
   );
 }
 
-// â”€â”€ Workload Activity Feed (moved from ManagerOverview) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Workload Activity Feed (moved from ManagerOverview) ───────────────────────
 function WorkloadActivityFeed({ tasks, workspaceId }) {
   const [logs, setLogs] = useState([]);
   useEffect(() => {
@@ -1587,9 +1587,9 @@ function WorkloadActivityFeed({ tasks, workspaceId }) {
   }, [workspaceId]);
 
   const ICON = {
-    task_assigned: "ðŸ“‹", task_created: "âž•", task_completed: "âœ…", task_updated: "âœï¸",
-    approval_requested: "â³", approval_approved: "âœ…", approval_rejected: "âŒ",
-    capacity_changed: "âš™ï¸", travel_mode_on: "âœˆï¸", leave_started: "ðŸ–ï¸",
+    task_assigned: "📋", task_created: "➕", task_completed: "✅", task_updated: "✏️",
+    approval_requested: "⏳", approval_approved: "✅", approval_rejected: "❌",
+    capacity_changed: "⚙️", travel_mode_on: "✈️", leave_started: "🏖️",
   };
 
   const recentTasks = [...tasks]
@@ -1600,7 +1600,7 @@ function WorkloadActivityFeed({ tasks, workspaceId }) {
       actor: t.assignee_name || "Unassigned",
       action: t.status === "done" ? "completed" : t.status === "blocked" ? "blocked" : "updated",
       taskTitle: t.title,
-      icon: t.status === "done" ? "âœ…" : t.status === "blocked" ? "ðŸš«" : "ðŸ“",
+      icon: t.status === "done" ? "✅" : t.status === "blocked" ? "🚫" : "📝",
     }));
 
   const logEvents = logs.slice(0, 12).map(l => ({
@@ -1608,7 +1608,7 @@ function WorkloadActivityFeed({ tasks, workspaceId }) {
     actor: l.actor_name || "Someone",
     action: l.action?.replace(/_/g, " "),
     taskTitle: l.meta?.task_title,
-    icon: ICON[l.action] || "ðŸ“",
+    icon: ICON[l.action] || "📝",
   }));
 
   const combined = [...logEvents, ...recentTasks.filter(te => !logEvents.some(le => le.taskTitle === te.taskTitle))]
@@ -1639,7 +1639,7 @@ function WorkloadActivityFeed({ tasks, workspaceId }) {
   );
 }
 
-// â”€â”€ Active Tasks by Member (moved from ManagerOverview) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Active Tasks by Member (moved from ManagerOverview) ───────────────────────
 function ActiveTasksByMember({ tasks, team }) {
   const [expanded, setExpanded] = useState({});
   const active = tasks.filter(t => t.status !== "done");
@@ -1676,7 +1676,7 @@ function ActiveTasksByMember({ tasks, team }) {
                 </div>
                 <span style={{ fontWeight: 700, fontSize: 13, color: "var(--tk-text-primary)", flex: 1 }}>{name}</span>
                 <span style={{ fontSize: 12, color: "var(--tk-text-secondary)", marginRight: 8 }}>{memberTasks.length} task{memberTasks.length !== 1 ? "s" : ""}</span>
-                <span style={{ fontSize: 13, color: "var(--tk-text-muted)", transform: isOpen ? "rotate(90deg)" : "rotate(0)", display: "inline-block", transition: "transform 0.15s" }}>â€º</span>
+                <span style={{ fontSize: 13, color: "var(--tk-text-muted)", transform: isOpen ? "rotate(90deg)" : "rotate(0)", display: "inline-block", transition: "transform 0.15s" }}>›</span>
               </div>
               {isOpen && (
                 <div style={{ padding: "0 14px 10px" }}>
@@ -1708,7 +1708,7 @@ function ActiveTasksByMember({ tasks, team }) {
   );
 }
 
-// â”€â”€ Task Distribution by Work Type (new interactive chart) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Task Distribution by Work Type (new interactive chart) ────────────────────
 const WORK_TYPE_COLORS = {
   rfp:           "#f59e0b",
   presentation:  "#ec4899",
@@ -1765,7 +1765,7 @@ function TaskDistributionChart({ tasks, team }) {
           <div style={{ fontSize: 12, color: "var(--tk-text-muted)", marginTop: 2 }}>Click a member bar or category label to filter Â· Click both for a combined view</div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search membersâ€¦"
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search members…"
             style={{ padding: "5px 10px", borderRadius: 7, border: "1px solid var(--tk-border)", background: "var(--tk-surface)", color: "var(--tk-text-primary)", fontSize: 12, width: 150 }} />
           {hasFilter && (
             <button onClick={clearFilters}
@@ -1782,13 +1782,13 @@ function TaskDistributionChart({ tasks, team }) {
           {selectedMember && (
             <span onClick={() => setSelectedMember(null)}
               style={{ padding: "3px 10px", borderRadius: 99, background: "rgba(59,130,246,0.15)", color: "var(--tk-accent)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-              ðŸ‘¤ {Object.values(memberMap).find(m => m.uid === selectedMember)?.name || selectedMember} âœ•
+              👤 {Object.values(memberMap).find(m => m.uid === selectedMember)?.name || selectedMember} ✕
             </span>
           )}
           {selectedCategory && (
             <span onClick={() => setSelectedCategory(null)}
               style={{ padding: "3px 10px", borderRadius: 99, background: `${WORK_TYPE_COLORS[selectedCategory] || "#64748b"}25`, color: WORK_TYPE_COLORS[selectedCategory] || "#64748b", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-              {selectedCategory} âœ•
+              {selectedCategory} ✕
             </span>
           )}
         </div>
@@ -1883,7 +1883,7 @@ function TaskDistributionChart({ tasks, team }) {
       {(selectedMember || selectedCategory) && filteredTasks.length > 0 && (
         <div style={{ marginTop: 18, borderTop: "1px solid var(--tk-border)", paddingTop: 16 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "var(--tk-text-muted)", marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.5 }}>
-            Filtered Tasks â€” {filteredTasks.length}
+            Filtered Tasks — {filteredTasks.length}
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {filteredTasks.slice(0, 15).map(t => (
@@ -1902,7 +1902,7 @@ function TaskDistributionChart({ tasks, team }) {
             ))}
             {filteredTasks.length > 15 && (
               <div style={{ textAlign: "center", fontSize: 12, color: "var(--tk-text-muted)", padding: "6px 0" }}>
-                +{filteredTasks.length - 15} more â€” refine your filters to narrow down
+                +{filteredTasks.length - 15} more — refine your filters to narrow down
               </div>
             )}
           </div>
@@ -1912,7 +1912,7 @@ function TaskDistributionChart({ tasks, team }) {
   );
 }
 
-// â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Main Component ─────────────────────────────────────────────────────────────
 export default function ManagerDashboard({ workspaceId, workspaceName, onNavigate, allTasks = [], onRefreshTasks }) {
   const { user } = useAuth();
   const [team,       setTeam]       = useState([]);
@@ -2021,7 +2021,7 @@ export default function ManagerDashboard({ workspaceId, workspaceName, onNavigat
 
       {activeTab === "team_intel" && (
         <div className="mgr-panel">
-          <div className="mgr-panel-title" style={{ marginBottom: 16 }}>👁 Team Intelligence — Single Pane of GlassTeam Intelligence â€” Single Pane of Glass</div>
+          <div className="mgr-panel-title" style={{ marginBottom: 16 }}>👁 Team Intelligence — Single Pane of GlassTeam Intelligence — Single Pane of Glass</div>
           <TeamIntelPanel workspaceId={workspaceId} team={team} />
         </div>
       )}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+﻿import { useState, useEffect, useCallback, useRef } from "react";
 import api from "../api/api";
 import { useSocket } from "../hooks/useSocket";
 import { useAuth } from "../context/AuthContext";
@@ -7,7 +7,6 @@ import MembersPanel from "./MembersPanel";
 import AnalyticsDashboard from "./AnalyticsDashboard";
 import CollaborationScore from "./CollaborationScore";
 import ChannelView from "./ChannelView";
-import ManagerOverview from "./ManagerOverview";
 import "../styles/manager.css";
 
 const STATUS_COLOR = {
@@ -37,7 +36,7 @@ function LoadBar({ pct }) {
         <div className={`tk-progress-fill ${fillClass}`} style={{ width: `${Math.min(pct || 0, 100)}%`, height: "100%" }} />
       </div>
       <span style={{ fontSize: 12, fontWeight: 700, color: textColor, minWidth: 36 }}>
-        {pct ?? "—"}%
+        {pct ?? "â€”"}%
       </span>
     </div>
   );
@@ -57,19 +56,19 @@ function MemberCard({ m, onEdit }) {
             <span className={`mgr-role-pill mgr-role-pill--${m.role}`}>
               {m.role?.replace("_", " ")}
             </span>
-            {m.travel_mode && <span className="mgr-badge mgr-badge--travel">✈ Travel</span>}
-            {m.on_leave    && <span className="mgr-badge mgr-badge--leave">🏖 Leave</span>}
+            {m.travel_mode && <span className="mgr-badge mgr-badge--travel">âœˆ Travel</span>}
+            {m.on_leave    && <span className="mgr-badge mgr-badge--leave">ðŸ– Leave</span>}
           </div>
           <div style={{ fontSize: 12, color: "var(--tk-text-muted)", marginTop: 2 }}>{m.email}</div>
         </div>
-        <button className="mgr-edit-btn" onClick={() => onEdit(m)} title="Edit capacity">⚙</button>
+        <button className="mgr-edit-btn" onClick={() => onEdit(m)} title="Edit capacity">âš™</button>
       </div>
 
       <div style={{ marginTop: 12 }}>
         <LoadBar pct={m.load_percent} />
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--tk-text-muted)", marginTop: 6 }}>
           <span>{m.task_count} active task{m.task_count !== 1 ? "s" : ""}</span>
-          <span>{m.total_remaining_hours}h remaining · {m.daily_capacity}h/day capacity</span>
+          <span>{m.total_remaining_hours}h remaining Â· {m.daily_capacity}h/day capacity</span>
         </div>
       </div>
 
@@ -86,7 +85,7 @@ function MemberCard({ m, onEdit }) {
   );
 }
 
-// ── Capacity Edit Modal ───────────────────────────────────────────────────────
+// â”€â”€ Capacity Edit Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function CapacityEditModal({ member, workspaceId, onClose, onSaved }) {
   const [form, setForm] = useState({
     daily_hours:       member.daily_capacity || 8,
@@ -124,8 +123,8 @@ function CapacityEditModal({ member, workspaceId, onClose, onSaved }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 460 }}>
         <div className="modal-header">
-          <h2 className="modal-title">Capacity — {member.name}</h2>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <h2 className="modal-title">Capacity â€” {member.name}</h2>
+          <button className="modal-close" onClick={onClose}>âœ•</button>
         </div>
         <div className="modal-form" style={{ gap: 14 }}>
           <div className="mgr-edit-row">
@@ -136,7 +135,7 @@ function CapacityEditModal({ member, workspaceId, onClose, onSaved }) {
           <div className="mgr-edit-section">Status</div>
           <label className="mgr-toggle">
             <input type="checkbox" checked={form.travel_mode} onChange={set("travel_mode")} />
-            <span>✈ Travel mode</span>
+            <span>âœˆ Travel mode</span>
             {form.travel_mode && (
               <input className="modal-input" type="number" min={0} max={24} step={0.5}
                 value={form.travel_hours} onChange={set("travel_hours")}
@@ -145,7 +144,7 @@ function CapacityEditModal({ member, workspaceId, onClose, onSaved }) {
           </label>
           <label className="mgr-toggle">
             <input type="checkbox" checked={form.on_leave} onChange={set("on_leave")} />
-            <span>🏖 On leave</span>
+            <span>ðŸ– On leave</span>
           </label>
           {form.on_leave && (
             <div style={{ display: "flex", gap: 10 }}>
@@ -171,7 +170,7 @@ function CapacityEditModal({ member, workspaceId, onClose, onSaved }) {
           {error && <div className="modal-error">{error}</div>}
           <div className="modal-actions">
             <button className="btn-modal-cancel" onClick={onClose}>Cancel</button>
-            <button className="btn-modal-save" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</button>
+            <button className="btn-modal-save" onClick={save} disabled={saving}>{saving ? "Savingâ€¦" : "Save"}</button>
           </div>
         </div>
       </div>
@@ -179,85 +178,7 @@ function CapacityEditModal({ member, workspaceId, onClose, onSaved }) {
   );
 }
 
-// ── AI Prediction Panel ───────────────────────────────────────────────────────
-function PredictionPanel({ predictions, loading, error, team = [], tasks = [] }) {
-  if (loading) return <div className="mgr-empty-note">Loading AI predictions…</div>;
-  if (error)   return <div className="mgr-empty-note" style={{ color: "var(--tk-status-danger)" }}>Could not load predictions. {error}</div>;
-
-  const displayPredictions = predictions?.length > 0 ? predictions : (() => {
-    if (!team.length) return [];
-    const today = new Date(); today.setHours(0,0,0,0);
-    return team.map(m => {
-      const mine    = tasks.filter(t => (String(t.assigned_user_id)===String(m.user_id)||String(t.effective_assignee_id)===String(m.user_id)) && t.status!=="done");
-      const overdue = mine.filter(t => t.due_date && new Date(t.due_date) < today).length;
-      const blocked = mine.filter(t => t.status==="blocked").length;
-      const load    = m.load_percent || Math.min(140, mine.length * 11);
-      const risk    = load>=100||overdue>=2 ? "high" : load>=80||overdue>=1||blocked>=1 ? "medium" : "low";
-      const peak    = Math.min(150, load + overdue*12 + blocked*8);
-      return {
-        user_id: m.user_id, name: m.name,
-        prediction: {
-          risk, peak_load: peak, burnout_risk: load>=110, on_leave: m.on_leave,
-          summary: `${mine.length} active · ${overdue} overdue · ${blocked} blocked`,
-          days: Array.from({length:14},(_,i)=>({
-            date: new Date(Date.now()+i*86400000).toISOString().split("T")[0],
-            load_percent: Math.max(0,Math.min(150,peak-(i>7?(i-7)*4:0)+Math.round((Math.random()-0.5)*6))),
-          })),
-        },
-      };
-    });
-  })();
-
-  if (!displayPredictions.length) return (
-    <div className="mgr-empty-note">No team members found. Add members to this workspace first.</div>
-  );
-
-  const at_risk = displayPredictions.filter(p => p.prediction.risk === "high" || p.prediction.burnout_risk);
-
-  return (
-    <div className="mgr-predict-panel">
-      <div className="tk-eyebrow" style={{ marginBottom: 16 }}>🤖 AI Workload Prediction — 14 days</div>
-      {!predictions?.length && (
-        <div style={{ padding:"8px 14px", background:"rgba(59,130,246,0.08)", border:"1px solid rgba(59,130,246,0.2)", borderRadius:8, fontSize:12, color:"var(--tk-accent)", marginBottom:16 }}>
-          Showing locally computed predictions based on current workload data.
-        </div>
-      )}
-      {displayPredictions.map(p => {
-        const riskColor = p.prediction.risk === "high" ? "var(--tk-status-danger)"
-                        : p.prediction.risk === "medium" ? "var(--tk-status-warn)"
-                        : "var(--tk-status-ok)";
-        const riskBg    = p.prediction.risk === "high" ? "var(--tk-status-danger-bg)"
-                        : p.prediction.risk === "medium" ? "var(--tk-status-warn-bg)"
-                        : "var(--tk-status-ok-bg)";
-        return (
-          <div key={p.user_id} className="mgr-predict-row">
-            <div className="mgr-predict-name">{p.name}</div>
-            <div className="mgr-predict-sparkline">
-              {p.prediction.days?.map((d, i) => (
-                <div key={i} className="mgr-spark"
-                  style={{ height: `${Math.max(2, d.load_percent)}%`, background: riskColor }}
-                  title={`${d.date}: ${d.load_percent}%`}
-                />
-              ))}
-            </div>
-            <span className="mgr-predict-badge" style={{ background: riskBg, color: riskColor }}>
-              {p.prediction.risk === "on_leave" ? "On leave" : `${p.prediction.peak_load}% peak`}
-            </span>
-            {p.prediction.burnout_risk && <span className="mgr-burnout-tag">🔥 burnout risk</span>}
-            {p.prediction.summary && <div style={{ fontSize:11, color:"var(--tk-text-muted)", marginTop:3, paddingLeft:2 }}>{p.prediction.summary}</div>}
-          </div>
-        );
-      })}
-      {at_risk.length > 0 && (
-        <div className="mgr-alert">
-          ⚠️ {at_risk.map(p => p.name).join(", ")} {at_risk.length === 1 ? "is" : "are"} likely overloaded next week
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Approvals Panel ───────────────────────────────────────────────────────────
+// â”€â”€ Approvals Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function ApprovalsPanel({ workspaceId, onRefresh }) {
   const [approvals,       setApprovals]       = useState([]);
   const [capRequests,     setCapRequests]     = useState([]);
@@ -309,7 +230,7 @@ function ApprovalsPanel({ workspaceId, onRefresh }) {
     }
   };
 
-  if (loading) return <div className="mgr-loading">Loading approvals…</div>;
+  if (loading) return <div className="mgr-loading">Loading approvalsâ€¦</div>;
   if (loadError) return (
     <div className="mgr-empty-note" style={{ color: "var(--tk-status-danger)" }}>
       Could not load approvals.{" "}
@@ -336,10 +257,10 @@ function ApprovalsPanel({ workspaceId, onRefresh }) {
     <div>
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
         <button onClick={() => setActiveTab("tasks")} style={tabStyle(activeTab === "tasks")}>
-          📋 Task Approvals {approvals.length > 0 && <span style={badgeStyle}>{approvals.length}</span>}
+          ðŸ“‹ Task Approvals {approvals.length > 0 && <span style={badgeStyle}>{approvals.length}</span>}
         </button>
         <button onClick={() => setActiveTab("capacity")} style={tabStyle(activeTab === "capacity")}>
-          🏖️ Leave & Travel {capRequests.length > 0 && <span style={badgeStyle}>{capRequests.length}</span>}
+          ðŸ–ï¸ Leave & Travel {capRequests.length > 0 && <span style={badgeStyle}>{capRequests.length}</span>}
         </button>
       </div>
 
@@ -358,7 +279,7 @@ function ApprovalsPanel({ workspaceId, onRefresh }) {
               <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
                 <div className="modal-header">
                   <h2 className="modal-title">Reject assignment</h2>
-                  <button className="modal-close" onClick={() => { setRejectId(null); setRejectReason(""); }}>✕</button>
+                  <button className="modal-close" onClick={() => { setRejectId(null); setRejectReason(""); }}>âœ•</button>
                 </div>
                 <div style={{ padding: "0 0 16px" }}>
                   <label className="modal-label">Reason (optional)</label>
@@ -375,15 +296,15 @@ function ApprovalsPanel({ workspaceId, onRefresh }) {
           {approvals.map(a => (
             <div key={a.id} className="mgr-approval-card">
               <div className="mgr-approval-info">
-                <div className="mgr-approval-task">📋 {a.task_title}</div>
+                <div className="mgr-approval-task">ðŸ“‹ {a.task_title}</div>
                 <div className="mgr-approval-meta">
-                  {a.requested_by_name} → assign to <strong>{a.assigned_to_name}</strong>
+                  {a.requested_by_name} â†’ assign to <strong>{a.assigned_to_name}</strong>
                   {a.justification && <span className="mgr-justification">"{a.justification}"</span>}
                 </div>
               </div>
               <div className="mgr-approval-actions">
-                <button className="mgr-btn-approve" onClick={() => resolve(a.id, "approve")}>✓ Approve</button>
-                <button className="mgr-btn-reject" onClick={() => setRejectId(a.id)}>✗ Reject</button>
+                <button className="mgr-btn-approve" onClick={() => resolve(a.id, "approve")}>âœ“ Approve</button>
+                <button className="mgr-btn-reject" onClick={() => setRejectId(a.id)}>âœ— Reject</button>
               </div>
             </div>
           ))}
@@ -397,7 +318,7 @@ function ApprovalsPanel({ workspaceId, onRefresh }) {
               <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
                 <div className="modal-header">
                   <h2 className="modal-title">Reject request</h2>
-                  <button className="modal-close" onClick={() => { setRejectCapId(null); setRejectCapReason(""); }}>✕</button>
+                  <button className="modal-close" onClick={() => { setRejectCapId(null); setRejectCapReason(""); }}>âœ•</button>
                 </div>
                 <div style={{ padding: "0 0 16px" }}>
                   <label className="modal-label">Reason (optional)</label>
@@ -415,15 +336,15 @@ function ApprovalsPanel({ workspaceId, onRefresh }) {
             <div key={cr.id} className="mgr-approval-card">
               <div className="mgr-approval-info">
                 <div className="mgr-approval-task">
-                  {cr.request_type === "leave" ? "🏖️ Leave Request" : "✈️ Travel Mode Request"}
+                  {cr.request_type === "leave" ? "ðŸ–ï¸ Leave Request" : "âœˆï¸ Travel Mode Request"}
                 </div>
                 <div className="mgr-approval-meta">
                   <strong>{cr.requester_name}</strong>
                   {cr.request_type === "leave" && cr.leave_start && (
-                    <span> · {cr.leave_start}{cr.leave_end ? ` → ${cr.leave_end}` : ""}</span>
+                    <span> Â· {cr.leave_start}{cr.leave_end ? ` â†’ ${cr.leave_end}` : ""}</span>
                   )}
                   {cr.request_type === "travel" && cr.travel_hours && (
-                    <span> · {cr.travel_hours}h/day while travelling</span>
+                    <span> Â· {cr.travel_hours}h/day while travelling</span>
                   )}
                   {cr.justification && <span className="mgr-justification">"{cr.justification}"</span>}
                 </div>
@@ -432,8 +353,8 @@ function ApprovalsPanel({ workspaceId, onRefresh }) {
                 </div>
               </div>
               <div className="mgr-approval-actions">
-                <button className="mgr-btn-approve" onClick={() => resolveCapacity(cr.id, "approve")}>✓ Approve</button>
-                <button className="mgr-btn-reject" onClick={() => setRejectCapId(cr.id)}>✗ Reject</button>
+                <button className="mgr-btn-approve" onClick={() => resolveCapacity(cr.id, "approve")}>âœ“ Approve</button>
+                <button className="mgr-btn-reject" onClick={() => setRejectCapId(cr.id)}>âœ— Reject</button>
               </div>
             </div>
           ))}
@@ -443,7 +364,7 @@ function ApprovalsPanel({ workspaceId, onRefresh }) {
   );
 }
 
-// ── Audit Log ─────────────────────────────────────────────────────────────────
+// â”€â”€ Audit Log â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function AuditLog({ workspaceId }) {
   const [logs,    setLogs]    = useState([]);
   const [loading, setLoading] = useState(true);
@@ -455,19 +376,19 @@ function AuditLog({ workspaceId }) {
       .finally(() => setLoading(false));
   }, [workspaceId]);
 
-  if (loading) return <div className="mgr-loading">Loading audit log…</div>;
+  if (loading) return <div className="mgr-loading">Loading audit logâ€¦</div>;
   if (!logs.length) return <div className="mgr-empty-note">No audit records yet</div>;
 
   const ACTION_ICON = {
-    task_assigned: "📋", approval_requested: "⏳", approval_approved: "✅",
-    approval_rejected: "❌", capacity_changed: "⚙️", travel_mode_on: "✈️", leave_started: "🏖️",
+    task_assigned: "ðŸ“‹", approval_requested: "â³", approval_approved: "âœ…",
+    approval_rejected: "âŒ", capacity_changed: "âš™ï¸", travel_mode_on: "âœˆï¸", leave_started: "ðŸ–ï¸",
   };
 
   return (
     <div className="mgr-audit-list">
       {logs.map(l => (
         <div key={l.id} className="mgr-audit-row">
-          <span className="mgr-audit-icon">{ACTION_ICON[l.action] || "📝"}</span>
+          <span className="mgr-audit-icon">{ACTION_ICON[l.action] || "ðŸ“"}</span>
           <div className="mgr-audit-body">
             <span className="mgr-audit-actor">{l.actor_name}</span>
             <span className="mgr-audit-action"> {l.action?.replace(/_/g, " ")}</span>
@@ -482,7 +403,7 @@ function AuditLog({ workspaceId }) {
   );
 }
 
-// ── Team Intel — Single Pane of Glass ────────────────────────────────────────
+// â”€â”€ Team Intel â€” Single Pane of Glass â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function TeamIntelPanel({ workspaceId, team }) {
   const [tasks,       setTasks]       = useState([]);
   const [loading,     setLoading]     = useState(true);
@@ -583,7 +504,7 @@ function TeamIntelPanel({ workspaceId, team }) {
   const displayTeam = (team || []).filter(m => String(m.user_id || m.id) !== String(currentUser?.id));
 
   // Enrich each team member with their task breakdown
-  // effective_assignee_id: backend sends this — falls back to workspace_owner_id for unassigned tasks
+  // effective_assignee_id: backend sends this â€” falls back to workspace_owner_id for unassigned tasks
   const matchesMember = (t, uid) =>
     String(t.assigned_user_id) === String(uid) ||
     String(t.effective_assignee_id) === String(uid) ||
@@ -613,7 +534,7 @@ function TeamIntelPanel({ workspaceId, team }) {
   if (filterMember !== "all") rows = rows.filter(m => String(m.user_id) === filterMember);
   if (filterRisk   !== "all") rows = rows.filter(m => m.risk === filterRisk);
 
-  // Unassigned active tasks — only those with no effective assignee and no workspace owner match
+  // Unassigned active tasks â€” only those with no effective assignee and no workspace owner match
   const memberIdSet = new Set((team || []).map(m => String(m.user_id)));
   const unassigned = visibleTasks.filter(t =>
     !t.assigned_user_id &&
@@ -635,12 +556,12 @@ function TeamIntelPanel({ workspaceId, team }) {
       if (m.blocked.length)      p.push(`${m.blocked.length} blocked`);
       return `${m.name} (${p.join(", ")})`;
     });
-    insights.push({ type: "danger", text: `Needs attention: ${desc.join(" · ")}` });
+    insights.push({ type: "danger", text: `Needs attention: ${desc.join(" Â· ")}` });
   }
   if (overloaded.length && available.length)
-    insights.push({ type: "warn", text: `Imbalance: ${overloaded.map(m=>m.name).join(", ")} overloaded — ${available.map(m=>m.name).join(", ")} have capacity` });
+    insights.push({ type: "warn", text: `Imbalance: ${overloaded.map(m=>m.name).join(", ")} overloaded â€” ${available.map(m=>m.name).join(", ")} have capacity` });
   if (unassigned.length)
-    insights.push({ type: "info", text: `${unassigned.length} unassigned task${unassigned.length !== 1?"s":""} — distribute to available members` });
+    insights.push({ type: "info", text: `${unassigned.length} unassigned task${unassigned.length !== 1?"s":""} â€” distribute to available members` });
 
   // KPIs from full task list (not filtered)
   const activeTasks  = tasks.filter(t => t.status !== "done").length;
@@ -681,7 +602,7 @@ function TeamIntelPanel({ workspaceId, team }) {
         if (s < 60)  return `${s}s ago`;
         return `${Math.floor(s/60)}m ago`;
       })()
-    : "—";
+    : "â€”";
 
   const RISK_COLOR = { high: "#ef4444", medium: "#f59e0b", low: "#22c55e" };
   const RISK_BG    = { high: "rgba(239,68,68,0.1)", medium: "rgba(245,158,11,0.1)", low: "rgba(34,197,94,0.1)" };
@@ -693,10 +614,10 @@ function TeamIntelPanel({ workspaceId, team }) {
     todo: "To Do", inprogress: "In Progress", in_progress: "In Progress",
     review: "In Review", blocked: "Blocked", done: "Done", pending_approval: "Pending Approval"
   };
-  const PRIORITY_ICON  = { high: "🔴", medium: "🟡", low: "🟢" };
+  const PRIORITY_ICON  = { high: "ðŸ”´", medium: "ðŸŸ¡", low: "ðŸŸ¢" };
 
   const formatDue = (d) => {
-    if (!d) return { label: "—", color: "var(--tk-text-muted)" };
+    if (!d) return { label: "â€”", color: "var(--tk-text-muted)" };
     const dt   = new Date(d);
     const diff = Math.round((dt - today) / 86400000);
     if (diff < 0)  return { label: `${Math.abs(diff)}d overdue`, color: "#ef4444", bold: true };
@@ -713,7 +634,7 @@ function TeamIntelPanel({ workspaceId, team }) {
   if (loading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "64px 0", gap: 12, color: "var(--tk-text-muted)", flexDirection: "column" }}>
       <div style={{ width: 32, height: 32, border: "3px solid var(--tk-border)", borderTopColor: "var(--tk-accent)", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-      <span style={{ fontSize: 14 }}>Loading team intelligence…</span>
+      <span style={{ fontSize: 14 }}>Loading team intelligenceâ€¦</span>
     </div>
   );
 
@@ -729,12 +650,12 @@ function TeamIntelPanel({ workspaceId, team }) {
       {/* Interactive KPI strip */}
       <div style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap" }}>
         {[
-          { key:"active",    label:"Active Tasks",    value:activeTasks,     color: "var(--tk-text-primary)",                                icon:"📋" },
-          { key:"overdue",   label:"Overdue",         value:overdueCount,    color: overdueCount   > 0 ? "#ef4444" : "var(--tk-text-primary)", icon:"🔴" },
-          { key:"blocked",   label:"Blocked",         value:blockedCount,    color: blockedCount   > 0 ? "#ef4444" : "var(--tk-text-primary)", icon:"🚫" },
-          { key:"stale",     label:"Stale (3d+)",     value:staleCount,      color: staleCount     > 0 ? "#f59e0b" : "var(--tk-text-primary)", icon:"⏸" },
-          { key:"unassigned",label:"Unassigned",      value:unassignedCount, color: unassignedCount> 0 ? "#f59e0b" : "var(--tk-text-primary)", icon:"👤" },
-          { key:"risk",      label:"Members at Risk", value:highRiskCount,   color: highRiskCount  > 0 ? "#ef4444" : "var(--tk-text-primary)", icon:"⚠️" },
+          { key:"active",    label:"Active Tasks",    value:activeTasks,     color: "var(--tk-text-primary)",                                icon:"ðŸ“‹" },
+          { key:"overdue",   label:"Overdue",         value:overdueCount,    color: overdueCount   > 0 ? "#ef4444" : "var(--tk-text-primary)", icon:"ðŸ”´" },
+          { key:"blocked",   label:"Blocked",         value:blockedCount,    color: blockedCount   > 0 ? "#ef4444" : "var(--tk-text-primary)", icon:"ðŸš«" },
+          { key:"stale",     label:"Stale (3d+)",     value:staleCount,      color: staleCount     > 0 ? "#f59e0b" : "var(--tk-text-primary)", icon:"â¸" },
+          { key:"unassigned",label:"Unassigned",      value:unassignedCount, color: unassignedCount> 0 ? "#f59e0b" : "var(--tk-text-primary)", icon:"ðŸ‘¤" },
+          { key:"risk",      label:"Members at Risk", value:highRiskCount,   color: highRiskCount  > 0 ? "#ef4444" : "var(--tk-text-primary)", icon:"âš ï¸" },
         ].map(k => (
           <div key={k.key}
             onClick={() => { setDrawerType(k.key); setDrawerSearch(""); setSelectedTasks(new Set()); }}
@@ -749,7 +670,7 @@ function TeamIntelPanel({ workspaceId, team }) {
 
       {/* AI Insights */}
       {insights.map((ins, i) => {
-        const c = { danger: { bg:"rgba(239,68,68,0.1)", border:"rgba(239,68,68,0.3)", text:"#ef4444", icon:"🚨" }, warn: { bg:"rgba(245,158,11,0.1)", border:"rgba(245,158,11,0.3)", text:"#f59e0b", icon:"⚠️" }, info: { bg:"rgba(59,130,246,0.1)", border:"rgba(59,130,246,0.3)", text:"#3b82f6", icon:"💡" } }[ins.type];
+        const c = { danger: { bg:"rgba(239,68,68,0.1)", border:"rgba(239,68,68,0.3)", text:"#ef4444", icon:"ðŸš¨" }, warn: { bg:"rgba(245,158,11,0.1)", border:"rgba(245,158,11,0.3)", text:"#f59e0b", icon:"âš ï¸" }, info: { bg:"rgba(59,130,246,0.1)", border:"rgba(59,130,246,0.3)", text:"#3b82f6", icon:"ðŸ’¡" } }[ins.type];
         return (
           <div key={i} style={{ display:"flex", alignItems:"flex-start", gap:10, background:c.bg, border:`1px solid ${c.border}`, borderRadius:8, padding:"9px 14px", marginBottom:8, fontSize:13 }}>
             <span>{c.icon}</span>
@@ -778,9 +699,9 @@ function TeamIntelPanel({ workspaceId, team }) {
         {/* Priority filter */}
         <select value={filterPriority} onChange={e=>setFilterPriority(e.target.value)} style={sel}>
           <option value="all">All Priorities</option>
-          <option value="high">🔴 High</option>
-          <option value="medium">🟡 Medium</option>
-          <option value="low">🟢 Low</option>
+          <option value="high">ðŸ”´ High</option>
+          <option value="medium">ðŸŸ¡ Medium</option>
+          <option value="low">ðŸŸ¢ Low</option>
         </select>
         {/* Risk filter */}
         <select value={filterRisk} onChange={e=>setFilterRisk(e.target.value)} style={sel}>
@@ -795,16 +716,16 @@ function TeamIntelPanel({ workspaceId, team }) {
           disabled={refreshing}
           style={{ padding:"6px 14px", borderRadius:8, border:"1px solid var(--tk-border)", background: refreshing ? "var(--tk-accent)" : "var(--tk-surface)", color: refreshing ? "#fff" : "var(--tk-text-secondary)", fontSize:13, cursor:"pointer", display:"flex", alignItems:"center", gap:6, transition:"all 0.2s" }}
         >
-          <span style={{ display:"inline-block", animation: refreshing ? "spin 0.8s linear infinite" : "none" }}>↻</span>
-          {refreshing ? "Refreshing…" : "Refresh"}
+          <span style={{ display:"inline-block", animation: refreshing ? "spin 0.8s linear infinite" : "none" }}>â†»</span>
+          {refreshing ? "Refreshingâ€¦" : "Refresh"}
         </button>
         {/* Export */}
         <button onClick={() => setExportOpen(true)}
           style={{ padding:"6px 14px", borderRadius:8, border:"1px solid var(--tk-border)", background:"var(--tk-surface)", color:"var(--tk-text-secondary)", fontSize:13, cursor:"pointer", display:"flex", alignItems:"center", gap:6 }}>
-          ↓ Export
+          â†“ Export
         </button>
         <span style={{ marginLeft:"auto", fontSize:11, color:"var(--tk-text-muted)" }}>
-          {rows.length} member{rows.length!==1?"s":""} · refreshed {refreshLabel}
+          {rows.length} member{rows.length!==1?"s":""} Â· refreshed {refreshLabel}
         </span>
       </div>
 
@@ -837,21 +758,21 @@ function TeamIntelPanel({ workspaceId, team }) {
               </div>
               {/* Status chips */}
               <div style={{ display:"flex", gap:5, flex:1, flexWrap:"wrap" }}>
-                {m.inProgress.length>0 && <Chip color="#3b82f6" bg="rgba(59,130,246,0.12)">🔵 {m.inProgress.length} in progress</Chip>}
-                {m.inReview.length>0   && <Chip color="#8b5cf6" bg="rgba(139,92,246,0.12)">🟣 {m.inReview.length} in review</Chip>}
-                {m.todo.length>0       && <Chip color="#64748b" bg="rgba(100,116,139,0.12)">⚪ {m.todo.length} to do</Chip>}
-                {m.overdue.length>0    && <Chip color="#ef4444" bg="rgba(239,68,68,0.12)" bold>🔴 {m.overdue.length} overdue</Chip>}
-                {m.blocked.length>0    && <Chip color="#ef4444" bg="rgba(239,68,68,0.1)" border="rgba(239,68,68,0.4)" bold>🚫 {m.blocked.length} blocked</Chip>}
-                {m.stale.length>0      && <Chip color="#f59e0b" bg="rgba(245,158,11,0.1)">⏸ {m.stale.length} stale</Chip>}
-                {m.dueToday.length>0   && <Chip color="#f59e0b" bg="rgba(245,158,11,0.12)">📅 {m.dueToday.length} due today</Chip>}
-                {m.on_leave            && <Chip color="#94a3b8" bg="rgba(100,116,139,0.1)">🏖 On leave</Chip>}
-                {m.travel_mode         && <Chip color="#94a3b8" bg="rgba(100,116,139,0.1)">✈ Travel</Chip>}
-                {m.allMine.length===0 && !m.on_leave && <Chip color="#22c55e" bg="rgba(34,197,94,0.1)">✓ Available</Chip>}
+                {m.inProgress.length>0 && <Chip color="#3b82f6" bg="rgba(59,130,246,0.12)">ðŸ”µ {m.inProgress.length} in progress</Chip>}
+                {m.inReview.length>0   && <Chip color="#8b5cf6" bg="rgba(139,92,246,0.12)">ðŸŸ£ {m.inReview.length} in review</Chip>}
+                {m.todo.length>0       && <Chip color="#64748b" bg="rgba(100,116,139,0.12)">âšª {m.todo.length} to do</Chip>}
+                {m.overdue.length>0    && <Chip color="#ef4444" bg="rgba(239,68,68,0.12)" bold>ðŸ”´ {m.overdue.length} overdue</Chip>}
+                {m.blocked.length>0    && <Chip color="#ef4444" bg="rgba(239,68,68,0.1)" border="rgba(239,68,68,0.4)" bold>ðŸš« {m.blocked.length} blocked</Chip>}
+                {m.stale.length>0      && <Chip color="#f59e0b" bg="rgba(245,158,11,0.1)">â¸ {m.stale.length} stale</Chip>}
+                {m.dueToday.length>0   && <Chip color="#f59e0b" bg="rgba(245,158,11,0.12)">ðŸ“… {m.dueToday.length} due today</Chip>}
+                {m.on_leave            && <Chip color="#94a3b8" bg="rgba(100,116,139,0.1)">ðŸ– On leave</Chip>}
+                {m.travel_mode         && <Chip color="#94a3b8" bg="rgba(100,116,139,0.1)">âœˆ Travel</Chip>}
+                {m.allMine.length===0 && !m.on_leave && <Chip color="#22c55e" bg="rgba(34,197,94,0.1)">âœ“ Available</Chip>}
               </div>
               {/* Risk badge + arrow */}
               <div style={{ display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
                 <span style={{ padding:"2px 8px", borderRadius:99, background:RISK_BG[m.risk], color:RISK_COLOR[m.risk], fontSize:11, fontWeight:700, width:52, textAlign:"center" }}>{m.risk}</span>
-                <span style={{ fontSize:14, color:"var(--tk-text-muted)", transform: open?"rotate(90deg)":"rotate(0)", display:"inline-block", transition:"transform 0.15s" }}>›</span>
+                <span style={{ fontSize:14, color:"var(--tk-text-muted)", transform: open?"rotate(90deg)":"rotate(0)", display:"inline-block", transition:"transform 0.15s" }}>â€º</span>
               </div>
             </div>
 
@@ -863,7 +784,7 @@ function TeamIntelPanel({ workspaceId, team }) {
                   <div style={{ display:"flex", alignItems:"center", gap:8, padding:"7px 16px", background:"rgba(59,130,246,0.08)", borderBottom:"1px solid rgba(59,130,246,0.2)" }}>
                     <span style={{ fontSize:12, fontWeight:700, color:"var(--tk-accent)" }}>{selectedTasks.size} selected</span>
                     <select value={bulkAction} onChange={e=>setBulkAction(e.target.value)} style={{ ...sel, padding:"3px 8px", fontSize:12 }}>
-                      <option value="">Bulk action…</option>
+                      <option value="">Bulk actionâ€¦</option>
                       <option value="reassign">Reassign</option>
                       <option value="high">Set High Priority</option>
                       <option value="done">Mark Done</option>
@@ -898,13 +819,13 @@ function TeamIntelPanel({ workspaceId, team }) {
                       <input type="checkbox" checked={isSelected}
                         onChange={e => setSelectedTasks(prev => { const n=new Set(prev); e.target.checked?n.add(t.id):n.delete(t.id); return n; })}
                         onClick={e => e.stopPropagation()} style={{ cursor:"pointer" }} />
-                      {/* Task name — click opens drawer */}
+                      {/* Task name â€” click opens drawer */}
                       <div style={{ paddingRight:8, minWidth:0, cursor:"pointer" }} onClick={() => setTaskDrawer(t)}>
                         <div style={{ fontSize:13, fontWeight:500, color:"var(--tk-accent)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", textDecoration:"underline", textDecorationStyle:"dotted", textUnderlineOffset:3 }}>{t.title}</div>
-                        {t.blocked_reason && <div style={{ fontSize:11, color:"#ef4444", marginTop:2 }}>⛔ {t.blocked_reason}</div>}
+                        {t.blocked_reason && <div style={{ fontSize:11, color:"#ef4444", marginTop:2 }}>â›” {t.blocked_reason}</div>}
                         <div style={{ display:"flex", gap:6, marginTop:2 }}>
-                          {t.comment_count>0 && <span style={{ fontSize:10, color:"var(--tk-text-muted)" }}>💬 {t.comment_count}</span>}
-                          {t.sprint_name && <span style={{ fontSize:10, color:"var(--tk-text-muted)" }}>🏃 {t.sprint_name}</span>}
+                          {t.comment_count>0 && <span style={{ fontSize:10, color:"var(--tk-text-muted)" }}>ðŸ’¬ {t.comment_count}</span>}
+                          {t.sprint_name && <span style={{ fontSize:10, color:"var(--tk-text-muted)" }}>ðŸƒ {t.sprint_name}</span>}
                           {t.workspace_name && <span style={{ fontSize:10, color:"var(--tk-text-muted)", opacity:0.7 }}>{t.workspace_name}</span>}
                         </div>
                       </div>
@@ -916,29 +837,29 @@ function TeamIntelPanel({ workspaceId, team }) {
                         </span>
                       </div>
                       {/* Priority */}
-                      <div style={{ fontSize:13 }}>{PRIORITY_ICON[t.priority]||"—"}</div>
+                      <div style={{ fontSize:13 }}>{PRIORITY_ICON[t.priority]||"â€”"}</div>
                       {/* Due */}
                       <div style={{ fontSize:11, color:due.color, fontWeight:due.bold?700:400, whiteSpace:"nowrap" }}>{due.label}</div>
                       {/* Actions */}
                       <div style={{ display:"flex", gap:3, flexWrap:"wrap" }}>
                         <button onClick={() => setTaskDrawer(t)}
-                          style={actionBtn("#3b82f6","rgba(59,130,246,0.1)")}>📋 Open</button>
+                          style={actionBtn("#3b82f6","rgba(59,130,246,0.1)")}>ðŸ“‹ Open</button>
                         <button onClick={() => { setReassignTask(t); setReassignTo(""); }}
-                          style={actionBtn("#64748b")}>↪</button>
+                          style={actionBtn("#64748b")}>â†ª</button>
                         {t.priority !== "high" && (
                           <button onClick={() => updateTask(t.id, { priority:"high" })} disabled={saving}
-                            style={actionBtn("#ef4444","rgba(239,68,68,0.12)")}>🔴</button>
+                            style={actionBtn("#ef4444","rgba(239,68,68,0.12)")}>ðŸ”´</button>
                         )}
                         {t.status !== "blocked" ? (
                           <button onClick={() => updateTask(t.id, { status:"blocked" })} disabled={saving}
-                            style={actionBtn("#ef4444","rgba(239,68,68,0.08)")}>🚫</button>
+                            style={actionBtn("#ef4444","rgba(239,68,68,0.08)")}>ðŸš«</button>
                         ) : (
                           <button onClick={() => updateTask(t.id, { status:"inprogress" })} disabled={saving}
-                            style={actionBtn("#22c55e","rgba(34,197,94,0.12)")}>▶</button>
+                            style={actionBtn("#22c55e","rgba(34,197,94,0.12)")}>â–¶</button>
                         )}
                         {t.status === "inprogress" && (
                           <button onClick={() => updateTask(t.id, { status:"done", progress:100 })} disabled={saving}
-                            style={actionBtn("#22c55e","rgba(34,197,94,0.1)")}>✓</button>
+                            style={actionBtn("#22c55e","rgba(34,197,94,0.1)")}>âœ“</button>
                         )}
                       </div>
                     </div>
@@ -948,7 +869,7 @@ function TeamIntelPanel({ workspaceId, team }) {
             )}
             {open && memberTasks.length === 0 && (
               <div style={{ padding:"14px 16px", color:"var(--tk-text-muted)", fontSize:13 }}>
-                {m.allMine.length === 0 ? "No tasks assigned — member is available." : "No tasks match the current filters."}
+                {m.allMine.length === 0 ? "No tasks assigned â€” member is available." : "No tasks match the current filters."}
               </div>
             )}
           </div>
@@ -971,7 +892,7 @@ function TeamIntelPanel({ workspaceId, team }) {
                 <div style={{ fontSize:13 }}>{PRIORITY_ICON[t.priority]||""}</div>
                 <button onClick={() => { setReassignTask(t); setReassignTo(""); }}
                   style={{ padding:"4px 12px", borderRadius:7, border:"1px solid var(--tk-accent)", background:"rgba(59,130,246,0.1)", color:"var(--tk-accent)", fontSize:11, cursor:"pointer", fontWeight:600 }}>
-                  Assign →
+                  Assign â†’
                 </button>
               </div>
             ))}
@@ -985,17 +906,17 @@ function TeamIntelPanel({ workspaceId, team }) {
           <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth:440 }}>
             <div className="modal-header">
               <h2 className="modal-title">Reassign Task</h2>
-              <button className="modal-close" onClick={() => setReassignTask(null)}>✕</button>
+              <button className="modal-close" onClick={() => setReassignTask(null)}>âœ•</button>
             </div>
             <div style={{ padding:"12px 0 4px" }}>
               <div style={{ fontSize:14, fontWeight:600, color:"var(--tk-text-primary)", marginBottom:14 }}>"{reassignTask.title}"</div>
               <label className="modal-label">Assign to</label>
               <select className="modal-input" value={reassignTo} onChange={e => setReassignTo(e.target.value)} autoFocus>
-                <option value="">Select member…</option>
+                <option value="">Select memberâ€¦</option>
                 <option value="__unassigned__">Unassigned</option>
                 {(team||[]).map(m => (
                   <option key={m.user_id} value={String(m.user_id)}>
-                    {m.name} — {m.load_percent??0}% load
+                    {m.name} â€” {m.load_percent??0}% load
                   </option>
                 ))}
               </select>
@@ -1008,7 +929,7 @@ function TeamIntelPanel({ workspaceId, team }) {
                   await updateTask(reassignTask.id, { assigned_user_id: newId });
                   setReassignTask(null);
                 }}>
-                {saving ? "Saving…" : "Reassign"}
+                {saving ? "Savingâ€¦" : "Reassign"}
               </button>
             </div>
           </div>
@@ -1021,7 +942,7 @@ function TeamIntelPanel({ workspaceId, team }) {
           <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth:380 }}>
             <div className="modal-header">
               <h2 className="modal-title">Change Status</h2>
-              <button className="modal-close" onClick={() => setStatusTask(null)}>✕</button>
+              <button className="modal-close" onClick={() => setStatusTask(null)}>âœ•</button>
             </div>
             <div style={{ padding:"12px 0 4px" }}>
               <div style={{ fontSize:13, color:"var(--tk-text-secondary)", marginBottom:12 }}>"{statusTask.title}"</div>
@@ -1041,7 +962,7 @@ function TeamIntelPanel({ workspaceId, team }) {
         </div>
       )}
 
-      {/* ── KPI Right-side Drawer ── */}
+      {/* â”€â”€ KPI Right-side Drawer â”€â”€ */}
       {drawerType && (() => {
         const drawerTitles = { active:"Active Tasks", overdue:"Overdue Tasks", blocked:"Blocked Tasks", stale:"Stale Tasks (3d+)", unassigned:"Unassigned Tasks", risk:"Members at Risk" };
         const drawerDatasets = { active:allActive, overdue:allOverdue, blocked:allBlocked, stale:allStale, unassigned:allUnassigned };
@@ -1064,15 +985,15 @@ function TeamIntelPanel({ workspaceId, team }) {
                 <div style={{ flex:1 }}>
                   <div style={{ fontWeight:800, fontSize:16, color:"var(--tk-text-primary)" }}>{drawerTitles[drawerType]}</div>
                   <div style={{ fontSize:12, color:"var(--tk-text-muted)", marginTop:2 }}>
-                    {isTaskDrawer ? `${drawerTasks.length} task${drawerTasks.length!==1?"s":""} · click to act` : `${drawerMembers.length} member${drawerMembers.length!==1?"s":""} at risk`}
+                    {isTaskDrawer ? `${drawerTasks.length} task${drawerTasks.length!==1?"s":""} Â· click to act` : `${drawerMembers.length} member${drawerMembers.length!==1?"s":""} at risk`}
                   </div>
                 </div>
-                <button onClick={() => setDrawerType(null)} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:"var(--tk-text-muted)", padding:"4px 8px" }}>✕</button>
+                <button onClick={() => setDrawerType(null)} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:"var(--tk-text-muted)", padding:"4px 8px" }}>âœ•</button>
               </div>
 
               {/* Search bar */}
               <div style={{ padding:"10px 20px", borderBottom:"1px solid var(--tk-border)" }}>
-                <input value={drawerSearch} onChange={e=>setDrawerSearch(e.target.value)} placeholder="Search tasks, members, projects…"
+                <input value={drawerSearch} onChange={e=>setDrawerSearch(e.target.value)} placeholder="Search tasks, members, projectsâ€¦"
                   style={{ width:"100%", padding:"7px 12px", borderRadius:8, border:"1px solid var(--tk-border)", background:"var(--tk-surface)", color:"var(--tk-text-primary)", fontSize:13, boxSizing:"border-box" }} />
               </div>
 
@@ -1081,8 +1002,8 @@ function TeamIntelPanel({ workspaceId, team }) {
                 <div style={{ margin:"10px 20px 0", padding:"9px 14px", background:"rgba(239,68,68,0.08)", border:"1px solid rgba(239,68,68,0.2)", borderRadius:8, fontSize:12 }}>
                   <span style={{ fontWeight:700, color:"#ef4444" }}>AI Insight: </span>
                   <span style={{ color:"var(--tk-text-secondary)" }}>
-                    {allOverdue.length} overdue tasks — top overdue owner: {
-                      (() => { const cnt={}; allOverdue.forEach(t=>{const n=t.assignee_name||"Unassigned"; cnt[n]=(cnt[n]||0)+1;}); return Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0]?.[0]||"—"; })()
+                    {allOverdue.length} overdue tasks â€” top overdue owner: {
+                      (() => { const cnt={}; allOverdue.forEach(t=>{const n=t.assignee_name||"Unassigned"; cnt[n]=(cnt[n]||0)+1;}); return Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0]?.[0]||"â€”"; })()
                     }. Consider redistributing to members below 60% load.
                   </span>
                 </div>
@@ -1091,7 +1012,7 @@ function TeamIntelPanel({ workspaceId, team }) {
                 <div style={{ margin:"10px 20px 0", padding:"9px 14px", background:"rgba(59,130,246,0.08)", border:"1px solid rgba(59,130,246,0.2)", borderRadius:8, fontSize:12 }}>
                   <span style={{ fontWeight:700, color:"var(--tk-accent)" }}>AI Suggestion: </span>
                   <span style={{ color:"var(--tk-text-secondary)" }}>
-                    Assign to <strong>{suggestedOwner.name}</strong> (currently {suggestedOwner.load_percent||0}% load — lowest available capacity).
+                    Assign to <strong>{suggestedOwner.name}</strong> (currently {suggestedOwner.load_percent||0}% load â€” lowest available capacity).
                   </span>
                   <button onClick={() => { allUnassigned.forEach(t => updateTask(t.id, { assigned_user_id: suggestedOwner.user_id })); setDrawerType(null); showToast(`All unassigned tasks assigned to ${suggestedOwner.name}`); }}
                     style={{ marginLeft:8, padding:"2px 10px", borderRadius:6, border:"1px solid var(--tk-accent)", background:"rgba(59,130,246,0.15)", color:"var(--tk-accent)", fontSize:11, cursor:"pointer", fontWeight:700 }}>Auto-Assign All</button>
@@ -1123,11 +1044,11 @@ function TeamIntelPanel({ workspaceId, team }) {
                         <div style={{ fontWeight:600, fontSize:13, color:"var(--tk-text-primary)", marginBottom:3 }}>{t.title}</div>
                         <div style={{ display:"flex", gap:8, flexWrap:"wrap", fontSize:11, color:"var(--tk-text-muted)" }}>
                           <span>{t.assignee_name||"Unassigned"}</span>
-                          {t.workspace_name && <span>· {t.workspace_name}</span>}
-                          {t.sprint_name && <span>· {t.sprint_name}</span>}
-                          {overdueDays!==null && overdueDays>0 && <span style={{ color:"#ef4444", fontWeight:700 }}>· {overdueDays}d overdue</span>}
-                          {staleDays!==null && staleDays>=3 && drawerType==="stale" && <span style={{ color:"#f59e0b", fontWeight:700 }}>· idle {staleDays}d</span>}
-                          {t.blocked_reason && <span style={{ color:"#ef4444" }}>· {t.blocked_reason}</span>}
+                          {t.workspace_name && <span>Â· {t.workspace_name}</span>}
+                          {t.sprint_name && <span>Â· {t.sprint_name}</span>}
+                          {overdueDays!==null && overdueDays>0 && <span style={{ color:"#ef4444", fontWeight:700 }}>Â· {overdueDays}d overdue</span>}
+                          {staleDays!==null && staleDays>=3 && drawerType==="stale" && <span style={{ color:"#f59e0b", fontWeight:700 }}>Â· idle {staleDays}d</span>}
+                          {t.blocked_reason && <span style={{ color:"#ef4444" }}>Â· {t.blocked_reason}</span>}
                         </div>
                         <div style={{ display:"flex", gap:6, marginTop:5, flexWrap:"wrap" }}>
                           <span style={{ padding:"1px 7px", borderRadius:99, background:`${STATUS_COLOR[t.status]||"#64748b"}20`, color:STATUS_COLOR[t.status]||"#64748b", fontSize:10, fontWeight:700 }}>{STATUS_LABEL[t.status]||t.status}</span>
@@ -1136,10 +1057,10 @@ function TeamIntelPanel({ workspaceId, team }) {
                         </div>
                       </div>
                       <div style={{ display:"flex", flexDirection:"column", gap:4, flexShrink:0 }}>
-                        <button onClick={() => { setReassignTask(t); setReassignTo(""); }} style={{ ...actionBtn("#64748b"), padding:"4px 10px", fontSize:11 }}>↪ Reassign</button>
-                        <button onClick={() => setStatusTask(t)} style={{ ...actionBtn("#3b82f6","rgba(59,130,246,0.1)"), padding:"4px 10px", fontSize:11 }}>✏ Status</button>
+                        <button onClick={() => { setReassignTask(t); setReassignTo(""); }} style={{ ...actionBtn("#64748b"), padding:"4px 10px", fontSize:11 }}>â†ª Reassign</button>
+                        <button onClick={() => setStatusTask(t)} style={{ ...actionBtn("#3b82f6","rgba(59,130,246,0.1)"), padding:"4px 10px", fontSize:11 }}>âœ Status</button>
                         {t.status==="blocked" && (
-                          <button onClick={() => updateTask(t.id, { status:"inprogress" })} style={{ ...actionBtn("#22c55e","rgba(34,197,94,0.1)"), padding:"4px 10px", fontSize:11 }}>▶ Unblock</button>
+                          <button onClick={() => updateTask(t.id, { status:"inprogress" })} style={{ ...actionBtn("#22c55e","rgba(34,197,94,0.1)"), padding:"4px 10px", fontSize:11 }}>â–¶ Unblock</button>
                         )}
                         {drawerType==="overdue" && (
                           <button onClick={() => updateTask(t.id, { due_date: new Date(Date.now()+7*86400000).toISOString().split("T")[0] })}
@@ -1147,14 +1068,14 @@ function TeamIntelPanel({ workspaceId, team }) {
                         )}
                         {(drawerType==="unassigned" || !t.assigned_user_id) && suggestedOwner && (
                           <button onClick={() => updateTask(t.id, { assigned_user_id: suggestedOwner.user_id })}
-                            style={{ ...actionBtn("#22c55e","rgba(34,197,94,0.1)"), padding:"4px 10px", fontSize:11 }}>→ {suggestedOwner.name?.split(" ")[0]}</button>
+                            style={{ ...actionBtn("#22c55e","rgba(34,197,94,0.1)"), padding:"4px 10px", fontSize:11 }}>â†’ {suggestedOwner.name?.split(" ")[0]}</button>
                         )}
                       </div>
                     </div>
                   );
                 })}
 
-                {/* Risk drawer — member cards */}
+                {/* Risk drawer â€” member cards */}
                 {!isTaskDrawer && drawerMembers.map(m => (
                   <div key={m.user_id} style={{ margin:"10px 20px", background:"var(--tk-surface)", border:"1px solid rgba(239,68,68,0.25)", borderRadius:10, padding:"14px 16px" }}>
                     <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
@@ -1185,16 +1106,16 @@ function TeamIntelPanel({ workspaceId, team }) {
                     <div style={{ padding:"8px 10px", background:"rgba(245,158,11,0.08)", borderRadius:7, fontSize:12, color:"var(--tk-text-secondary)", marginBottom:10 }}>
                       <span style={{ fontWeight:700, color:"#f59e0b" }}>AI: </span>
                       {m.load_percent>=100&&m.overdue.length>0 ? `Move ${Math.min(2,m.overdue.length)} overdue tasks to reduce load below 80%.` :
-                       m.overdue.length>0 ? `${m.overdue.length} overdue task${m.overdue.length>1?"s":""} — schedule a review or extend deadlines.` :
-                       m.blocked.length>0 ? `${m.blocked.length} blocked task${m.blocked.length>1?"s":""} — unblock or reassign to keep sprint on track.` :
-                       "Monitor closely — stale tasks indicate possible blockers."}
+                       m.overdue.length>0 ? `${m.overdue.length} overdue task${m.overdue.length>1?"s":""} â€” schedule a review or extend deadlines.` :
+                       m.blocked.length>0 ? `${m.blocked.length} blocked task${m.blocked.length>1?"s":""} â€” unblock or reassign to keep sprint on track.` :
+                       "Monitor closely â€” stale tasks indicate possible blockers."}
                     </div>
                     {/* Manager actions */}
                     <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
                       <button onClick={() => { setFilterMember(String(m.user_id)); setDrawerType(null); }} style={{ ...actionBtn("#64748b"), padding:"5px 12px", fontSize:12 }}>View Tasks</button>
                       {m.overdue.length>0 && available.length>0 && (
                         <button onClick={async () => { for(const t of m.overdue.slice(0,2)) await updateTask(t.id, { assigned_user_id: available[0].user_id }); showToast(`Moved ${Math.min(2,m.overdue.length)} tasks to ${available[0].name}`); }}
-                          style={{ ...actionBtn("#f59e0b","rgba(245,158,11,0.1)"), padding:"5px 12px", fontSize:12 }}>↪ Move 2 Tasks</button>
+                          style={{ ...actionBtn("#f59e0b","rgba(245,158,11,0.1)"), padding:"5px 12px", fontSize:12 }}>â†ª Move 2 Tasks</button>
                       )}
                     </div>
                   </div>
@@ -1204,7 +1125,7 @@ function TeamIntelPanel({ workspaceId, team }) {
               {/* Drawer footer */}
               <div style={{ padding:"12px 20px", borderTop:"1px solid var(--tk-border)", display:"flex", gap:8, justifyContent:"flex-end" }}>
                 <button onClick={() => exportData(drawerType, isTaskDrawer?drawerTasks:drawerMembers, "csv")}
-                  style={{ padding:"7px 16px", borderRadius:8, border:"1px solid var(--tk-border)", background:"var(--tk-surface)", color:"var(--tk-text-secondary)", fontSize:13, cursor:"pointer" }}>↓ Export CSV</button>
+                  style={{ padding:"7px 16px", borderRadius:8, border:"1px solid var(--tk-border)", background:"var(--tk-surface)", color:"var(--tk-text-secondary)", fontSize:13, cursor:"pointer" }}>â†“ Export CSV</button>
                 <button onClick={() => setDrawerType(null)}
                   style={{ padding:"7px 16px", borderRadius:8, border:"none", background:"var(--tk-accent)", color:"#fff", fontSize:13, cursor:"pointer", fontWeight:600 }}>Done</button>
               </div>
@@ -1213,13 +1134,13 @@ function TeamIntelPanel({ workspaceId, team }) {
         );
       })()}
 
-      {/* ── Export Modal ── */}
+      {/* â”€â”€ Export Modal â”€â”€ */}
       {exportOpen && (
         <div className="modal-overlay" onClick={() => setExportOpen(false)}>
           <div className="modal-box" onClick={e=>e.stopPropagation()} style={{ maxWidth:460 }}>
             <div className="modal-header">
               <h2 className="modal-title">Export Team Report</h2>
-              <button className="modal-close" onClick={() => setExportOpen(false)}>✕</button>
+              <button className="modal-close" onClick={() => setExportOpen(false)}>âœ•</button>
             </div>
             <div style={{ padding:"14px 0 4px", display:"flex", flexDirection:"column", gap:14 }}>
               <div>
@@ -1241,7 +1162,7 @@ function TeamIntelPanel({ workspaceId, team }) {
                 </div>
               </div>
               <div style={{ padding:"10px 12px", background:"var(--tk-surface)", borderRadius:8, fontSize:12, color:"var(--tk-text-muted)" }}>
-                {exportScope==="all"&&`${tasks.length} total tasks · ${memberData.length} members`}
+                {exportScope==="all"&&`${tasks.length} total tasks Â· ${memberData.length} members`}
                 {exportScope==="overdue"&&`${allOverdue.length} overdue tasks`}
                 {exportScope==="blocked"&&`${allBlocked.length} blocked tasks`}
                 {exportScope==="unassigned"&&`${allUnassigned.length} unassigned tasks`}
@@ -1306,7 +1227,7 @@ const actionBtn = (color, bg) => ({
   padding:"3px 8px", borderRadius:6, border:`1px solid ${color}40`, background:bg||`${color}10`, color, fontSize:10, cursor:"pointer", fontWeight:600, whiteSpace:"nowrap"
 });
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function timeAgoShort(dateStr) {
   const diff = (Date.now() - new Date(dateStr)) / 1000;
   if (diff < 60)         return "just now";
@@ -1323,7 +1244,7 @@ function relativeDueDate(dateStr) {
   return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-// ── Task Intel Drawer ─────────────────────────────────────────────────────────
+// â”€â”€ Task Intel Drawer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const DRAWER_STATUS_COLOR = {
   todo: "#64748b", inprogress: "#3b82f6", in_progress: "#3b82f6",
   review: "#8b5cf6", blocked: "#ef4444", done: "#22c55e", pending_approval: "#f59e0b"
@@ -1445,29 +1366,29 @@ function TaskIntelDrawer({ task, team = [], workspaceId, onClose, onUpdated }) {
                 {DRAWER_STATUS_LABEL[task.status]||task.status}
               </span>
               <span style={{ padding:"2px 8px", borderRadius:99, background: task.priority==="high"?"rgba(239,68,68,0.12)":task.priority==="medium"?"rgba(245,158,11,0.12)":"rgba(100,116,139,0.12)", color: task.priority==="high"?"#ef4444":task.priority==="medium"?"#f59e0b":"#64748b", fontSize:11, fontWeight:700 }}>
-                {task.priority||"—"} priority
+                {task.priority||"â€”"} priority
               </span>
-              {task.sprint_name && <span style={{ padding:"2px 8px", borderRadius:99, background:"rgba(139,92,246,0.12)", color:"#8b5cf6", fontSize:11 }}>🏃 {task.sprint_name}</span>}
+              {task.sprint_name && <span style={{ padding:"2px 8px", borderRadius:99, background:"rgba(139,92,246,0.12)", color:"#8b5cf6", fontSize:11 }}>ðŸƒ {task.sprint_name}</span>}
             </div>
             <div style={{ fontSize:16, fontWeight:700, color:"var(--tk-text-primary)", lineHeight:1.3 }}>{task.title}</div>
             <div style={{ fontSize:12, color:"var(--tk-text-muted)", marginTop:4 }}>
-              {task.workspace_name && <span>📁 {task.workspace_name}</span>}
-              {task.assignee_name && <span style={{ marginLeft:10 }}>👤 {task.assignee_name}</span>}
-              {due && <span style={{ marginLeft:10, color:isOverdue?"#ef4444":"var(--tk-text-muted)" }}>📅 {due.toLocaleDateString("en-US",{month:"short",day:"numeric"})}{isOverdue?" (overdue)":""}</span>}
+              {task.workspace_name && <span>ðŸ“ {task.workspace_name}</span>}
+              {task.assignee_name && <span style={{ marginLeft:10 }}>ðŸ‘¤ {task.assignee_name}</span>}
+              {due && <span style={{ marginLeft:10, color:isOverdue?"#ef4444":"var(--tk-text-muted)" }}>ðŸ“… {due.toLocaleDateString("en-US",{month:"short",day:"numeric"})}{isOverdue?" (overdue)":""}</span>}
             </div>
           </div>
-          <button onClick={onClose} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:"var(--tk-text-muted)", flexShrink:0, lineHeight:1 }}>✕</button>
+          <button onClick={onClose} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:"var(--tk-text-muted)", flexShrink:0, lineHeight:1 }}>âœ•</button>
         </div>
 
         {/* Manager Quick Actions */}
         <div style={{ padding:"10px 20px", borderBottom:"1px solid var(--tk-border)", display:"flex", gap:6, flexWrap:"wrap" }}>
           <button onClick={() => setTab("subtasks")} style={{ ...actionBtn("#8b5cf6","rgba(139,92,246,0.1)"), fontSize:11 }}>+ Subtask</button>
-          <button onClick={() => setEditDesc(true)} style={{ ...actionBtn("#3b82f6","rgba(59,130,246,0.1)"), fontSize:11 }}>✏️ Edit Desc</button>
-          <button onClick={() => setDueDateEdit(true)} style={{ ...actionBtn("#f59e0b","rgba(245,158,11,0.1)"), fontSize:11 }}>📅 Change Due</button>
+          <button onClick={() => setEditDesc(true)} style={{ ...actionBtn("#3b82f6","rgba(59,130,246,0.1)"), fontSize:11 }}>âœï¸ Edit Desc</button>
+          <button onClick={() => setDueDateEdit(true)} style={{ ...actionBtn("#f59e0b","rgba(245,158,11,0.1)"), fontSize:11 }}>ðŸ“… Change Due</button>
           <button onClick={async () => { await api.put(`/tasks/${task.id}`,{priority:"high"}); onUpdated?.(); }}
-            style={{ ...actionBtn("#ef4444","rgba(239,68,68,0.1)"), fontSize:11, opacity: task.priority==="high"?0.4:1 }} disabled={task.priority==="high"}>🔴 High Priority</button>
+            style={{ ...actionBtn("#ef4444","rgba(239,68,68,0.1)"), fontSize:11, opacity: task.priority==="high"?0.4:1 }} disabled={task.priority==="high"}>ðŸ”´ High Priority</button>
           <button onClick={notifyAssignee} style={{ ...actionBtn("#22c55e","rgba(34,197,94,0.1)"), fontSize:11 }}>
-            {notifSent ? "✅ Sent!" : "🔔 Notify"}
+            {notifSent ? "âœ… Sent!" : "ðŸ”” Notify"}
           </button>
         </div>
 
@@ -1501,7 +1422,7 @@ function TaskIntelDrawer({ task, team = [], workspaceId, onClose, onUpdated }) {
                   </div>
                 ) : (
                   <div onClick={()=>setEditDesc(true)} style={{ fontSize:13, color: descVal?"var(--tk-text-primary)":"var(--tk-text-muted)", cursor:"pointer", padding:"8px 10px", borderRadius:8, border:"1px dashed var(--tk-border)", minHeight:60, lineHeight:1.6 }}>
-                    {descVal || "Click to add description…"}
+                    {descVal || "Click to add descriptionâ€¦"}
                   </div>
                 )}
               </div>
@@ -1518,8 +1439,8 @@ function TaskIntelDrawer({ task, team = [], workspaceId, onClose, onUpdated }) {
                   </div>
                 ) : (
                   <div onClick={()=>setDueDateEdit(true)} style={{ fontSize:13, color:isOverdue?"#ef4444":"var(--tk-text-primary)", cursor:"pointer" }}>
-                    {due ? due.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"}) : "No due date set — click to add"}
-                    {isOverdue && <span style={{ fontSize:11, marginLeft:8, color:"#ef4444" }}>⚠️ Overdue</span>}
+                    {due ? due.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"}) : "No due date set â€” click to add"}
+                    {isOverdue && <span style={{ fontSize:11, marginLeft:8, color:"#ef4444" }}>âš ï¸ Overdue</span>}
                   </div>
                 )}
               </div>
@@ -1539,9 +1460,9 @@ function TaskIntelDrawer({ task, team = [], workspaceId, onClose, onUpdated }) {
                 {[
                   ["Owner", task.assignee_name || "Unassigned"],
                   ["Status", DRAWER_STATUS_LABEL[task.status] || task.status],
-                  ["Priority", task.priority || "—"],
-                  ["Type", task.task_type || task.type || "—"],
-                  ["Workspace", task.workspace_name || "—"],
+                  ["Priority", task.priority || "â€”"],
+                  ["Type", task.task_type || task.type || "â€”"],
+                  ["Workspace", task.workspace_name || "â€”"],
                   ["Sprint", task.sprint_name || "None"],
                   ["Blockers", task.blocking_dep_count > 0 ? `${task.blocking_dep_count} blocking deps` : "None"],
                   ["Comments", task.comment_count || 0],
@@ -1562,7 +1483,7 @@ function TaskIntelDrawer({ task, team = [], workspaceId, onClose, onUpdated }) {
               <div style={{ padding:"12px", borderRadius:10, background:"rgba(139,92,246,0.06)", border:"1px solid rgba(139,92,246,0.2)", marginBottom:16 }}>
                 <div style={{ fontSize:12, fontWeight:700, color:"#8b5cf6", marginBottom:8 }}>+ New Subtask</div>
                 <input value={newSub} onChange={e=>setNewSub(e.target.value)}
-                  placeholder="Subtask title…"
+                  placeholder="Subtask titleâ€¦"
                   onKeyDown={e => e.key==="Enter" && addSubtask()}
                   style={{ width:"100%", padding:"7px 10px", borderRadius:7, border:"1px solid var(--tk-border)", background:"var(--tk-surface)", color:"var(--tk-text-primary)", fontSize:13, marginBottom:8, boxSizing:"border-box" }} />
                 <div style={{ display:"flex", gap:8, marginBottom:8 }}>
@@ -1576,7 +1497,7 @@ function TaskIntelDrawer({ task, team = [], workspaceId, onClose, onUpdated }) {
                 </div>
                 <button onClick={addSubtask} disabled={saving||!newSub.trim()}
                   style={{ ...actionBtn("#8b5cf6","rgba(139,92,246,0.15)"), opacity:saving||!newSub.trim()?0.5:1 }}>
-                  {saving ? "Adding…" : "Add Subtask"}
+                  {saving ? "Addingâ€¦" : "Add Subtask"}
                 </button>
               </div>
 
@@ -1605,11 +1526,11 @@ function TaskIntelDrawer({ task, team = [], workspaceId, onClose, onUpdated }) {
             <div>
               <div style={{ marginBottom:16 }}>
                 <textarea value={newComment} onChange={e=>setNewComment(e.target.value)}
-                  placeholder="Add a comment…"
+                  placeholder="Add a commentâ€¦"
                   style={{ width:"100%", minHeight:72, padding:"8px 10px", borderRadius:8, border:"1px solid var(--tk-border)", background:"var(--tk-surface)", color:"var(--tk-text-primary)", fontSize:13, resize:"vertical", boxSizing:"border-box" }} />
                 <button onClick={addComment} disabled={saving||!newComment.trim()}
                   style={{ ...actionBtn("#3b82f6","rgba(59,130,246,0.12)"), marginTop:6, opacity:saving||!newComment.trim()?0.5:1 }}>
-                  {saving ? "Posting…" : "Post Comment"}
+                  {saving ? "Postingâ€¦" : "Post Comment"}
                 </button>
               </div>
               {comments.length === 0 ? (
@@ -1637,7 +1558,7 @@ function TaskIntelDrawer({ task, team = [], workspaceId, onClose, onUpdated }) {
                 <div style={{ color:"var(--tk-text-muted)", textAlign:"center", padding:"32px 0", fontSize:13 }}>No activity recorded</div>
               ) : activity.map((a,i) => (
                 <div key={a.id||i} style={{ display:"flex", gap:10, padding:"8px 0", borderBottom:"1px solid var(--tk-border)" }}>
-                  <div style={{ width:28, height:28, borderRadius:"50%", background:"rgba(59,130,246,0.15)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, flexShrink:0 }}>📝</div>
+                  <div style={{ width:28, height:28, borderRadius:"50%", background:"rgba(59,130,246,0.15)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, flexShrink:0 }}>ðŸ“</div>
                   <div>
                     <div style={{ fontSize:12, color:"var(--tk-text-primary)" }}>
                       <strong>{a.actor_name||"System"}</strong>{" "}
@@ -1656,228 +1577,363 @@ function TaskIntelDrawer({ task, team = [], workspaceId, onClose, onUpdated }) {
   );
 }
 
-// ── Manager Overview Dashboard View ──────────────────────────────────────────
-function ManagerDashView({ workspaceId }) {
-  const [tasks,         setTasks]         = useState([]);
-  const [activity,      setActivity]      = useState([]);
-  const [tasksLoading,  setTasksLoading]  = useState(true);
-  const [actLoading,    setActLoading]    = useState(true);
-  const [overdueOpen,   setOverdueOpen]   = useState(true);
-  const [activityOpen,  setActivityOpen]  = useState(true);
-  const [dayGroupsOpen, setDayGroupsOpen] = useState({});
-  const [refreshedAt,   setRefreshedAt]   = useState(Date.now());
-
-  const loadTasks = useCallback(async () => {
+// â”€â”€ Workload Activity Feed (moved from ManagerOverview) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function WorkloadActivityFeed({ tasks, workspaceId }) {
+  const [logs, setLogs] = useState([]);
+  useEffect(() => {
     if (!workspaceId) return;
-    setTasksLoading(true);
-    try {
-      const r = await api.get(`/tasks/workspace/${workspaceId}`);
-      setTasks(r.data); setRefreshedAt(Date.now());
-    } catch {} finally { setTasksLoading(false); }
+    api.get(`/audit?workspace_id=${workspaceId}&limit=20`)
+      .then(r => setLogs(r.data || [])).catch(() => {});
   }, [workspaceId]);
 
-  const loadActivity = useCallback(async () => {
-    if (!workspaceId) return;
-    setActLoading(true);
-    try {
-      const r = await api.get(`/audit?workspace_id=${workspaceId}&limit=20`);
-      setActivity(r.data);
-    } catch {} finally { setActLoading(false); }
-  }, [workspaceId]);
+  const ICON = {
+    task_assigned: "ðŸ“‹", task_created: "âž•", task_completed: "âœ…", task_updated: "âœï¸",
+    approval_requested: "â³", approval_approved: "âœ…", approval_rejected: "âŒ",
+    capacity_changed: "âš™ï¸", travel_mode_on: "âœˆï¸", leave_started: "ðŸ–ï¸",
+  };
 
-  useEffect(() => { loadTasks(); loadActivity(); }, [loadTasks, loadActivity]);
+  const recentTasks = [...tasks]
+    .sort((a, b) => new Date(b.status_changed_at || b.created_at || 0) - new Date(a.status_changed_at || a.created_at || 0))
+    .slice(0, 8)
+    .map(t => ({
+      id: `t-${t.id}`, ts: t.status_changed_at || t.created_at,
+      actor: t.assignee_name || "Unassigned",
+      action: t.status === "done" ? "completed" : t.status === "blocked" ? "blocked" : "updated",
+      taskTitle: t.title,
+      icon: t.status === "done" ? "âœ…" : t.status === "blocked" ? "ðŸš«" : "ðŸ“",
+    }));
 
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const endOfWeek = new Date(today);
-  endOfWeek.setDate(today.getDate() + (6 - today.getDay()));
-  endOfWeek.setHours(23, 59, 59, 999);
+  const logEvents = logs.slice(0, 12).map(l => ({
+    id: `l-${l.id}`, ts: l.created_at,
+    actor: l.actor_name || "Someone",
+    action: l.action?.replace(/_/g, " "),
+    taskTitle: l.meta?.task_title,
+    icon: ICON[l.action] || "ðŸ“",
+  }));
 
-  const relevant = tasks.filter(t => {
-    if (!t.due_date || t.status === "done") return false;
-    return new Date(t.due_date) <= endOfWeek;
-  });
-  const overdue  = relevant.filter(t => new Date(t.due_date) < today);
-  const upcoming = relevant.filter(t => new Date(t.due_date) >= today);
+  const combined = [...logEvents, ...recentTasks.filter(te => !logEvents.some(le => le.taskTitle === te.taskTitle))]
+    .sort((a, b) => new Date(b.ts) - new Date(a.ts)).slice(0, 16);
 
-  const dayGroups = {};
-  upcoming.forEach(t => {
-    const label = new Date(t.due_date).toLocaleDateString("en-US", { weekday: "long" });
-    if (!dayGroups[label]) dayGroups[label] = [];
-    dayGroups[label].push(t);
-  });
-
-  const minAgo = Math.floor((Date.now() - refreshedAt) / 60000);
-  const refreshLabel = minAgo === 0 ? "Just now" : `${minAgo}m ago`;
-  const PRIORITY_ICON = { high: "🔴", medium: "🟡", low: "🟢" };
-
-  function TaskRow({ task, isOverdue }) {
-    return (
-      <div className="mgr-dash-row" style={isOverdue ? { background: "var(--tk-status-danger-bg)" } : undefined}>
-        <div className="mgr-dash-cell mgr-dash-name">
-          <span className="mgr-dash-task-name">{task.title}</span>
-        </div>
-        <div className="mgr-dash-cell mgr-dash-assignee">
-          {task.assignee_name ? (
-            <div className="mgr-dash-avatar" title={task.assignee_name}>
-              {task.assignee_name.slice(0, 2).toUpperCase()}
-            </div>
-          ) : (
-            <div className="mgr-dash-avatar mgr-dash-avatar--empty" title="Unassigned">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-              </svg>
-            </div>
-          )}
-        </div>
-        <div className="mgr-dash-cell mgr-dash-due" style={{ color: isOverdue ? "var(--tk-status-danger)" : "var(--tk-text-secondary)", fontWeight: isOverdue ? 700 : 400 }}>
-          {isOverdue ? relativeDueDate(task.due_date) : new Date(task.due_date).toLocaleDateString("en-US", { weekday: "short" })}
-        </div>
-        <div className="mgr-dash-cell mgr-dash-priority">
-          {task.priority ? (PRIORITY_ICON[task.priority] || "") : ""}
-        </div>
-      </div>
-    );
-  }
-
-  function SectionHeader({ label, count, open, onToggle, isOverdue }) {
-    return (
-      <div className={`mgr-dash-section ${isOverdue ? "mgr-dash-section--overdue" : ""}`} onClick={onToggle}>
-        <span className="mgr-dash-chevron" style={isOverdue ? { color: "var(--tk-status-danger)" } : undefined}>
-          {open ? "▼" : "▶"}
-        </span>
-        <span className="mgr-dash-section-label" style={isOverdue ? { color: "var(--tk-status-danger)" } : undefined}>
-          {label}
-        </span>
-        <span className="mgr-dash-count">{count}</span>
-      </div>
-    );
-  }
+  if (!combined.length) return (
+    <div style={{ color: "var(--tk-text-muted)", textAlign: "center", padding: "32px 0", fontSize: 13 }}>No recent activity</div>
+  );
 
   return (
-    <div className="mgr-dash-layout">
-      <div className="mgr-dash-widget">
-        <div className="mgr-dash-toolbar">
-          <div className="mgr-dash-toolbar-left">
-            <span className="mgr-dash-pill">Group: Due date</span>
-            <span className="mgr-dash-pill">Subtasks</span>
-            <span className="mgr-dash-pill">Columns</span>
+    <div style={{ display: "flex", flexDirection: "column" }}>
+      {combined.map((e, i) => (
+        <div key={e.id} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 0", borderBottom: i < combined.length - 1 ? "1px solid var(--tk-border)" : "none" }}>
+          <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(59,130,246,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0 }}>
+            {e.icon}
           </div>
-          <div className="mgr-dash-toolbar-right">
-            <span className="mgr-dash-refreshed">Refreshed {refreshLabel}</span>
-            <button className="mgr-dash-icon-btn" onClick={loadTasks} title="Refresh">↻</button>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, color: "var(--tk-text-primary)", lineHeight: 1.4 }}>
+              <strong>{e.actor}</strong>{" "}
+              <span style={{ color: "var(--tk-text-secondary)" }}>{e.action}</span>
+              {e.taskTitle && <span style={{ color: "var(--tk-accent)" }}> "{e.taskTitle}"</span>}
+            </div>
+            <div style={{ fontSize: 11, color: "var(--tk-text-muted)", marginTop: 2 }}>{e.ts ? timeAgoShort(e.ts) : ""}</div>
           </div>
         </div>
+      ))}
+    </div>
+  );
+}
 
-        <div className="mgr-dash-col-header">
-          <span style={{ flex: 1 }}>Name</span>
-          <span style={{ width: 52 }}>Assignee</span>
-          <span style={{ width: 84 }}>Due date</span>
-          <span style={{ width: 52 }}>Priority</span>
+// â”€â”€ Active Tasks by Member (moved from ManagerOverview) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function ActiveTasksByMember({ tasks, team }) {
+  const [expanded, setExpanded] = useState({});
+  const active = tasks.filter(t => t.status !== "done");
+  if (!active.length) return null;
+
+  const byMember = {};
+  active.forEach(t => {
+    const key = t.assignee_name || "Unassigned";
+    if (!byMember[key]) byMember[key] = [];
+    byMember[key].push(t);
+  });
+  const entries = Object.entries(byMember).sort((a, b) => b[1].length - a[1].length);
+
+  return (
+    <div style={{ background: "var(--tk-card)", border: "1px solid var(--tk-border)", borderRadius: 12, padding: "20px 24px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--tk-text-primary)" }}>Active Tasks by Member</div>
+          <div style={{ fontSize: 12, color: "var(--tk-text-muted)", marginTop: 2 }}>All open tasks across the team</div>
         </div>
-
-        {tasksLoading ? (
-          <div className="mgr-loading" style={{ padding: "32px 16px" }}>Loading tasks…</div>
-        ) : relevant.length === 0 ? (
-          <div className="mgr-dash-empty">
-            <div style={{ fontSize: 40, marginBottom: 8 }}>✅</div>
-            <div style={{ fontWeight: 600, color: "var(--tk-text-primary)" }}>All caught up!</div>
-            <div style={{ color: "var(--tk-text-secondary)", marginTop: 4 }}>No overdue or upcoming tasks this week.</div>
-          </div>
-        ) : (
-          <>
-            {overdue.length > 0 && (
-              <>
-                <SectionHeader label="Overdue" count={overdue.length} open={overdueOpen}
-                  onToggle={() => setOverdueOpen(v => !v)} isOverdue />
-                {overdueOpen && overdue.map(t => <TaskRow key={t.id} task={t} isOverdue />)}
-                {overdueOpen && <div className="mgr-dash-add-row">+ Add Task</div>}
-              </>
-            )}
-            {Object.entries(dayGroups).map(([day, dayTasks]) => (
-              <div key={day}>
-                <SectionHeader label={day} count={dayTasks.length}
-                  open={dayGroupsOpen[day] !== false}
-                  onToggle={() => setDayGroupsOpen(p => ({ ...p, [day]: p[day] === false ? true : false }))} />
-                {dayGroupsOpen[day] !== false && dayTasks.map(t => <TaskRow key={t.id} task={t} />)}
-                {dayGroupsOpen[day] !== false && <div className="mgr-dash-add-row">+ Add Task</div>}
-              </div>
-            ))}
-          </>
-        )}
+        <span style={{ fontSize: 12, background: "var(--tk-surface)", color: "var(--tk-text-secondary)", padding: "3px 10px", borderRadius: 20, border: "1px solid var(--tk-border)" }}>
+          {active.length} active
+        </span>
       </div>
-
-      <div className="mgr-dash-activity">
-        <div className="mgr-dash-activity-header">
-          <span>Latest Activity</span>
-          <button className="mgr-dash-icon-btn" onClick={() => setActivityOpen(v => !v)}>
-            {activityOpen ? "▾" : "▸"}
-          </button>
-        </div>
-        {activityOpen && (
-          <div className="mgr-dash-activity-body">
-            {actLoading ? (
-              <div className="mgr-loading" style={{ padding: "20px 16px" }}>Loading…</div>
-            ) : activity.length === 0 ? (
-              <div style={{ padding: "20px 16px", color: "var(--tk-text-muted)", fontSize: 13, textAlign: "center" }}>
-                No recent activity
-              </div>
-            ) : activity.slice(0, 15).map(e => (
-              <div key={e.id} className="mgr-dash-act-row">
-                <div className="mgr-dash-act-avatar">
-                  {(e.actor_name || "?").slice(0, 2).toUpperCase()}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {entries.map(([name, memberTasks]) => {
+          const isOpen = expanded[name];
+          return (
+            <div key={name} style={{ border: "1px solid var(--tk-border)", borderRadius: 8, overflow: "hidden" }}>
+              <div onClick={() => setExpanded(p => ({ ...p, [name]: !p[name] }))}
+                style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", cursor: "pointer", background: "rgba(59,130,246,0.05)", userSelect: "none" }}>
+                <div style={{ width: 30, height: 30, borderRadius: "50%", background: "var(--tk-accent)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#fff", flexShrink: 0 }}>
+                  {name.slice(0, 2).toUpperCase()}
                 </div>
-                <div className="mgr-dash-act-body">
-                  <div>
-                    <span className="mgr-dash-act-actor">{e.actor_name || "Someone"}</span>
-                    {" "}<span className="mgr-dash-act-action">{e.action?.replace(/_/g, " ")}</span>
-                    {e.meta?.task_title && (
-                      <span className="mgr-dash-act-task"> "{e.meta.task_title}"</span>
-                    )}
-                  </div>
-                  <div className="mgr-dash-act-time">{timeAgoShort(e.created_at)}</div>
-                </div>
+                <span style={{ fontWeight: 700, fontSize: 13, color: "var(--tk-text-primary)", flex: 1 }}>{name}</span>
+                <span style={{ fontSize: 12, color: "var(--tk-text-secondary)", marginRight: 8 }}>{memberTasks.length} task{memberTasks.length !== 1 ? "s" : ""}</span>
+                <span style={{ fontSize: 13, color: "var(--tk-text-muted)", transform: isOpen ? "rotate(90deg)" : "rotate(0)", display: "inline-block", transition: "transform 0.15s" }}>â€º</span>
               </div>
-            ))}
-          </div>
-        )}
+              {isOpen && (
+                <div style={{ padding: "0 14px 10px" }}>
+                  {memberTasks.map(t => (
+                    <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: "1px solid var(--tk-border)" }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 99, background: `${DRAWER_STATUS_COLOR[t.status] || "#64748b"}20`, color: DRAWER_STATUS_COLOR[t.status] || "#64748b", flexShrink: 0 }}>
+                        {DRAWER_STATUS_LABEL[t.status] || t.status}
+                      </span>
+                      <span style={{ flex: 1, fontSize: 13, color: "var(--tk-text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.title}</span>
+                      {t.priority && (
+                        <span style={{ fontSize: 10, color: t.priority === "high" ? "#ef4444" : t.priority === "medium" ? "#f59e0b" : "#22c55e", fontWeight: 700, flexShrink: 0 }}>
+                          {t.priority}
+                        </span>
+                      )}
+                      {t.due_date && (
+                        <span style={{ fontSize: 10, color: new Date(t.due_date) < new Date() ? "#ef4444" : "var(--tk-text-muted)", flexShrink: 0 }}>
+                          {new Date(t.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-// ── Main Component ─────────────────────────────────────────────────────────────
+// â”€â”€ Task Distribution by Work Type (new interactive chart) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const WORK_TYPE_COLORS = {
+  rfp:           "#f59e0b",
+  presentation:  "#ec4899",
+  "customer demo": "#06b6d4",
+  documentation: "#8b5cf6",
+  ai:            "#a855f7",
+  development:   "#3b82f6",
+  bug:           "#ef4444",
+  upgrade:       "#14b8a6",
+  poc:           "#10b981",
+  meeting:       "#64748b",
+  task:          "#475569",
+  story:         "#6366f1",
+  proposal:      "#f97316",
+};
+
+function TaskDistributionChart({ tasks, team }) {
+  const [selectedMember,   setSelectedMember]   = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [search,           setSearch]           = useState("");
+
+  const activeTasks = tasks.filter(t => t.status !== "done");
+
+  const memberMap = {};
+  activeTasks.forEach(t => {
+    const uid  = String(t.assigned_user_id || "unassigned");
+    const name = t.assignee_name || "Unassigned";
+    const cat  = (t.task_type || t.type || "task").toLowerCase();
+    if (!memberMap[uid]) memberMap[uid] = { name, uid, cats: {} };
+    memberMap[uid].cats[cat] = (memberMap[uid].cats[cat] || 0) + 1;
+  });
+
+  const allCats = [...new Set(activeTasks.map(t => (t.task_type || t.type || "task").toLowerCase()))].sort();
+
+  const entries = Object.values(memberMap).filter(m =>
+    !search || m.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const filteredTasks = activeTasks.filter(t => {
+    const matchMember = !selectedMember || String(t.assigned_user_id || "unassigned") === selectedMember;
+    const matchCat    = !selectedCategory || (t.task_type || t.type || "task").toLowerCase() === selectedCategory;
+    return matchMember && matchCat;
+  });
+
+  const hasFilter = selectedMember || selectedCategory || search;
+  const clearFilters = () => { setSelectedMember(null); setSelectedCategory(null); setSearch(""); };
+
+  return (
+    <div style={{ background: "var(--tk-card)", border: "1px solid var(--tk-border)", borderRadius: 12, padding: "20px 24px" }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--tk-text-primary)" }}>Task Distribution by Work Type</div>
+          <div style={{ fontSize: 12, color: "var(--tk-text-muted)", marginTop: 2 }}>Click a member bar or category label to filter Â· Click both for a combined view</div>
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search membersâ€¦"
+            style={{ padding: "5px 10px", borderRadius: 7, border: "1px solid var(--tk-border)", background: "var(--tk-surface)", color: "var(--tk-text-primary)", fontSize: 12, width: 150 }} />
+          {hasFilter && (
+            <button onClick={clearFilters}
+              style={{ padding: "5px 12px", borderRadius: 7, border: "1px solid var(--tk-border)", background: "transparent", color: "var(--tk-text-muted)", fontSize: 12, cursor: "pointer" }}>
+              Reset
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Active filter chips */}
+      {(selectedMember || selectedCategory) && (
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+          {selectedMember && (
+            <span onClick={() => setSelectedMember(null)}
+              style={{ padding: "3px 10px", borderRadius: 99, background: "rgba(59,130,246,0.15)", color: "var(--tk-accent)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+              ðŸ‘¤ {Object.values(memberMap).find(m => m.uid === selectedMember)?.name || selectedMember} âœ•
+            </span>
+          )}
+          {selectedCategory && (
+            <span onClick={() => setSelectedCategory(null)}
+              style={{ padding: "3px 10px", borderRadius: 99, background: `${WORK_TYPE_COLORS[selectedCategory] || "#64748b"}25`, color: WORK_TYPE_COLORS[selectedCategory] || "#64748b", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+              {selectedCategory} âœ•
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Category legend (clickable) */}
+      {allCats.length > 0 && (
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+          {allCats.map(cat => (
+            <span key={cat} onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+              style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer", padding: "3px 10px", borderRadius: 99,
+                border: `1px solid ${selectedCategory === cat ? WORK_TYPE_COLORS[cat] || "#64748b" : "var(--tk-border)"}`,
+                background: selectedCategory === cat ? `${WORK_TYPE_COLORS[cat] || "#64748b"}20` : "transparent",
+                fontSize: 11, fontWeight: 600,
+                color: selectedCategory === cat ? WORK_TYPE_COLORS[cat] || "#64748b" : "var(--tk-text-secondary)",
+                transition: "all 0.15s",
+              }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: WORK_TYPE_COLORS[cat] || "#64748b", flexShrink: 0 }} />
+              {cat}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Stacked bars per member */}
+      {entries.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "32px 0", color: "var(--tk-text-muted)", fontSize: 13 }}>
+          {search ? "No members match your search" : "No active tasks yet"}
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {entries.map(m => {
+            const total      = Object.values(m.cats).reduce((s, v) => s + v, 0);
+            const isSelected = selectedMember === m.uid;
+            return (
+              <div key={m.uid} onClick={() => setSelectedMember(isSelected ? null : m.uid)}
+                style={{ cursor: "pointer", padding: "10px 14px", borderRadius: 10,
+                  border: `1px solid ${isSelected ? "var(--tk-accent)" : "var(--tk-border)"}`,
+                  background: isSelected ? "rgba(59,130,246,0.06)" : "var(--tk-surface)",
+                  transition: "all 0.15s",
+                }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff", background: isSelected ? "var(--tk-accent)" : "#475569" }}>
+                      {m.name.slice(0, 2).toUpperCase()}
+                    </div>
+                    <span style={{ fontWeight: 700, fontSize: 13, color: "var(--tk-text-primary)" }}>{m.name}</span>
+                  </div>
+                  <span style={{ fontSize: 12, color: "var(--tk-text-muted)" }}>{total} task{total !== 1 ? "s" : ""}</span>
+                </div>
+
+                {/* Stacked bar */}
+                <div style={{ display: "flex", height: 22, borderRadius: 6, overflow: "hidden", gap: 2 }}>
+                  {Object.entries(m.cats).map(([cat, count]) => {
+                    const catSelected = selectedCategory === cat;
+                    return (
+                      <div key={cat}
+                        onClick={e => { e.stopPropagation(); setSelectedCategory(catSelected ? null : cat); }}
+                        title={`${cat}: ${count} task${count !== 1 ? "s" : ""}`}
+                        style={{
+                          width: `${(count / total) * 100}%`, minWidth: count > 0 ? 6 : 0,
+                          background: WORK_TYPE_COLORS[cat] || "#64748b",
+                          opacity: selectedCategory && !catSelected ? 0.25 : 1,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          outline: catSelected ? "2px solid rgba(255,255,255,0.8)" : "none",
+                          outlineOffset: -2, transition: "opacity 0.2s",
+                          cursor: "pointer",
+                        }}>
+                        {count > 1 && (count / total) > 0.12 && (
+                          <span style={{ fontSize: 10, color: "#fff", fontWeight: 800 }}>{count}</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Per-cat mini labels */}
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 5 }}>
+                  {Object.entries(m.cats).map(([cat, count]) => (
+                    <span key={cat} style={{ fontSize: 10, color: WORK_TYPE_COLORS[cat] || "#64748b", fontWeight: 600 }}>
+                      {cat} {count}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Filtered task drill-down */}
+      {(selectedMember || selectedCategory) && filteredTasks.length > 0 && (
+        <div style={{ marginTop: 18, borderTop: "1px solid var(--tk-border)", paddingTop: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--tk-text-muted)", marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.5 }}>
+            Filtered Tasks â€” {filteredTasks.length}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {filteredTasks.slice(0, 15).map(t => (
+              <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 12px", borderRadius: 8, background: "var(--tk-surface)", border: "1px solid var(--tk-border)" }}>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 99, background: `${DRAWER_STATUS_COLOR[t.status] || "#64748b"}20`, color: DRAWER_STATUS_COLOR[t.status] || "#64748b", flexShrink: 0 }}>
+                  {DRAWER_STATUS_LABEL[t.status] || t.status}
+                </span>
+                <span style={{ flex: 1, fontSize: 13, color: "var(--tk-text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.title}</span>
+                <span style={{ fontSize: 11, color: "var(--tk-text-muted)", flexShrink: 0 }}>{t.assignee_name || "Unassigned"}</span>
+                {t.priority && (
+                  <span style={{ fontSize: 10, fontWeight: 700, flexShrink: 0, color: t.priority === "high" ? "#ef4444" : t.priority === "medium" ? "#f59e0b" : "#22c55e" }}>
+                    {t.priority}
+                  </span>
+                )}
+              </div>
+            ))}
+            {filteredTasks.length > 15 && (
+              <div style={{ textAlign: "center", fontSize: 12, color: "var(--tk-text-muted)", padding: "6px 0" }}>
+                +{filteredTasks.length - 15} more â€” refine your filters to narrow down
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function ManagerDashboard({ workspaceId, workspaceName, onNavigate, allTasks = [], onRefreshTasks }) {
   const { user } = useAuth();
-  const [team,        setTeam]        = useState([]);
-  const [predictions, setPredictions] = useState([]);
-  const [predLoading, setPredLoading] = useState(true);
-  const [predError,   setPredError]   = useState("");
-  const [loading,     setLoading]     = useState(true);
-  const [editMember,  setEditMember]  = useState(null);
-  const [activeTab,   setActiveTab]   = useState("team_intel");
-  const [teamTasks,   setTeamTasks]   = useState([]);
+  const [team,       setTeam]       = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [editMember, setEditMember] = useState(null);
+  const [activeTab,  setActiveTab]  = useState("team_intel");
+  const [teamTasks,  setTeamTasks]  = useState([]);
 
   const canManage = ["manager","super_boss","super_admin","admin"].includes(user?.role);
 
   const loadTeam = useCallback(async () => {
     if (!workspaceId || !canManage) return;
     setLoading(true);
-    const teamPromise = api.get(`/capacity/team/${workspaceId}`)
-      .then(r => setTeam(r.data))
-      .catch(err => console.error("team load:", err));
-
-    const predPromise = (async () => {
-      setPredLoading(true); setPredError("");
-      try {
-        const r = await api.get(`/capacity/predict/${workspaceId}?days=14`);
-        setPredictions(r.data);
-      } catch {
-        setPredictions([]);
-      } finally { setPredLoading(false); }
-    })();
-
-    await Promise.allSettled([teamPromise, predPromise]);
-    setLoading(false);
+    try {
+      const r = await api.get(`/capacity/team/${workspaceId}`);
+      setTeam(r.data);
+    } catch (err) {
+      console.error("team load:", err);
+    } finally {
+      setLoading(false);
+    }
   }, [workspaceId, canManage]);
 
   const loadTeamTasks = useCallback(async () => {
@@ -1915,16 +1971,14 @@ export default function ManagerDashboard({ workspaceId, workspaceName, onNavigat
     ? Math.round(team.filter(m => !m.on_leave).reduce((s, m) => s + (m.load_percent || 0), 0) / Math.max(1, team.filter(m => !m.on_leave).length))
     : 0;
 
-  const TABS = ["team_intel", "dashboard", "workload", "members", "predictions", "approvals", "collab", "channel"];
+  const TABS = ["team_intel", "workload", "members", "approvals", "collab", "channel"];
   const TAB_LABELS = {
-    team_intel:  "👁 Team Intel",
-    dashboard:   "🗂️ Overview",
-    workload:    "👥 Workload & Capacity",
-    members:     "👤 Members",
-    predictions: "🤖 AI Predictions",
-    approvals:   "✅ Approvals",
-    collab:      "🤝 Collaboration",
-    channel:     "💬 Channel",
+    team_intel: "👁 Team Intel",
+    workload:   "👥 Workload & Capacity",
+    members:    "👤 Members",
+    approvals:  "✅ Approvals",
+    collab:     "🤝 Collaboration",
+    channel:    "💬 Channel",
   };
 
   return (
@@ -1967,38 +2021,58 @@ export default function ManagerDashboard({ workspaceId, workspaceName, onNavigat
 
       {activeTab === "team_intel" && (
         <div className="mgr-panel">
-          <div className="mgr-panel-title" style={{ marginBottom: 16 }}>👁 Team Intelligence — Single Pane of Glass</div>
+          <div className="mgr-panel-title" style={{ marginBottom: 16 }}>👁 Team Intelligence — Single Pane of GlassTeam Intelligence â€” Single Pane of Glass</div>
           <TeamIntelPanel workspaceId={workspaceId} team={team} />
         </div>
       )}
 
-      {activeTab === "dashboard" && (
-        <ManagerOverview
-          workspaceId={workspaceId}
-          team={team}
-          tasks={teamTasks}
-          onNavigateToSimulate={() => { if (onNavigate) onNavigate("simulation"); }}
-        />
-      )}
-
-      {activeTab === "workload" && (
+        {activeTab === "workload" && (
         <div>
-          <WorkloadDashboard workspaceId={workspaceId} teamTasks={teamTasks} teamMembers={team} />
-          <div style={{ marginTop: 24 }}>
+          {/* Header with Rebalance Work button */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, padding: "0 2px" }}>
+            <div className="mgr-panel-title" style={{ margin: 0 }}>👥 Workload & Capacity</div>
+            <button
+              className="mgr-action-btn"
+              style={{ background: "var(--tk-accent)", color: "#fff", border: "none", borderRadius: 8, padding: "8px 18px", fontWeight: 600, cursor: "pointer", fontSize: 13 }}
+              onClick={() => onNavigate && onNavigate("simulation")}
+            >
+              ⚖️ Rebalance Work
+            </button>
+          </div>
+
+          {/* Task Distribution chart */}
+          <TaskDistributionChart tasks={teamTasks} team={team} />
+
+          {/* Workload per-member cards */}
+          <div style={{ marginTop: 28 }}>
+            <WorkloadDashboard workspaceId={workspaceId} teamTasks={teamTasks} teamMembers={team} />
+          </div>
+
+          {/* Active tasks grouped by member */}
+          <div style={{ marginTop: 28 }}>
+            <ActiveTasksByMember tasks={teamTasks} team={team} />
+          </div>
+
+          {/* Team Capacity edit cards */}
+          <div style={{ marginTop: 28 }}>
             <div className="mgr-panel-title" style={{ marginBottom: 12, paddingLeft: 4 }}>⚙️ Team Capacity</div>
             <div className="mgr-team-grid">
               {team.map(m => <MemberCard key={m.user_id} m={m} onEdit={setEditMember} />)}
               {team.length === 0 && <div className="mgr-empty-note">No team members found. Invite people to your workspace.</div>}
             </div>
           </div>
+
+          {/* Recent activity feed */}
+          <div style={{ marginTop: 28 }}>
+            <div className="mgr-panel" style={{ padding: 20 }}>
+              <div className="mgr-panel-title" style={{ marginBottom: 12 }}>📋 Recent Activity</div>
+              <WorkloadActivityFeed tasks={teamTasks} workspaceId={workspaceId} />
+            </div>
+          </div>
         </div>
       )}
 
       {activeTab === "members" && <MembersPanel workspaceId={workspaceId} />}
-
-      {activeTab === "predictions" && (
-        <PredictionPanel predictions={predictions} loading={predLoading} error={predError} team={team} tasks={teamTasks} />
-      )}
 
       {activeTab === "approvals" && (
         <div className="mgr-panel">

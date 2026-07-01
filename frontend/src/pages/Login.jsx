@@ -96,16 +96,8 @@ export default function Login() {
 
       <div style={styles.card}>
         {/* Logo */}
-        <div style={styles.logoRow}>
-          <div style={styles.logoMark}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <rect x="2" y="10" width="4" height="12" rx="1.5" fill="#fff"/>
-              <rect x="10" y="6" width="4" height="16" rx="1.5" fill="#fff"/>
-              <rect x="18" y="2" width="4" height="20" rx="1.5" fill="#fff"/>
-            </svg>
-          </div>
-          <span style={styles.logoText}>Taskora</span>
-          <span style={styles.logoBadge}>AI</span>
+        <div style={{ marginBottom: 28 }}>
+          <img src="/logo.svg" alt="Taskora" style={{ height: 48, width: "auto" }} />
         </div>
 
         <h1 style={styles.heading}>Welcome back</h1>

@@ -128,10 +128,8 @@ export default function WorkspaceSetup() {
 
       <div style={S.card}>
         {/* Logo */}
-        <div style={S.logoRow}>
-          <div style={S.logoMark}>T</div>
-          <span style={S.logoText}>Taskora</span>
-          <span style={S.badge}>Setup</span>
+        <div style={{ marginBottom: 16 }}>
+          <img src="/logo.svg" alt="Taskora" style={{ height: 48, width: "auto" }} />
         </div>
 
         {/* Progress bar */}

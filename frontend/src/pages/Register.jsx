@@ -107,15 +107,7 @@ export default function Register() {
       <div style={S.card}>
         {/* Logo */}
         <div style={S.logoRow}>
-          <div style={S.logoMark}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <rect x="2" y="10" width="4" height="12" rx="1.5" fill="#fff"/>
-              <rect x="10" y="6" width="4" height="16" rx="1.5" fill="#fff"/>
-              <rect x="18" y="2" width="4" height="20" rx="1.5" fill="#fff"/>
-            </svg>
-          </div>
-          <span style={S.logoText}>Taskora</span>
-          <span style={{fontSize:10,fontWeight:700,color:"var(--tk-accent, #3B82F6)",background:"rgba(59,130,246,0.1)",borderRadius:4,padding:"2px 5px"}}>AI</span>
+          <img src="/logo.svg" alt="Taskora" style={{ height: 40, width: "auto" }} />
           <div style={{flex:1}} />
           {/* Step indicator */}
           <div style={S.stepIndicator}>

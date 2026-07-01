@@ -10,9 +10,18 @@ export default function Terms() {
       <nav style={S.nav}>
         <div style={S.navInner}>
           <div style={S.logoRow} onClick={() => navigate("/")}>
-            <div style={S.logoMark}>T</div>
-            <span style={S.logoText}>Taskora</span>
-            <span style={S.logoBadge}>AI</span>
+            <svg width="20" height="20" viewBox="0 0 100 100" fill="none">
+              <defs>
+                <linearGradient id="tkMark" x1="8" y1="20" x2="94" y2="90" gradientUnits="userSpaceOnUse">
+                  <stop offset="0" stopColor="#3B82F6"/>
+                  <stop offset="1" stopColor="#06B6D4"/>
+                </linearGradient>
+              </defs>
+              <path d="M8 20 L62 20 L94 28 L62 36 L43 36 L43 90 L27 90 L27 36 L8 36 Z" fill="url(#tkMark)"/>
+            </svg>
+            <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 18, letterSpacing: "-0.2px" }}>
+              <span style={{ color: "#E2E8F0" }}>Task</span><span style={{ background: "linear-gradient(90deg,#3B82F6,#06B6D4)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>ora</span>
+            </span>
           </div>
           <div style={S.navActions}>
             <button style={S.ghostBtn} onClick={() => navigate("/login")}>Sign in</button>

@@ -107,7 +107,18 @@ export default function Register() {
       <div style={S.card}>
         {/* Logo */}
         <div style={S.logoRow}>
-          <img src="/logo.svg" alt="Taskora" style={{ height: 40, width: "auto" }} />
+          <svg width="30" height="30" viewBox="0 0 100 100" fill="none">
+            <defs>
+              <linearGradient id="tkMark" x1="8" y1="20" x2="94" y2="90" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stopColor="#3B82F6"/>
+                <stop offset="1" stopColor="#06B6D4"/>
+              </linearGradient>
+            </defs>
+            <path d="M8 20 L62 20 L94 28 L62 36 L43 36 L43 90 L27 90 L27 36 L8 36 Z" fill="url(#tkMark)"/>
+          </svg>
+          <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 20, color: "#0f172a", letterSpacing: "-0.3px" }}>
+            Task<span style={{ background: "linear-gradient(90deg,#3B82F6,#06B6D4)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>ora</span>
+          </span>
           <div style={{flex:1}} />
           {/* Step indicator */}
           <div style={S.stepIndicator}>

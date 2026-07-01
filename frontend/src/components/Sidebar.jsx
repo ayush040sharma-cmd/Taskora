@@ -90,15 +90,18 @@ export default function Sidebar({
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
         </button>
-        <div className="sidebar-logo-mark">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <rect x="2" y="10" width="4" height="12" rx="1.5" fill="#fff"/>
-            <rect x="10" y="6" width="4" height="16" rx="1.5" fill="#fff"/>
-            <rect x="18" y="2" width="4" height="20" rx="1.5" fill="#fff"/>
-          </svg>
-        </div>
-        <span className="sidebar-logo-text" style={{ color: '#E2E8F0', fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 15 }}>Taskora</span>
-        <span className="sidebar-ai-badge">AI</span>
+        <svg width="20" height="20" viewBox="0 0 100 100" fill="none" style={{ flexShrink: 0 }}>
+          <defs>
+            <linearGradient id="tkMark_sb" x1="8" y1="20" x2="94" y2="90" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stopColor="#3B82F6"/>
+              <stop offset="1" stopColor="#06B6D4"/>
+            </linearGradient>
+          </defs>
+          <path d="M8 20 L62 20 L94 28 L62 36 L43 36 L43 90 L27 90 L27 36 L8 36 Z" fill="url(#tkMark_sb)"/>
+        </svg>
+        <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 15, letterSpacing: "-0.2px" }}>
+          <span style={{ color: "#E2E8F0" }}>Task</span><span style={{ background: "linear-gradient(90deg,#3B82F6,#06B6D4)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>ora</span>
+        </span>
       </div>
 
       {/* ⌘K search launcher */}

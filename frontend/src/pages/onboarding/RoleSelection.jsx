@@ -86,24 +86,19 @@ export default function RoleSelection() {
       <div style={{ width: "100%", maxWidth: 680 }}>
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <div style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 10,
-            marginBottom: 8,
-          }}>
-            <div style={{
-              width: 36, height: 36, borderRadius: 10,
-              background: "var(--tk-accent, #3B82F6)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <rect x="2" y="10" width="4" height="12" rx="1.5" fill="#fff"/>
-                <rect x="10" y="6" width="4" height="16" rx="1.5" fill="#fff"/>
-                <rect x="18" y="2" width="4" height="20" rx="1.5" fill="#fff"/>
-              </svg>
-            </div>
-            <span style={{ fontSize: 22, fontWeight: 700, color: "#fff" }}>Taskora</span>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+            <svg width="32" height="32" viewBox="0 0 100 100" fill="none">
+              <defs>
+                <linearGradient id="tkMark" x1="8" y1="20" x2="94" y2="90" gradientUnits="userSpaceOnUse">
+                  <stop offset="0" stopColor="#3B82F6"/>
+                  <stop offset="1" stopColor="#06B6D4"/>
+                </linearGradient>
+              </defs>
+              <path d="M8 20 L62 20 L94 28 L62 36 L43 36 L43 90 L27 90 L27 36 L8 36 Z" fill="url(#tkMark)"/>
+            </svg>
+            <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 22, letterSpacing: "-0.3px" }}>
+              <span style={{ color: "#E2E8F0" }}>Task</span><span style={{ background: "linear-gradient(90deg,#3B82F6,#06B6D4)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>ora</span>
+            </span>
           </div>
           <div style={{ color: "#94a3b8", fontSize: 14 }}>
             Step {step} of 2 — Let's personalise your experience

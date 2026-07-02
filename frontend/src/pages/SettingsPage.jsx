@@ -548,7 +548,7 @@ function SettingsNav({ sections, active, onSelect }) {
       width: 220, flexShrink: 0, borderRight: "1px solid var(--border)",
       background: "var(--column-bg)", overflowY: "auto", paddingBottom: 16,
     }}>
-      <div style={{ padding: "20px 16px 12px", fontWeight: 700, fontSize: 15, color: "var(--text-primary)" }}>
+      <div style={{ padding: "20px 16px 12px", fontWeight: 700, fontSize: 14, color: "var(--text-primary)" }}>
         Settings
       </div>
       {groups.map(group => {

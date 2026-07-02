@@ -12,12 +12,12 @@ const S = {
     ghost:   { background: "var(--card-bg)", color: "var(--text-primary)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 16px", fontSize: 13, cursor: "pointer" },
     link:    { background: "none", border: "none", color: "var(--tk-accent, #3B82F6)", fontSize: 12, cursor: "pointer", textDecoration: "underline", padding: 0 },
     linkGray:{ background: "none", border: "none", color: "#6b7280", fontSize: 12, cursor: "pointer", textDecoration: "underline", padding: 0 },
-    linkRed: { background: "none", border: "none", color: "#ef4444", fontSize: 12, cursor: "pointer", textDecoration: "underline", padding: 0 },
+    linkRed: { background: "none", border: "none", color: "var(--tk-status-danger, #EF4444)", fontSize: 12, cursor: "pointer", textDecoration: "underline", padding: 0 },
   },
   input: { width: "100%", boxSizing: "border-box", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 12px", fontSize: 13, outline: "none" },
   badge: {
-    green:  { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "rgba(34,197,94,0.15)", color: "#22c55e" },
-    red:    { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "rgba(239,68,68,0.15)", color: "#ef4444" },
+    green:  { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "var(--tk-status-ok-bg, rgba(34,197,94,0.15))", color: "var(--tk-status-ok, #22C55E)" },
+    red:    { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "var(--tk-status-danger-bg, rgba(239,68,68,0.15))", color: "var(--tk-status-danger, #EF4444)" },
     blue:   { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "rgba(59,130,246,0.15)", color: "#60a5fa" },
     purple: { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "rgba(139,92,246,0.15)", color: "#a78bfa" },
     orange: { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "rgba(249,115,22,0.15)", color: "#fb923c" },
@@ -26,7 +26,7 @@ const S = {
     teal:   { fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: "rgba(20,184,166,0.15)", color: "#2dd4bf" },
   },
   overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 },
-  modal:   { background: "var(--card-bg)", borderRadius: 14, padding: 24, boxShadow: "0 20px 60px rgba(0,0,0,0.5)" },
+  modal:   { background: "var(--card-bg)", borderRadius: 16, padding: 24, boxShadow: "0 20px 60px rgba(0,0,0,0.5)" },
   card:    { border: "1px solid var(--border)", borderRadius: 12, padding: 16 },
   section: { fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 },
   divider: { borderBottom: "1px solid var(--border)" },
@@ -135,7 +135,7 @@ function UsersTab({ roles }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {actionError && (
-        <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", borderRadius: 8, padding: "8px 12px", fontSize: 13 }}>
+        <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "var(--tk-status-danger, #EF4444)", borderRadius: 8, padding: "8px 12px", fontSize: 13 }}>
           {actionError}
         </div>
       )}
@@ -154,7 +154,7 @@ function UsersTab({ roles }) {
       {/* Create user modal */}
       {showCreate && (
         <Modal onClose={() => setShowCreate(false)}>
-          <h3 style={{ fontWeight: 700, fontSize: 17, margin: "0 0 16px" }}>Create User</h3>
+          <h3 style={{ fontWeight: 700, fontSize: 20, margin: "0 0 16px" }}>Create User</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {["name","email","password"].map(f => (
               <input
@@ -177,7 +177,7 @@ function UsersTab({ roles }) {
       {/* Assign role modal */}
       {assigning && (
         <Modal onClose={() => setAssigning(null)} width={340}>
-          <h3 style={{ fontWeight: 700, fontSize: 17, margin: "0 0 16px" }}>Assign Role</h3>
+          <h3 style={{ fontWeight: 700, fontSize: 20, margin: "0 0 16px" }}>Assign Role</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <select
               value={assignRole}
@@ -355,7 +355,7 @@ function RolesTab({ roles, catalog, reload }) {
       {/* Create modal */}
       {showCreate && (
         <Modal onClose={() => setShowCreate(false)}>
-          <h3 style={{ fontWeight: 700, fontSize: 17, margin: "0 0 16px" }}>Create Custom Role</h3>
+          <h3 style={{ fontWeight: 700, fontSize: 20, margin: "0 0 16px" }}>Create Custom Role</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <input
               placeholder="Display name"
@@ -390,7 +390,7 @@ function RolesTab({ roles, catalog, reload }) {
       {/* Clone modal */}
       {cloneSource && (
         <Modal onClose={() => setCloneSource(null)} width={340}>
-          <h3 style={{ fontWeight: 700, fontSize: 17, margin: "0 0 16px" }}>Clone "{cloneSource.display_name}"</h3>
+          <h3 style={{ fontWeight: 700, fontSize: 20, margin: "0 0 16px" }}>Clone "{cloneSource.display_name}"</h3>
           <input
             placeholder="New role name"
             value={cloneName}
@@ -408,11 +408,11 @@ function RolesTab({ roles, catalog, reload }) {
       {editingRole && (
         <div style={S.overlay}>
           <div style={{
-            background: "var(--card-bg)", borderRadius: 14, boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+            background: "var(--card-bg)", borderRadius: 16, boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
             width: "min(860px, 94vw)", maxHeight: "88vh", display: "flex", flexDirection: "column",
           }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 24px", borderBottom: "1px solid var(--border)" }}>
-              <h3 style={{ fontWeight: 700, fontSize: 17, margin: 0 }}>
+              <h3 style={{ fontWeight: 700, fontSize: 20, margin: 0 }}>
                 Permissions for{" "}
                 <span style={{ color: editingRole.color }}>{editingRole.display_name}</span>
               </h3>

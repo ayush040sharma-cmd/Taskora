@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/api";
+import Logo from "../components/Logo";
 
 const BACKEND_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
@@ -107,18 +108,7 @@ export default function Register() {
       <div style={S.card}>
         {/* Logo */}
         <div style={S.logoRow}>
-          <svg width="30" height="30" viewBox="0 0 100 100" fill="none">
-            <defs>
-              <linearGradient id="tkMark" x1="8" y1="20" x2="94" y2="90" gradientUnits="userSpaceOnUse">
-                <stop offset="0" stopColor="#3B82F6"/>
-                <stop offset="1" stopColor="#06B6D4"/>
-              </linearGradient>
-            </defs>
-            <path d="M8 20 L62 20 L94 28 L62 36 L43 36 L43 90 L27 90 L27 36 L8 36 Z" fill="url(#tkMark)"/>
-          </svg>
-          <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 20, color: "#0f172a", letterSpacing: "-0.3px" }}>
-            Task<span style={{ background: "linear-gradient(90deg,#3B82F6,#06B6D4)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>ora</span>
-          </span>
+          <Logo iconSize={30} wordmarkSize={20} wordmarkColor="#0f172a" />
           <div style={{flex:1}} />
           {/* Step indicator */}
           <div style={S.stepIndicator}>
@@ -300,7 +290,7 @@ export default function Register() {
 const S = {
   root: {
     minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center",
-    background:"linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)",
+    background:"linear-gradient(135deg, #020617 0%, #0F172A 50%, #020617 100%)",
     padding:"24px", position:"relative", overflow:"hidden",
     flexDirection:"column", gap:"24px",
   },
@@ -308,7 +298,7 @@ const S = {
     background:"radial-gradient(circle, rgba(59,130,246,0.3) 0%, transparent 70%)",
     top:"-100px", left:"-100px", pointerEvents:"none" },
   blob2: { position:"absolute", width:400, height:400, borderRadius:"50%",
-    background:"radial-gradient(circle, rgba(168,85,247,0.2) 0%, transparent 70%)",
+    background:"radial-gradient(circle, rgba(6,182,212,0.18) 0%, transparent 70%)",
     bottom:"-80px", right:"-80px", pointerEvents:"none" },
   card: {
     background:"#ffffff", borderRadius:20, padding:"40px 44px",
@@ -323,7 +313,7 @@ const S = {
   logoText: { fontSize:20, fontWeight:800, color:"#0f172a", letterSpacing:"-0.5px", flex:1 },
   stepIndicator: { display:"flex", gap:6, alignItems:"center" },
   stepDot: { width:8, height:8, borderRadius:"50%", transition:"background 0.3s" },
-  heading: { fontSize:26, fontWeight:800, color:"#0f172a", margin:"0 0 6px", letterSpacing:"-0.5px" },
+  heading: { fontFamily:"var(--tk-font-display, 'Syne')", fontSize:26, fontWeight:700, color:"#0f172a", margin:"0 0 6px", letterSpacing:"-0.5px" },
   subtext: { fontSize:14, color:"#64748b", margin:"0 0 24px" },
   errorBox: { display:"flex", alignItems:"center", gap:8, background:"#fef2f2",
     border:"1px solid #fecaca", color:"#dc2626", borderRadius:10,
@@ -342,7 +332,7 @@ const S = {
   strengthBar: { flex:1, height:3, borderRadius:99, transition:"background 0.3s" },
   submitBtn: { width:"100%", padding:"13px",
     background:"var(--tk-accent, #3B82F6)",
-    color:"#fff", border:"none", borderRadius:10, fontSize:15,
+    color:"#fff", border:"none", borderRadius:10, fontSize:14,
     fontWeight:700, cursor:"pointer", marginTop:4, letterSpacing:"0.2px",
     transition:"opacity 0.15s" },
   backBtn: { display:"block", width:"100%", marginTop:10, padding:"10px",
@@ -364,7 +354,7 @@ const S = {
     border:"2px solid var(--tk-accent, #3B82F6)", background:"rgba(59,130,246,0.07)",
   },
   roleIcon: { fontSize:24, marginBottom:4 },
-  roleTitle: { fontSize:15, fontWeight:700, color:"#0f172a" },
+  roleTitle: { fontSize:14, fontWeight:700, color:"#0f172a" },
   roleDesc:  { fontSize:13, color:"#64748b", lineHeight:1.4 },
   roleCheck: {
     position:"absolute", top:12, right:14,

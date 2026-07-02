@@ -122,7 +122,7 @@ export default function BlockedDashboard({ workspaceId, onTaskClick }) {
                   {(data.most_blocking_user.name || "?")[0].toUpperCase()}
                 </div>
                 <div>
-                  <div style={{ color: "var(--text-primary)", fontWeight: 600, fontSize: 15 }}>
+                  <div style={{ color: "var(--text-primary)", fontWeight: 600, fontSize: 14 }}>
                     {data.most_blocking_user.name}
                   </div>
                   <div style={{ color: "var(--text-secondary)", fontSize: 12 }}>
@@ -141,7 +141,7 @@ export default function BlockedDashboard({ workspaceId, onTaskClick }) {
               <div style={{ color: "var(--text-secondary)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>
                 Most Common Block Reason
               </div>
-              <div style={{ color: "var(--text-primary)", fontSize: 15, fontWeight: 600 }}>
+              <div style={{ color: "var(--text-primary)", fontSize: 14, fontWeight: 600 }}>
                 "{data.most_common_reason}"
               </div>
             </div>
@@ -193,7 +193,7 @@ export default function BlockedDashboard({ workspaceId, onTaskClick }) {
               onClick={() => setFilter(f)}
               style={{
                 background: filter === f ? "var(--tk-accent, #3B82F6)" : "var(--border)",
-                border: "none", borderRadius: 6, padding: "4px 12px",
+                border: "none", borderRadius: 8, padding: "4px 12px",
                 color: filter === f ? "#fff" : "var(--text-secondary)",
                 fontSize: 12, fontWeight: 600, cursor: "pointer",
                 textTransform: "capitalize",

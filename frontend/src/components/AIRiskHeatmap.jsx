@@ -13,7 +13,10 @@ const RISK_META = {
 // Actual hex for SVG strokes (error icon)
 const HC_DANGER = "#EF4444";
 
-const PRIORITY_DOT = { critical: "🔴", high: "🟠", medium: "🟡", low: "🟢" };
+const PRIORITY_COLOR_DOT = { critical: "#EF4444", high: "#F97316", medium: "#F59E0B", low: "#22C55E" };
+const PriorityDot = ({ priority }) => (
+  <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: PRIORITY_COLOR_DOT[priority] || "#94A3B8", flexShrink: 0 }} />
+);
 
 function RiskScoreBar({ score }) {
   const color =
@@ -74,7 +77,7 @@ function AITaskCard({ task, onAnalyze }) {
       {/* Header */}
       <div className="ai-tc-header">
         <div className="ai-tc-title-row">
-          <span className="ai-tc-priority">{PRIORITY_DOT[task.priority] || "⚪"}</span>
+          <span className="ai-tc-priority"><PriorityDot priority={task.priority} /></span>
           <span className="ai-tc-title">{task.title}</span>
           <span className="ai-tc-badge" style={{ background: meta.color }}>{meta.label}</span>
         </div>
@@ -178,7 +181,7 @@ function RiskHeatmap({ tasks }) {
         {priorities.map(p => (
           <div key={p} style={{ display: "contents" }}>
             <div className="risk-hm-row-header">
-              {PRIORITY_DOT[p]} {p}
+              <PriorityDot priority={p} /> {p}
             </div>
             {levels.map(l => {
               const items = cell(p, l);

@@ -1,25 +1,26 @@
 import { useState, useRef, useEffect } from "react";
 import { Draggable } from "@hello-pangea/dnd";
+import { LuTrash2, LuSquarePen, LuCalendar, LuMessageSquare, LuLink, LuBrain, LuClock, LuCircleAlert, LuClipboardList, LuBug, LuBookOpen, LuFileStack, LuFilePenLine, LuPresentation, LuArrowUp, LuFlaskConical } from "react-icons/lu";
 import api from "../api/api";
 
-const IconTrash  = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>;
-const IconEdit   = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
-const IconCal    = () => <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
-const IconMsg    = () => <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>;
-const IconLink   = () => <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>;
-const IconBrain  = () => <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-5 0V7a2.5 2.5 0 0 1 2.5-2.5Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5"/><path d="M20 7a2 2 0 0 0-2-2h-2"/><path d="M4 7a2 2 0 0 1 2-2h2"/><path d="M20 14a2 2 0 0 1-2 2h-2"/><path d="M4 14a2 2 0 0 0 2 2h2"/></svg>;
-const IconClock  = () => <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
-const IconStuck  = () => <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>;
+const IconTrash  = () => <LuTrash2 size={13} />;
+const IconEdit   = () => <LuSquarePen size={13} />;
+const IconCal    = () => <LuCalendar size={11} />;
+const IconMsg    = () => <LuMessageSquare size={11} />;
+const IconLink   = () => <LuLink size={11} />;
+const IconBrain  = () => <LuBrain size={11} />;
+const IconClock  = () => <LuClock size={11} />;
+const IconStuck  = () => <LuCircleAlert size={11} />;
 
 const TYPE_META = {
-  task:         { label: "Task",         icon: "📋" },
-  bug:          { label: "Bug",          icon: "🐛" },
-  story:        { label: "Story",        icon: "📖" },
-  rfp:          { label: "RFP",          icon: "📑" },
-  proposal:     { label: "Proposal",     icon: "📝" },
-  presentation: { label: "Presentation", icon: "🎤" },
-  upgrade:      { label: "Upgrade",      icon: "⬆️"  },
-  poc:          { label: "POC",          icon: "🔬" },
+  task:         { label: "Task",         icon: LuClipboardList },
+  bug:          { label: "Bug",          icon: LuBug },
+  story:        { label: "Story",        icon: LuBookOpen },
+  rfp:          { label: "RFP",          icon: LuFileStack },
+  proposal:     { label: "Proposal",     icon: LuFilePenLine },
+  presentation: { label: "Presentation", icon: LuPresentation },
+  upgrade:      { label: "Upgrade",      icon: LuArrowUp },
+  poc:          { label: "POC",          icon: LuFlaskConical },
 };
 
 const RISK_LEVELS = {
@@ -191,7 +192,7 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
     }
   };
 
-  const typeMeta  = TYPE_META[task.type] || { label: task.type, icon: "📋" };
+  const typeMeta  = TYPE_META[task.type] || { label: task.type, icon: LuClipboardList };
   const riskLevel = getRiskLevel(task.risk_score);
   const riskMeta  = riskLevel ? RISK_LEVELS[riskLevel] : null;
   const isBlocked = (task.blocking_dep_count || 0) > 0;
@@ -323,8 +324,8 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
           {/* Type + Priority + Risk + Due date */}
           <div className="tk-task-meta">
             {task.type && (
-              <span className="tk-task-type">
-                {typeMeta.icon} {typeMeta.label}
+              <span className="tk-task-type" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <typeMeta.icon size={11} /> {typeMeta.label}
               </span>
             )}
             {task.priority && (

@@ -5,6 +5,7 @@
    / index.css) before any component styles.
    ========================================================================== */
 
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700;800&display=swap');
 
 :root {
   /* ---- Surfaces (darkest to lightest) ---- */
@@ -37,8 +38,8 @@
   --tk-status-danger-bg: rgba(239, 68, 68, 0.15);
 
   /* ---- Typography ---- */
-  --tk-font-display: 'Syne', -apple-system, BlinkMacSystemFont, sans-serif;
-  --tk-font-body:    'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --tk-font-display: 'Syne', sans-serif;   /* headings, KPI numbers, brand wordmark */
+  --tk-font-body:    'DM Sans', sans-serif; /* everything else */
 
   --tk-text-h1: 36px;
   --tk-text-h2: 24px;
@@ -94,28 +95,6 @@ body.tk-theme {
   padding: var(--tk-space-4);
 }
 
-/* --- DS-005: Shared card surface for all app card variants ─────────────────
-   Ensures every card has consistent background / border / radius regardless
-   of which screen-specific class it uses. Layout (flex, grid, padding) stays
-   per-variant. Add new card classes here rather than copying these 4 rules.
-   ─────────────────────────────────────────────────────────────────────────── */
-.analytics-card,
-.cap-card,
-.ai-metric-card,
-.integration-card,
-.collab-card,
-.mgr-member-card,
-.mgr-approval-card,
-.wl-card,
-.sum-stat-card,
-.sum-card,
-.sim-metric-card,
-.sim-user-card {
-  background: var(--tk-card);
-  border: 1px solid var(--tk-border);
-  border-radius: var(--tk-radius-card);
-}
-
 /* --- Card: AI / insight variant. This is THE signature motif —
    use it any time the system is surfacing an AI-generated suggestion,
    prediction, or risk read. Do not use the plain glow border elsewhere,
@@ -161,7 +140,7 @@ body.tk-theme {
 
 .tk-btn-secondary {
   background: transparent;
-  border: 1px solid var(--tk-border);
+  border: 1px solid #334155;
   color: var(--tk-text-secondary);
   padding: 9px 20px;
   border-radius: var(--tk-radius-btn);
@@ -210,13 +189,6 @@ body.tk-theme {
   font-family: var(--tk-font-display);
   font-weight: 700;
   color: var(--tk-text-primary);
-  line-height: 1.2;
-}
-
-/* --- Default heading typography (brand guideline: Syne 700, sentence case) --- */
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--tk-font-display);
-  font-weight: 700;
   line-height: 1.2;
 }
 .tk-gradient-text {
@@ -283,34 +255,3 @@ h1, h2, h3, h4, h5, h6 {
    number itself is fine — see spec doc "Workload bar overflow rule." */
 .tk-progress-fill--danger { background: var(--tk-status-danger); }
 .tk-progress-fill--warn   { background: var(--tk-status-warn); }
-
-/* ==========================================================================
-   LIGHT MODE TOKEN OVERRIDES
-   Only surfaces, text, and status backgrounds change — brand accent and
-   gradients remain constant across themes.
-   ========================================================================== */
-
-[data-theme="light"] {
-  /* Surfaces — matched to existing index.css light-mode palette */
-  --tk-bg:            #F4F5F7;
-  --tk-bg-elevated:   #FFFFFF;
-  --tk-card:          #FFFFFF;
-  --tk-card-2:        #F0F1F4;
-  --tk-border:        #DFE1E6;
-  --tk-border-soft:   rgba(59, 130, 246, 0.20);
-  --tk-accent-glow:   rgba(59, 130, 246, 0.08);
-
-  /* Text — legible on white surfaces */
-  --tk-text-primary:   #172B4D;
-  --tk-text-secondary: #5E6C84;
-  --tk-text-muted:     #97A0AF;
-  --tk-text-faint:     #C1C7D0;
-
-  /* Status — matched to existing --low/medium/high-bg palette in index.css */
-  --tk-status-ok:       #00875A;
-  --tk-status-ok-bg:    #E3FCEF;
-  --tk-status-warn:     #FF8B00;
-  --tk-status-warn-bg:  #FFFAE6;
-  --tk-status-danger:   #DE350B;
-  --tk-status-danger-bg: #FFEBE6;
-}

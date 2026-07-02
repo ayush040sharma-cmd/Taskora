@@ -661,7 +661,7 @@ function TeamIntelPanel({ workspaceId, team }) {
                       if (bulkAction==="reassign") { const first=tasks.find(t=>t.id===ids[0]); setReassignTask(first); }
                       else { for (const id of ids) await updateTask(id, bulkAction==="high"?{priority:"high"}:bulkAction==="done"?{status:"done",progress:100}:{status:"blocked"}); }
                       setSelectedTasks(new Set()); setBulkAction("");
-                    }} style={{ padding:"3px 12px", borderRadius:7, border:"1px solid var(--tk-accent)", background:"var(--tk-accent)", color:"#fff", fontSize:12, cursor:"pointer", fontWeight:600 }}>Apply</button>
+                    }} style={{ padding:"3px 12px", borderRadius:8, border:"1px solid var(--tk-accent)", background:"var(--tk-accent)", color:"#fff", fontSize:12, cursor:"pointer", fontWeight:600 }}>Apply</button>
                     <button onClick={() => { setSelectedTasks(new Set()); setBulkAction(""); }} style={{ marginLeft:"auto", fontSize:11, color:"var(--tk-text-muted)", background:"none", border:"none", cursor:"pointer" }}>Clear</button>
                   </div>
                 )}
@@ -757,7 +757,7 @@ function TeamIntelPanel({ workspaceId, team }) {
                 <span style={{ padding:"2px 7px", borderRadius:99, background:`${STATUS_COLOR[t.status]||"#64748b"}20`, color:STATUS_COLOR[t.status]||"#64748b", fontSize:10, fontWeight:700 }}>{STATUS_LABEL[t.status]||t.status}</span>
                 <div style={{ fontSize:13 }}>{PRIORITY_ICON[t.priority]||""}</div>
                 <button onClick={() => { setReassignTask(t); setReassignTo(""); }}
-                  style={{ padding:"4px 12px", borderRadius:7, border:"1px solid var(--tk-accent)", background:"rgba(59,130,246,0.1)", color:"var(--tk-accent)", fontSize:11, cursor:"pointer", fontWeight:600 }}>
+                  style={{ padding:"4px 12px", borderRadius:8, border:"1px solid var(--tk-accent)", background:"rgba(59,130,246,0.1)", color:"var(--tk-accent)", fontSize:11, cursor:"pointer", fontWeight:600 }}>
                   Assign →
                 </button>
               </div>
@@ -881,7 +881,7 @@ function TeamIntelPanel({ workspaceId, team }) {
                     Assign to <strong>{suggestedOwner.name}</strong> (currently {suggestedOwner.load_percent||0}% load — lowest available capacity).
                   </span>
                   <button onClick={() => { allUnassigned.forEach(t => updateTask(t.id, { assigned_user_id: suggestedOwner.user_id })); setDrawerType(null); showToast(`All unassigned tasks assigned to ${suggestedOwner.name}`); }}
-                    style={{ marginLeft:8, padding:"2px 10px", borderRadius:6, border:"1px solid var(--tk-accent)", background:"rgba(59,130,246,0.15)", color:"var(--tk-accent)", fontSize:11, cursor:"pointer", fontWeight:700 }}>Auto-Assign All</button>
+                    style={{ marginLeft:8, padding:"2px 10px", borderRadius:8, border:"1px solid var(--tk-accent)", background:"rgba(59,130,246,0.15)", color:"var(--tk-accent)", fontSize:11, cursor:"pointer", fontWeight:700 }}>Auto-Assign All</button>
                 </div>
               )}
               {drawerType==="risk" && allAtRisk.length>0 && (
@@ -962,7 +962,7 @@ function TeamIntelPanel({ workspaceId, team }) {
                         { label:"Blocked", value:m.blocked.length,           color:m.blocked.length>0?"#ef4444":"#22c55e" },
                         { label:"Stale",   value:m.stale.length,             color:m.stale.length>0?"#f59e0b":"#22c55e" },
                       ].map(s=>(
-                        <div key={s.label} style={{ textAlign:"center", background:"var(--tk-bg)", borderRadius:7, padding:"8px 4px" }}>
+                        <div key={s.label} style={{ textAlign:"center", background:"var(--tk-bg)", borderRadius:8, padding:"8px 4px" }}>
                           <div style={{ fontSize:18, fontWeight:800, color:s.color }}>{s.value}</div>
                           <div style={{ fontSize:9, color:"var(--tk-text-muted)", fontWeight:600 }}>{s.label}</div>
                         </div>
@@ -1090,7 +1090,7 @@ function Chip({ color, bg, border, bold, children }) {
 // Style helpers
 const sel = { padding:"6px 10px", borderRadius:8, border:"1px solid var(--tk-border)", background:"var(--tk-surface)", color:"var(--tk-text-primary)", fontSize:13, cursor:"pointer" };
 const actionBtn = (color, bg) => ({
-  padding:"3px 8px", borderRadius:6, border:`1px solid ${color}40`, background:bg||`${color}10`, color, fontSize:10, cursor:"pointer", fontWeight:600, whiteSpace:"nowrap"
+  padding:"3px 8px", borderRadius:8, border:`1px solid ${color}40`, background:bg||`${color}10`, color, fontSize:10, cursor:"pointer", fontWeight:600, whiteSpace:"nowrap"
 });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -1299,7 +1299,7 @@ function TaskIntelDrawer({ task, team = [], workspaceId, onClose, onUpdated }) {
                 {dueDateEdit ? (
                   <div style={{ display:"flex", gap:8, alignItems:"center" }}>
                     <input type="date" value={newDue} onChange={e=>setNewDue(e.target.value)}
-                      style={{ padding:"5px 8px", borderRadius:7, border:"1px solid var(--tk-border)", background:"var(--tk-surface)", color:"var(--tk-text-primary)", fontSize:13 }} />
+                      style={{ padding:"5px 8px", borderRadius:8, border:"1px solid var(--tk-border)", background:"var(--tk-surface)", color:"var(--tk-text-primary)", fontSize:13 }} />
                     <button onClick={saveDueDate} style={actionBtn("#3b82f6","rgba(59,130,246,0.12)")}>Save</button>
                     <button onClick={()=>setDueDateEdit(false)} style={actionBtn("#64748b")}>Cancel</button>
                   </div>
@@ -1351,15 +1351,15 @@ function TaskIntelDrawer({ task, team = [], workspaceId, onClose, onUpdated }) {
                 <input value={newSub} onChange={e=>setNewSub(e.target.value)}
                   placeholder="Subtask title…"
                   onKeyDown={e => e.key==="Enter" && addSubtask()}
-                  style={{ width:"100%", padding:"7px 10px", borderRadius:7, border:"1px solid var(--tk-border)", background:"var(--tk-surface)", color:"var(--tk-text-primary)", fontSize:13, marginBottom:8, boxSizing:"border-box" }} />
+                  style={{ width:"100%", padding:"7px 10px", borderRadius:8, border:"1px solid var(--tk-border)", background:"var(--tk-surface)", color:"var(--tk-text-primary)", fontSize:13, marginBottom:8, boxSizing:"border-box" }} />
                 <div style={{ display:"flex", gap:8, marginBottom:8 }}>
                   <select value={subAssignTo} onChange={e=>setSubAssignTo(e.target.value)}
-                    style={{ flex:1, padding:"6px 8px", borderRadius:7, border:"1px solid var(--tk-border)", background:"var(--tk-surface)", color:"var(--tk-text-primary)", fontSize:12 }}>
+                    style={{ flex:1, padding:"6px 8px", borderRadius:8, border:"1px solid var(--tk-border)", background:"var(--tk-surface)", color:"var(--tk-text-primary)", fontSize:12 }}>
                     <option value="">Assign to (default: task owner)</option>
                     {team.map(m=><option key={m.user_id} value={m.user_id}>{m.name}</option>)}
                   </select>
                   <input type="date" value={subDue} onChange={e=>setSubDue(e.target.value)}
-                    style={{ padding:"6px 8px", borderRadius:7, border:"1px solid var(--tk-border)", background:"var(--tk-surface)", color:"var(--tk-text-primary)", fontSize:12 }} />
+                    style={{ padding:"6px 8px", borderRadius:8, border:"1px solid var(--tk-border)", background:"var(--tk-surface)", color:"var(--tk-text-primary)", fontSize:12 }} />
                 </div>
                 <button onClick={addSubtask} disabled={saving||!newSub.trim()}
                   style={{ ...actionBtn("#8b5cf6","rgba(139,92,246,0.15)"), opacity:saving||!newSub.trim()?0.5:1 }}>
@@ -1613,7 +1613,7 @@ function TaskDistributionChart({ tasks, team, onOpenDrawer }) {
       {/* ── Header ── */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}>
         <div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--tk-text-primary)" }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--tk-text-primary)" }}>
             Task Distribution by Work Type
           </div>
           <div style={{ fontSize: 12, color: "var(--tk-text-muted)", marginTop: 2 }}>

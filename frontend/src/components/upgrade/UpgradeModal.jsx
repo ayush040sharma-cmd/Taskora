@@ -45,7 +45,7 @@ export default function UpgradeModal({ feature, requiredPlan, onClose }) {
         maxWidth: 420,
         width: "100%",
         textAlign: "center",
-        fontFamily: "'Inter', sans-serif",
+        fontFamily: "'DM Sans', sans-serif",
       }}>
         <div style={{ fontSize: 44, marginBottom: 16 }}>
           {requiredPlan === "enterprise" ? "🏢" : "⚡"}

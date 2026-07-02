@@ -51,7 +51,7 @@
   --radius:     6px;
   --radius-lg:  10px;
 
-  font-family: var(--tk-font-body, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+  font-family: var(--tk-font-body, 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
   font-size: 14px;
   line-height: 1.5;
   color: var(--text-primary);
@@ -469,7 +469,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
 
 /* ── Base ── */
 .lp-root {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--tk-font-body, "DM Sans"), -apple-system, BlinkMacSystemFont, sans-serif;
   color: #0f172a;
   background: #ffffff;
   overflow-x: hidden;
@@ -539,8 +539,8 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
   font-size: 14px; font-weight: 500; color: #475569;
   text-decoration: none; transition: color 0.15s;
 }
-.lp-nav-links a:hover { color: #0052cc; }
-.lp-nav-actions { display: flex; gap: 10px; align-items: center; }
+.lp-nav-links a:hover { color: var(--tk-accent, #3B82F6); }
+.lp-nav-actions { display: flex; gap: 12px; align-items: center; }
 .lp-btn-ghost {
   padding: 8px 18px;
   font-size: 14px; font-weight: 500;
@@ -548,19 +548,18 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
   cursor: pointer; border-radius: 8px;
   transition: color 0.15s, background 0.15s;
 }
-.lp-btn-ghost:hover { color: #0052cc; background: #f0f4ff; }
+.lp-btn-ghost:hover { color: var(--tk-accent, #3B82F6); background: #f0f4ff; }
 .lp-btn-primary {
   padding: 8px 20px;
   font-size: 14px; font-weight: 600;
-  color: white; background: #0052cc; border: none;
+  color: white; background: var(--tk-gradient, linear-gradient(90deg,#3B82F6,#06B6D4)); border: none;
   border-radius: 8px; cursor: pointer;
   transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
-  box-shadow: 0 1px 4px rgba(0,82,204,0.3);
+  box-shadow: 0 1px 4px rgba(59,130,246,0.3);
 }
 .lp-btn-primary:hover {
-  background: #0040a8;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0,82,204,0.4);
+  box-shadow: 0 4px 12px rgba(59,130,246,0.4);
 }
 .lp-hamburger {
   display: none;
@@ -621,7 +620,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
 }
 .lp-hero-content {
   position: relative; z-index: 1;
-  max-width: 700px;
+  width: min(980px, 92vw);
   text-align: center;
   display: flex; flex-direction: column; align-items: center; gap: 24px;
 }
@@ -644,10 +643,11 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
   100% { box-shadow: 0 0 0 0 rgba(0,208,132,0); }
 }
 .lp-hero-h1 {
-  font-size: clamp(32px, 4.5vw, 60px);
+  width: 100%;
+  font-size: clamp(30px, 3.6vw, 48px);
   font-weight: 800;
-  line-height: 1.08;
-  letter-spacing: -2px;
+  line-height: 1.18;
+  letter-spacing: -1.5px;
   color: white;
   margin: 0;
 }
@@ -661,18 +661,18 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
   font-size: 18px; line-height: 1.7; color: #94a3b8;
   max-width: 580px; margin: 0;
 }
-.lp-hero-cta { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+.lp-hero-cta { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
 .lp-cta-primary {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 14px 28px; font-size: 15px; font-weight: 600;
-  color: white; background: #0052cc; border: none;
+  color: white; background: var(--tk-gradient, linear-gradient(90deg,#3B82F6,#06B6D4)); border: none;
   border-radius: 10px; cursor: pointer;
-  box-shadow: 0 4px 24px rgba(0,82,204,0.4);
+  box-shadow: 0 4px 24px rgba(59,130,246,0.4);
   transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
 }
 .lp-cta-primary:hover {
-  background: #0040a8; transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(0,82,204,0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(59,130,246,0.5);
 }
 .lp-cta-large { padding: 16px 36px; font-size: 16px; }
 .lp-cta-secondary {
@@ -687,8 +687,8 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
 .lp-cta-outline {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 12px 24px; font-size: 14px; font-weight: 600;
-  color: #0052cc; background: transparent;
-  border: 1.5px solid #0052cc;
+  color: var(--tk-accent, #3B82F6); background: transparent;
+  border: 1.5px solid var(--tk-accent, #3B82F6);
   border-radius: 10px; cursor: pointer;
   transition: background 0.15s;
 }
@@ -711,7 +711,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
 .lp-hero-mockup:hover { transform: perspective(1200px) rotateX(0deg); }
 
 /* ── Dashboard mockup UI ─────────────────────────────────────── */
-.lp-mockup { background: #1a1f2e; font-family: "Inter", sans-serif; }
+.lp-mockup { background: #1a1f2e; font-family: var(--tk-font-body, "DM Sans"), sans-serif; }
 .lp-mock-bar {
   display: flex; align-items: center; gap: 12px;
   padding: 12px 16px;
@@ -1032,7 +1032,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
 .lp-price-amount { display: flex; align-items: baseline; gap: 6px; margin-bottom: 28px; }
 .lp-price-num  { font-size: 42px; font-weight: 800; color: #0f172a; letter-spacing: -1.5px; }
 .lp-price-per  { font-size: 13px; color: #64748b; }
-.lp-price-features { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
+.lp-price-features { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-bottom: 28px; }
 .lp-price-features li { font-size: 14px; color: #475569; display: flex; align-items: center; gap: 8px; }
 .lp-check { color: #0052cc; font-weight: 700; }
 
@@ -1063,7 +1063,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
 .lp-footer-brand .lp-logo-name { color: #e2e8f0; }
 .lp-footer-brand .lp-logo-badge { background: rgba(99,102,241,0.25); color: #a5b4fc; }
 .lp-footer-links { display: flex; gap: 48px; flex: 1; justify-content: flex-end; }
-.lp-footer-col { display: flex; flex-direction: column; gap: 10px; }
+.lp-footer-col { display: flex; flex-direction: column; gap: 12px; }
 .lp-footer-col-title { font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
 .lp-footer-col a { font-size: 13px; color: #64748b; text-decoration: none; transition: color 0.15s; }
 .lp-footer-col a:hover { color: #e2e8f0; }
@@ -1101,7 +1101,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
   .lp-section-inner { padding: 0 16px; }
   .lp-problem, .lp-solution, .lp-features,
   .lp-how, .lp-testimonials, .lp-pricing { padding: 64px 16px; }
-  .lp-hero-h1 { letter-spacing: -0.5px; }
+  .lp-hero-h1 { font-size: clamp(24px, 7vw, 30px); letter-spacing: -0.5px; }
 }
 
 /* ─── Home / Landing (legacy — keep for backwards compat) ─── */
@@ -4239,7 +4239,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
 
 .modal-box {
   background: #fff;
-  border-radius: 14px;
+  border-radius: 16px;
   width: 440px;
   max-width: calc(100vw - 32px);
   box-shadow: 0 20px 60px rgba(0,0,0,0.18);
@@ -5207,7 +5207,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
   z-index: 1100; display: flex; align-items: center; justify-content: center;
 }
 .cal-form-modal {
-  background: var(--surface); border-radius: 14px;
+  background: var(--surface); border-radius: 16px;
   padding: 24px; width: 480px; max-width: calc(100vw - 32px);
   box-shadow: 0 20px 60px rgba(0,0,0,0.3);
 }
@@ -6190,7 +6190,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
 .cmd-palette {
   width: 620px; max-width: calc(100vw - 32px);
   background: #fff;
-  border-radius: 14px;
+  border-radius: 16px;
   box-shadow: 0 24px 64px rgba(9,30,66,0.3), 0 0 0 1px rgba(9,30,66,0.08);
   overflow: hidden;
   display: flex; flex-direction: column;
@@ -6511,7 +6511,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
 ═══════════════════════════════════════════════════════════════ */
 
 .shortcuts-modal {
-  background: #fff; border-radius: 14px;
+  background: #fff; border-radius: 16px;
   padding: 24px 28px; width: 400px; max-width: calc(100vw - 32px);
   box-shadow: 0 24px 64px rgba(9,30,66,0.25);
   animation: slideDown 0.15s ease;

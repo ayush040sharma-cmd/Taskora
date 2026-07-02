@@ -1,25 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import Logo from "../components/Logo";
 
 function NavBar() {
   const navigate = useNavigate();
   return (
     <nav style={S.nav}>
       <div style={S.navInner}>
-        <div style={S.logoRow} onClick={() => navigate("/")}>
-          <svg width="20" height="20" viewBox="0 0 100 100" fill="none">
-            <defs>
-              <linearGradient id="tkMark" x1="8" y1="20" x2="94" y2="90" gradientUnits="userSpaceOnUse">
-                <stop offset="0" stopColor="#3B82F6"/>
-                <stop offset="1" stopColor="#06B6D4"/>
-              </linearGradient>
-            </defs>
-            <path d="M8 20 L62 20 L94 28 L62 36 L43 36 L43 90 L27 90 L27 36 L8 36 Z" fill="url(#tkMark)"/>
-          </svg>
-          <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 18, letterSpacing: "-0.2px" }}>
-            <span style={{ color: "#E2E8F0" }}>Task</span><span style={{ background: "linear-gradient(90deg,#3B82F6,#06B6D4)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>ora</span>
-          </span>
-        </div>
+        <Logo iconSize={20} wordmarkSize={18} letterSpacing="-0.2px" style={S.logoRow} onClick={() => navigate("/")} />
         <div style={S.navLinks}>
           <a href="/#features" style={S.navLink}>Features</a>
           <a href="/#pricing" style={S.navLink}>Pricing</a>
@@ -240,7 +228,7 @@ export default function Contact() {
 }
 
 const S = {
-  root: { fontFamily: "system-ui, -apple-system, sans-serif", color: "#0f172a", lineHeight: 1.6 },
+  root: { fontFamily: "var(--tk-font-body, 'DM Sans'), -apple-system, sans-serif", color: "#0f172a", lineHeight: 1.6 },
   nav: {
     position: "sticky", top: 0, zIndex: 100,
     background: "rgba(255,255,255,0.95)", backdropFilter: "blur(10px)",
@@ -266,19 +254,19 @@ const S = {
   primaryBtnSmall: { padding: "8px 18px", background: "var(--tk-accent, #3B82F6)", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, color: "#fff", cursor: "pointer" },
   hero: {
     padding: "80px 24px 64px", textAlign: "center",
-    background: "linear-gradient(135deg, #0f0c29 0%, #302b63 60%, #24243e 100%)",
+    background: "linear-gradient(135deg, #020617 0%, #0F172A 60%, #020617 100%)",
     position: "relative", overflow: "hidden",
   },
   blob1: { position: "absolute", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(59,130,246,0.25) 0%, transparent 70%)", top: "-150px", left: "-100px", pointerEvents: "none" },
-  blob2: { position: "absolute", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(139,92,246,0.2) 0%, transparent 70%)", bottom: "-150px", right: "-100px", pointerEvents: "none" },
+  blob2: { position: "absolute", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(6,182,212,0.18) 0%, transparent 70%)", bottom: "-150px", right: "-100px", pointerEvents: "none" },
   heroContent: { position: "relative", zIndex: 1, maxWidth: 600, margin: "0 auto" },
-  eyebrow: { display: "inline-block", background: "rgba(59,130,246,0.2)", color: "#a5b4fc", borderRadius: 99, padding: "5px 16px", fontSize: 13, fontWeight: 600, marginBottom: 16 },
-  h1: { fontSize: "clamp(28px, 4vw, 44px)", fontWeight: 900, color: "#fff", margin: "0 0 16px", letterSpacing: "-1px" },
+  eyebrow: { display: "inline-block", background: "rgba(6,182,212,0.15)", color: "#06B6D4", borderRadius: 99, padding: "5px 16px", fontSize: 13, fontWeight: 600, marginBottom: 16 },
+  h1: { fontFamily: "var(--tk-font-display, 'Syne')", fontSize: "clamp(28px, 4vw, 44px)", fontWeight: 700, color: "#fff", margin: "0 0 16px", letterSpacing: "-1px" },
   heroPara: { fontSize: 16, color: "rgba(255,255,255,0.7)", maxWidth: 480, margin: "0 auto" },
   section: { padding: "72px 24px" },
   sectionInner: { maxWidth: 1100, margin: "0 auto" },
-  h2: { fontSize: "clamp(22px, 3vw, 32px)", fontWeight: 800, margin: "0 0 12px", letterSpacing: "-0.5px" },
-  para: { fontSize: 15, color: "#64748b", lineHeight: 1.8, marginBottom: 24 },
+  h2: { fontFamily: "var(--tk-font-display, 'Syne')", fontSize: "clamp(22px, 3vw, 32px)", fontWeight: 700, margin: "0 0 12px", letterSpacing: "-0.5px" },
+  para: { fontSize: 14, color: "#64748b", lineHeight: 1.8, marginBottom: 24 },
   grid: { display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: 64, alignItems: "start" },
   infoCol: {},
   contactItem: { display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 24 },
@@ -300,15 +288,15 @@ const S = {
   input: { padding: "10px 14px", border: "1.5px solid #e2e8f0", borderRadius: 8, fontSize: 14, color: "#0f172a", background: "#f8fafc", outline: "none", fontFamily: "inherit", boxSizing: "border-box" },
   select: { padding: "10px 14px", border: "1.5px solid #e2e8f0", borderRadius: 8, fontSize: 14, color: "#0f172a", background: "#f8fafc", outline: "none", fontFamily: "inherit" },
   textarea: { padding: "10px 14px", border: "1.5px solid #e2e8f0", borderRadius: 8, fontSize: 14, color: "#0f172a", background: "#f8fafc", outline: "none", fontFamily: "inherit", resize: "vertical" },
-  submitBtn: { padding: "13px", background: "var(--tk-accent, #3B82F6)", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer" },
+  submitBtn: { padding: "13px", background: "var(--tk-accent, #3B82F6)", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: "pointer" },
   successCard: { background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: 16, padding: 40, textAlign: "center" },
   successIcon: { fontSize: 48, marginBottom: 16 },
-  successTitle: { fontSize: 22, fontWeight: 800, color: "#0f172a", margin: "0 0 8px" },
+  successTitle: { fontSize: 22, fontWeight: 700, color: "#0f172a", margin: "0 0 8px" },
   successSub: { fontSize: 14, color: "#64748b", marginBottom: 24 },
   sendAnotherBtn: { padding: "10px 24px", background: "#fff", border: "1.5px solid #bbf7d0", borderRadius: 8, fontSize: 14, fontWeight: 600, color: "#059669", cursor: "pointer" },
   faqGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20 },
   faqCard: { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 24 },
-  faqQ: { fontSize: 15, fontWeight: 700, color: "#0f172a", marginBottom: 8 },
+  faqQ: { fontSize: 14, fontWeight: 700, color: "#0f172a", marginBottom: 8 },
   faqA: { fontSize: 14, color: "#64748b", lineHeight: 1.7 },
   footer: { background: "#0f172a", padding: "20px 24px" },
   footerInner: { maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 },

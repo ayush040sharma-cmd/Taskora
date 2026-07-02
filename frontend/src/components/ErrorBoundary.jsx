@@ -1,4 +1,5 @@
 import React from "react";
+import Logo from "./Logo";
 
 export default class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -22,7 +23,7 @@ export default class ErrorBoundary extends React.Component {
       return (
         <div style={{ padding: "40px 24px", textAlign: "center", color: "#64748b" }}>
           <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
-          <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a", marginBottom: 6 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: "#0f172a", marginBottom: 6 }}>
             {this.props.viewName || "This view"} failed to load
           </div>
           <div style={{ fontSize: 13, marginBottom: 16, color: "#94a3b8" }}>
@@ -97,20 +98,7 @@ export default class ErrorBoundary extends React.Component {
           </div>
         </div>
 
-        <div style={S.logoRow}>
-          <svg width="24" height="24" viewBox="0 0 100 100" fill="none">
-            <defs>
-              <linearGradient id="tkMark" x1="8" y1="20" x2="94" y2="90" gradientUnits="userSpaceOnUse">
-                <stop offset="0" stopColor="#3B82F6"/>
-                <stop offset="1" stopColor="#06B6D4"/>
-              </linearGradient>
-            </defs>
-            <path d="M8 20 L62 20 L94 28 L62 36 L43 36 L43 90 L27 90 L27 36 L8 36 Z" fill="url(#tkMark)"/>
-          </svg>
-          <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 16, letterSpacing: "-0.2px" }}>
-            <span style={{ color: "rgba(255,255,255,0.9)" }}>Task</span><span style={{ background: "linear-gradient(90deg,#3B82F6,#06B6D4)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>ora</span>
-          </span>
-        </div>
+        <Logo iconSize={24} wordmarkSize={16} wordmarkColor="rgba(255,255,255,0.9)" letterSpacing="-0.2px" style={S.logoRow} />
       </div>
     );
   }

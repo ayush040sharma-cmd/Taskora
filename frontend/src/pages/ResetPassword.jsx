@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import api from "../api/api";
+import Logo from "../components/Logo";
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -43,20 +44,7 @@ export default function ResetPassword() {
       <div style={styles.blob1} />
       <div style={styles.blob2} />
       <div style={styles.card}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 28 }}>
-          <svg width="32" height="32" viewBox="0 0 100 100" fill="none">
-            <defs>
-              <linearGradient id="tkMark" x1="8" y1="20" x2="94" y2="90" gradientUnits="userSpaceOnUse">
-                <stop offset="0" stopColor="#3B82F6"/>
-                <stop offset="1" stopColor="#06B6D4"/>
-              </linearGradient>
-            </defs>
-            <path d="M8 20 L62 20 L94 28 L62 36 L43 36 L43 90 L27 90 L27 36 L8 36 Z" fill="url(#tkMark)"/>
-          </svg>
-          <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 22, color: "#0f172a", letterSpacing: "-0.3px" }}>
-            Task<span style={{ background: "linear-gradient(90deg,#3B82F6,#06B6D4)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>ora</span>
-          </span>
-        </div>
+        <Logo iconSize={32} wordmarkSize={22} wordmarkColor="#0f172a" style={{ marginBottom: 28 }} />
 
         {success ? (
           <div style={{ textAlign: "center", padding: "12px 0" }}>
@@ -148,15 +136,15 @@ export default function ResetPassword() {
 }
 
 const styles = {
-  root: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)", padding: "24px", position: "relative", overflow: "hidden" },
+  root: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, #020617 0%, #0F172A 50%, #020617 100%)", padding: "24px", position: "relative", overflow: "hidden" },
   blob1: { position: "absolute", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(59,130,246,0.3) 0%, transparent 70%)", top: "-100px", left: "-100px", pointerEvents: "none" },
-  blob2: { position: "absolute", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(168,85,247,0.2) 0%, transparent 70%)", bottom: "-80px", right: "-80px", pointerEvents: "none" },
+  blob2: { position: "absolute", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(6,182,212,0.18) 0%, transparent 70%)", bottom: "-80px", right: "-80px", pointerEvents: "none" },
   card: { background: "#fff", borderRadius: 20, padding: "40px 44px", width: "100%", maxWidth: 420, boxShadow: "0 25px 60px rgba(0,0,0,0.4)", position: "relative", zIndex: 1 },
   logoRow: { display: "flex", alignItems: "center", gap: 10, marginBottom: 28 },
   logoMark: { width: 36, height: 36, borderRadius: 10, background: "var(--tk-accent, #3B82F6)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   logoText: { fontSize: 20, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.5px", flex: 1 },
   logoBadge: { fontSize: 10, fontWeight: 700, color: "var(--tk-accent, #3B82F6)", background: "rgba(59,130,246,0.1)", borderRadius: 4, padding: "2px 5px" },
-  heading: { fontSize: 26, fontWeight: 800, color: "#0f172a", margin: "0 0 6px", letterSpacing: "-0.5px" },
+  heading: { fontFamily: "var(--tk-font-display, 'Syne')", fontSize: 26, fontWeight: 700, color: "#0f172a", margin: "0 0 6px", letterSpacing: "-0.5px" },
   subtext: { fontSize: 14, color: "#64748b", margin: "0 0 20px" },
   errorBox: { display: "flex", alignItems: "center", gap: 8, background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 500, marginBottom: 18 },
   form: { display: "flex", flexDirection: "column", gap: 16 },
@@ -166,7 +154,7 @@ const styles = {
   passWrap: { position: "relative" },
   eyeBtn: { position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4, display: "flex", alignItems: "center" },
   hints: { display: "flex", gap: 12, fontSize: 12, flexWrap: "wrap", marginTop: 4 },
-  submitBtn: { display: "block", textAlign: "center", width: "100%", padding: "13px", background: "var(--tk-accent, #3B82F6)", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", marginTop: 4, letterSpacing: "0.2px", textDecoration: "none", boxSizing: "border-box" },
+  submitBtn: { display: "block", textAlign: "center", width: "100%", padding: "13px", background: "var(--tk-accent, #3B82F6)", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: "pointer", marginTop: 4, letterSpacing: "0.2px", textDecoration: "none", boxSizing: "border-box" },
   backRow: { textAlign: "center", marginTop: 20 },
   backLink: { fontSize: 13, color: "var(--tk-accent, #3B82F6)", textDecoration: "none", fontWeight: 600 },
 };

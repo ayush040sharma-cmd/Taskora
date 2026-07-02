@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { canViewSidebar } from "../utils/canAccess";
+import Logo from "./Logo";
 
 // ── All views organized by section ─────────────────────────────────────────────
 const SECTIONS = [
@@ -90,18 +91,7 @@ export default function Sidebar({
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
         </button>
-        <svg width="20" height="20" viewBox="0 0 100 100" fill="none" style={{ flexShrink: 0 }}>
-          <defs>
-            <linearGradient id="tkMark_sb" x1="8" y1="20" x2="94" y2="90" gradientUnits="userSpaceOnUse">
-              <stop offset="0" stopColor="#3B82F6"/>
-              <stop offset="1" stopColor="#06B6D4"/>
-            </linearGradient>
-          </defs>
-          <path d="M8 20 L62 20 L94 28 L62 36 L43 36 L43 90 L27 90 L27 36 L8 36 Z" fill="url(#tkMark_sb)"/>
-        </svg>
-        <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 15, letterSpacing: "-0.2px" }}>
-          <span style={{ color: "#E2E8F0" }}>Task</span><span style={{ background: "linear-gradient(90deg,#3B82F6,#06B6D4)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>ora</span>
-        </span>
+        <Logo iconSize={20} wordmarkSize={15} letterSpacing="-0.2px" />
       </div>
 
       {/* ⌘K search launcher */}

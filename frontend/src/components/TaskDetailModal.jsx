@@ -4,17 +4,18 @@
  */
 
 import { useState, useEffect, useRef } from "react";
+import { LuX, LuClipboardList, LuBug, LuBookOpen, LuFileStack, LuFilePenLine, LuPresentation, LuArrowUp, LuFlaskConical } from "react-icons/lu";
 import api from "../api/api";
 
 const TYPE_META = {
-  task:         { label: "Task",         icon: "📋" },
-  bug:          { label: "Bug",          icon: "🐛" },
-  story:        { label: "Story",        icon: "📖" },
-  rfp:          { label: "RFP",          icon: "📑" },
-  proposal:     { label: "Proposal",     icon: "📝" },
-  presentation: { label: "Presentation", icon: "🎤" },
-  upgrade:      { label: "Upgrade",      icon: "⬆️" },
-  poc:          { label: "POC",          icon: "🔬" },
+  task:         { label: "Task",         icon: LuClipboardList },
+  bug:          { label: "Bug",          icon: LuBug },
+  story:        { label: "Story",        icon: LuBookOpen },
+  rfp:          { label: "RFP",          icon: LuFileStack },
+  proposal:     { label: "Proposal",     icon: LuFilePenLine },
+  presentation: { label: "Presentation", icon: LuPresentation },
+  upgrade:      { label: "Upgrade",      icon: LuArrowUp },
+  poc:          { label: "POC",          icon: LuFlaskConical },
 };
 
 const PRIORITIES = ["low", "medium", "high"];
@@ -40,12 +41,7 @@ function formatDate(d) {
   return d ? new Date(d).toISOString().split("T")[0] : "";
 }
 
-const IconX = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-  </svg>
-);
+const IconX = () => <LuX size={16} />;
 
 // ── Subtasks Tab ──────────────────────────────────────────────
 function SubtasksTab({ taskId }) {
@@ -429,7 +425,9 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
         {/* ── Header ── */}
         <div className="td-header">
           <div className="td-header-left">
-            <span className="td-type-icon">{TYPE_META[task.type]?.icon || "📋"}</span>
+            <span className="td-type-icon">
+              {(() => { const TypeIcon = TYPE_META[task.type]?.icon || LuClipboardList; return <TypeIcon size={14} />; })()}
+            </span>
             {editTitle ? (
               <input
                 className="td-title-input"
@@ -570,7 +568,7 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
                     onChange={e => { setTask(p => ({ ...p, type: e.target.value })); saveField("type", e.target.value); }}
                   >
                     {Object.entries(TYPE_META).map(([v, m]) => (
-                      <option key={v} value={v}>{m.icon} {m.label}</option>
+                      <option key={v} value={v}>{m.label}</option>
                     ))}
                   </select>
                 </div>

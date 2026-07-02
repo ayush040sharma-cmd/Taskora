@@ -75,7 +75,7 @@ function DropZone({ onFile, accept = ".xlsx,.xls,.csv" }) {
         onChange={e => e.target.files[0] && onFile(e.target.files[0])}
       />
       <div style={{ fontSize: 40, marginBottom: 12 }}>📂</div>
-      <div style={{ color: "var(--text-primary)", fontSize: 15, fontWeight: 600, marginBottom: 8 }}>
+      <div style={{ color: "var(--text-primary)", fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
         Drop your Excel or CSV file here
       </div>
       <div style={{ color: "var(--text-secondary)", fontSize: 13 }}>
@@ -535,7 +535,7 @@ function ExportTab({ workspaceId }) {
         style={{
           background: downloading ? "var(--border)" : "var(--tk-accent, #3B82F6)",
           border: "none", borderRadius: 10, padding: "14px 32px",
-          color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer",
+          color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer",
           opacity: downloading ? 0.7 : 1,
         }}
       >

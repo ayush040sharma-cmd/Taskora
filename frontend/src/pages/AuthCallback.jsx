@@ -60,7 +60,7 @@ const S = {
   root: {
     minHeight: "100vh",
     display: "flex", alignItems: "center", justifyContent: "center",
-    background: "linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)",
+    background: "linear-gradient(135deg, #020617 0%, #0F172A 50%, #020617 100%)",
   },
   card: {
     background: "#fff", borderRadius: 20, padding: "48px 44px",
@@ -75,7 +75,7 @@ const S = {
     margin: "0 auto 16px",
   },
   errorIcon: { fontSize: 40, marginBottom: 12 },
-  heading: { fontSize: 20, fontWeight: 800, color: "#0f172a", margin: "0 0 8px" },
+  heading: { fontFamily: "var(--tk-font-display, 'Syne')", fontSize: 20, fontWeight: 700, color: "#0f172a", margin: "0 0 8px" },
   sub: { fontSize: 14, color: "#64748b", margin: "0 0 24px" },
   btn: {
     padding: "12px 28px",

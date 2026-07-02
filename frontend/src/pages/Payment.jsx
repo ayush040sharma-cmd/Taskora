@@ -126,7 +126,7 @@ export default function Payment() {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      fontFamily: "'Inter', sans-serif",
+      fontFamily: "'DM Sans', sans-serif",
       padding: 24,
     }}>
       <div style={{ width: "100%", maxWidth: 460 }}>
@@ -142,7 +142,7 @@ export default function Payment() {
             <h2 style={{ color: "#34d399", fontSize: 22, fontWeight: 700, marginBottom: 8 }}>
               You're on {details.title}!
             </h2>
-            <p style={{ color: "#94a3b8", fontSize: 15 }}>
+            <p style={{ color: "#94a3b8", fontSize: 14 }}>
               Your plan has been upgraded. Redirecting to dashboard…
             </p>
           </div>
@@ -236,7 +236,7 @@ export default function Payment() {
                     color: "#fff",
                     border: "none",
                     borderRadius: 10,
-                    fontSize: 15,
+                    fontSize: 14,
                     fontWeight: 600,
                     cursor: loading ? "not-allowed" : "pointer",
                     marginBottom: 12,

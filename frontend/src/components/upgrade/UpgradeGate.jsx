@@ -48,7 +48,7 @@ export default function UpgradeGate({ feature, children, style = {} }) {
             borderRadius: 12,
             padding: "14px 20px",
             textAlign: "center",
-            fontFamily: "'Inter', sans-serif",
+            fontFamily: "'DM Sans', sans-serif",
           }}>
             <div style={{ fontSize: 20, marginBottom: 6 }}>
               {needed === "enterprise" ? "🏢" : "⚡"}

@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import api from "../api/api";
 
-const STATUS_COLOR  = { todo: "#94a3b8", inprogress: "#3B82F6", in_progress: "#3B82F6", done: "#10b981", review: "#f59e0b" };
-const PRIORITY_COLOR = { critical: "#dc2626", high: "#ef4444", medium: "#f59e0b", low: "#10b981" };
+const STATUS_COLOR  = { todo: "var(--tk-text-secondary, #94A3B8)", inprogress: "var(--tk-accent, #3B82F6)", in_progress: "var(--tk-accent, #3B82F6)", done: "#10b981", review: "var(--tk-status-warn, #F59E0B)" };
+const PRIORITY_COLOR = { critical: "#dc2626", high: "var(--tk-status-danger, #EF4444)", medium: "var(--tk-status-warn, #F59E0B)", low: "#10b981" };
 const ROW_H   = 36;
 const LABEL_W = 220;
 const DAY_W   = 28;

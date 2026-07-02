@@ -1,21 +1,18 @@
 import { useState, useEffect } from "react";
+import { LuX, LuClipboardList, LuBug, LuBookOpen, LuFileStack, LuFilePenLine, LuPresentation, LuArrowUp, LuFlaskConical } from "react-icons/lu";
 import api from "../api/api";
 
-const IconX = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-  </svg>
-);
+const IconX = () => <LuX size={16} />;
 
 const TYPE_META = {
-  task:         { label: "Task",         desc: "General work item",   icon: "📋", days: 1,  range: "~1 day"    },
-  bug:          { label: "Bug",          desc: "Something is broken", icon: "🐛", days: 1,  range: "~1 day"    },
-  story:        { label: "Story",        desc: "User-facing feature", icon: "📖", days: 3,  range: "~3 days"   },
-  rfp:          { label: "RFP",          desc: "Request for proposal",icon: "📑", days: 15, range: "2–3 weeks" },
-  proposal:     { label: "Proposal",     desc: "Sales proposal",      icon: "📝", days: 2,  range: "2–3 days"  },
-  presentation: { label: "Presentation", desc: "Deck / demo",         icon: "🎤", days: 1,  range: "1–2 days"  },
-  upgrade:      { label: "Upgrade",      desc: "Version upgrade",     icon: "⬆️", days: 5,  range: "~1 week"   },
-  poc:          { label: "POC",          desc: "Proof of concept",    icon: "🔬", days: 30, range: "1–2 months"},
+  task:         { label: "Task",         desc: "General work item",   icon: LuClipboardList, days: 1,  range: "~1 day"    },
+  bug:          { label: "Bug",          desc: "Something is broken", icon: LuBug,           days: 1,  range: "~1 day"    },
+  story:        { label: "Story",        desc: "User-facing feature", icon: LuBookOpen,      days: 3,  range: "~3 days"   },
+  rfp:          { label: "RFP",          desc: "Request for proposal",icon: LuFileStack,     days: 15, range: "2–3 weeks" },
+  proposal:     { label: "Proposal",     desc: "Sales proposal",      icon: LuFilePenLine,   days: 2,  range: "2–3 days"  },
+  presentation: { label: "Presentation", desc: "Deck / demo",         icon: LuPresentation,  days: 1,  range: "1–2 days"  },
+  upgrade:      { label: "Upgrade",      desc: "Version upgrade",     icon: LuArrowUp,       days: 5,  range: "~1 week"   },
+  poc:          { label: "POC",          desc: "Proof of concept",    icon: LuFlaskConical,  days: 30, range: "1–2 months"},
 };
 
 export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "todo", sprints = [], workspaceId }) {
@@ -168,7 +165,7 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
                     className={`task-type-btn ${form.type === t ? "active" : ""}`}
                     onClick={() => selectType(t)}
                   >
-                    <span className="task-type-icon">{meta.icon}</span>
+                    <span className="task-type-icon"><meta.icon size={16} /></span>
                     <strong>{meta.label}</strong>
                     <span>{meta.desc}</span>
                     <span className="task-type-range">{meta.range}</span>

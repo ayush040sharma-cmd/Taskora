@@ -4,7 +4,10 @@ import BlockedDashboard from "./BlockedDashboard";
 
 const STATUS_COLOR  = { todo: "#94a3b8", inprogress: "#3B82F6", in_progress: "#3B82F6", done: "#10b981", review: "#f59e0b" };
 const RISK_COLOR    = (score) => score >= 75 ? "#dc2626" : score >= 50 ? "#ef4444" : score >= 25 ? "#f59e0b" : "#10b981";
-const PRIORITY_ICON = { critical: "🔴", high: "🟠", medium: "🟡", low: "🟢" };
+const PRIORITY_COLOR_DOT = { critical: "#EF4444", high: "#F97316", medium: "#F59E0B", low: "#22C55E" };
+const PriorityDot = ({ priority }) => priority ? (
+  <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: PRIORITY_COLOR_DOT[priority] || "#94A3B8", flexShrink: 0 }} />
+) : null;
 
 const NODE_W  = 160;
 const NODE_H  = 52;
@@ -130,7 +133,7 @@ function GraphNode({ node, selected, onClick }) {
             lineHeight: "1.3",
           }}
         >
-          {PRIORITY_ICON[node.priority] || ""} {node.title}
+          <PriorityDot priority={node.priority} /> {node.title}
         </div>
       </foreignObject>
       {/* Assignee + risk */}
@@ -303,7 +306,7 @@ export default function DependencyGraph({ workspaceId, onTaskClick }) {
                 <button onClick={() => setSelected(null)} className="dep-detail-close">✕</button>
               </div>
               <div className="dep-detail-row"><span>Status</span><span className="dep-detail-val" style={{ color: STATUS_COLOR[selected.status] }}>{selected.status}</span></div>
-              <div className="dep-detail-row"><span>Priority</span><span className="dep-detail-val">{PRIORITY_ICON[selected.priority]} {selected.priority}</span></div>
+              <div className="dep-detail-row"><span>Priority</span><span className="dep-detail-val"><PriorityDot priority={selected.priority} /> {selected.priority}</span></div>
               <div className="dep-detail-row"><span>Assignee</span><span className="dep-detail-val">{selected.assignee_name || "—"}</span></div>
               <div className="dep-detail-row"><span>Progress</span><span className="dep-detail-val">{selected.progress || 0}%</span></div>
               {selected.risk_score > 0 && (

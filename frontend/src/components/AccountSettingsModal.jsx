@@ -80,7 +80,7 @@ export default function AccountSettingsModal({ onClose, currentWorkspaceId }) {
     return s;
   };
   const strengthLabel = ["", "Weak", "Fair", "Good", "Strong"];
-  const strengthColor = ["", "#ef4444", "#f59e0b", "var(--tk-accent, #3B82F6)", "#10b981"];
+  const strengthColor = ["", "var(--tk-status-danger, #EF4444)", "var(--tk-status-warn, #F59E0B)", "var(--tk-accent, #3B82F6)", "#10b981"];
   const pw = form.new_password;
   const s = strength(pw);
 
@@ -129,7 +129,7 @@ export default function AccountSettingsModal({ onClose, currentWorkspaceId }) {
           width: 180, borderRight: "1px solid var(--border)", padding: "20px 0",
           background: "var(--column-bg)", borderRadius: "var(--radius-lg) 0 0 var(--radius-lg)", flexShrink: 0,
         }}>
-          <div style={{ padding: "0 16px 12px", fontWeight: 700, fontSize: 15, color: "var(--text-primary)" }}>Settings</div>
+          <div style={{ padding: "0 16px 12px", fontWeight: 700, fontSize: 14, color: "var(--text-primary)" }}>Settings</div>
           {SECTIONS.map(s => (
             <button
               key={s.id}
@@ -369,7 +369,7 @@ export default function AccountSettingsModal({ onClose, currentWorkspaceId }) {
                     <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>Current session</div>
                     <div style={{ fontSize: 12, color: "var(--text-muted)" }}>This browser · {new Date().toLocaleDateString()}</div>
                   </div>
-                  <span style={{ fontSize: 11, background: "rgba(34,197,94,0.15)", color: "#22c55e", borderRadius: 99, padding: "2px 8px", fontWeight: 600 }}>Active</span>
+                  <span style={{ fontSize: 11, background: "var(--tk-status-ok-bg, rgba(34,197,94,0.15))", color: "var(--tk-status-ok, #22C55E)", borderRadius: 99, padding: "2px 8px", fontWeight: 600 }}>Active</span>
                 </div>
               </div>
             </div>
@@ -384,12 +384,12 @@ export default function AccountSettingsModal({ onClose, currentWorkspaceId }) {
                 <strong style={{ color: "var(--text-primary)" }}> This will clear existing tasks.</strong>
               </p>
               {seedMsg && (
-                <div style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#22c55e", marginBottom: 10 }}>
+                <div style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "var(--tk-status-ok, #22C55E)", marginBottom: 10 }}>
                   ✅ {seedMsg}
                 </div>
               )}
               {seedError && (
-                <div style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#ef4444", marginBottom: 10 }}>
+                <div style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "var(--tk-status-danger, #EF4444)", marginBottom: 10 }}>
                   ❌ {seedError}
                 </div>
               )}

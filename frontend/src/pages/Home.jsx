@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
+import Logo from "../components/Logo";
 
 // ── Animated counter ──────────────────────────────────────────────────────────
 function Counter({ end, suffix = "", duration = 2000 }) {
@@ -202,20 +203,12 @@ export default function Home() {
       {/* ── Navigation ──────────────────────────────────────────── */}
       <nav className={`lp-nav ${scrolled ? "lp-nav--scrolled" : ""}`}>
         <div className="lp-nav-inner">
-          <div className="lp-nav-logo" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
-            <svg width="22" height="22" viewBox="0 0 100 100" fill="none" style={{ flexShrink: 0 }}>
-              <defs>
-                <linearGradient id="tkMark_hn" x1="8" y1="20" x2="94" y2="90" gradientUnits="userSpaceOnUse">
-                  <stop offset="0" stopColor="#3B82F6"/>
-                  <stop offset="1" stopColor="#06B6D4"/>
-                </linearGradient>
-              </defs>
-              <path d="M8 20 L62 20 L94 28 L62 36 L43 36 L43 90 L27 90 L27 36 L8 36 Z" fill="url(#tkMark_hn)"/>
-            </svg>
-            <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 20, letterSpacing: "-0.3px" }}>
-              <span style={{ color: "#E2E8F0" }}>Task</span><span style={{ background: "linear-gradient(90deg,#3B82F6,#06B6D4)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>ora</span>
-            </span>
-          </div>
+          <Logo
+            className="lp-nav-logo"
+            iconSize={22}
+            wordmarkSize={20}
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          />
 
           <div className="lp-nav-links">
             <a href="#features">Features</a>
@@ -619,20 +612,7 @@ export default function Home() {
       <footer className="lp-footer">
         <div className="lp-footer-inner">
           <div className="lp-footer-brand">
-            <div className="lp-nav-logo">
-              <svg width="22" height="22" viewBox="0 0 100 100" fill="none" style={{ flexShrink: 0 }}>
-                <defs>
-                  <linearGradient id="tkMark_hf" x1="8" y1="20" x2="94" y2="90" gradientUnits="userSpaceOnUse">
-                    <stop offset="0" stopColor="#3B82F6"/>
-                    <stop offset="1" stopColor="#06B6D4"/>
-                  </linearGradient>
-                </defs>
-                <path d="M8 20 L62 20 L94 28 L62 36 L43 36 L43 90 L27 90 L27 36 L8 36 Z" fill="url(#tkMark_hf)"/>
-              </svg>
-              <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 20, letterSpacing: "-0.3px" }}>
-                <span style={{ color: "#E2E8F0" }}>Task</span><span style={{ background: "linear-gradient(90deg,#3B82F6,#06B6D4)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>ora</span>
-              </span>
-            </div>
+            <Logo className="lp-nav-logo" iconSize={22} wordmarkSize={20} />
             <p>AI-powered execution intelligence.<br />Predict. Simulate. Execute.</p>
           </div>
 

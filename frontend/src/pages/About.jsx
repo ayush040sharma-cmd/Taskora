@@ -1,25 +1,13 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
+import Logo from "../components/Logo";
 
 function NavBar() {
   const navigate = useNavigate();
   return (
     <nav style={S.nav}>
       <div style={S.navInner}>
-        <div style={S.logoRow} onClick={() => navigate("/")}>
-          <svg width="20" height="20" viewBox="0 0 100 100" fill="none">
-            <defs>
-              <linearGradient id="tkMark" x1="8" y1="20" x2="94" y2="90" gradientUnits="userSpaceOnUse">
-                <stop offset="0" stopColor="#3B82F6"/>
-                <stop offset="1" stopColor="#06B6D4"/>
-              </linearGradient>
-            </defs>
-            <path d="M8 20 L62 20 L94 28 L62 36 L43 36 L43 90 L27 90 L27 36 L8 36 Z" fill="url(#tkMark)"/>
-          </svg>
-          <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 18, letterSpacing: "-0.2px" }}>
-            <span style={{ color: "#E2E8F0" }}>Task</span><span style={{ background: "linear-gradient(90deg,#3B82F6,#06B6D4)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>ora</span>
-          </span>
-        </div>
+        <Logo iconSize={20} wordmarkSize={18} letterSpacing="-0.2px" style={S.logoRow} onClick={() => navigate("/")} />
         <div style={S.navLinks}>
           <a href="/#features" style={S.navLink}>Features</a>
           <a href="/#pricing" style={S.navLink}>Pricing</a>
@@ -202,7 +190,7 @@ export default function About() {
       </section>
 
       {/* Values */}
-      <section style={{ ...S.section, background: "linear-gradient(135deg, #0f0c29 0%, #302b63 100%)" }}>
+      <section style={{ ...S.section, background: "linear-gradient(135deg, #020617 0%, #0F172A 100%)" }}>
         <div style={S.sectionInner}>
           <h2 style={{ ...S.h2, textAlign: "center", color: "#fff" }}>What we believe</h2>
           <div style={S.valuesGrid}>
@@ -257,7 +245,7 @@ export default function About() {
 }
 
 const S = {
-  root: { fontFamily: "system-ui, -apple-system, sans-serif", color: "#0f172a", lineHeight: 1.6 },
+  root: { fontFamily: "var(--tk-font-body, 'DM Sans'), -apple-system, sans-serif", color: "#0f172a", lineHeight: 1.6 },
   nav: {
     position: "sticky", top: 0, zIndex: 100,
     background: "rgba(255,255,255,0.95)", backdropFilter: "blur(10px)",
@@ -294,7 +282,7 @@ const S = {
   },
   hero: {
     padding: "96px 24px 80px",
-    background: "linear-gradient(135deg, #0f0c29 0%, #302b63 60%, #24243e 100%)",
+    background: "linear-gradient(135deg, #020617 0%, #0F172A 60%, #020617 100%)",
     textAlign: "center", position: "relative", overflow: "hidden",
   },
   blob1: {
@@ -304,25 +292,26 @@ const S = {
   },
   blob2: {
     position: "absolute", width: 500, height: 500, borderRadius: "50%",
-    background: "radial-gradient(circle, rgba(139,92,246,0.2) 0%, transparent 70%)",
+    background: "radial-gradient(circle, rgba(6,182,212,0.18) 0%, transparent 70%)",
     bottom: "-200px", right: "-100px", pointerEvents: "none",
   },
   heroContent: { position: "relative", zIndex: 1, maxWidth: 700, margin: "0 auto" },
   eyebrow: {
-    display: "inline-block", background: "rgba(59,130,246,0.2)",
-    color: "#a5b4fc", borderRadius: 99, padding: "5px 16px",
+    display: "inline-block", background: "rgba(6,182,212,0.15)",
+    color: "#06B6D4", borderRadius: 99, padding: "5px 16px",
     fontSize: 13, fontWeight: 600, marginBottom: 20,
   },
   h1: {
-    fontSize: "clamp(32px, 5vw, 52px)", fontWeight: 900,
+    fontFamily: "var(--tk-font-display, 'Syne')",
+    fontSize: "clamp(32px, 5vw, 52px)", fontWeight: 700,
     color: "#fff", margin: "0 0 20px", lineHeight: 1.2,
     letterSpacing: "-1px",
   },
-  gradient: { background: "linear-gradient(135deg, #a5b4fc, #c084fc)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" },
+  gradient: { background: "linear-gradient(90deg, #3B82F6, #06B6D4)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" },
   heroPara: { fontSize: 18, color: "rgba(255,255,255,0.7)", maxWidth: 560, margin: "0 auto" },
   section: { padding: "80px 24px" },
   sectionInner: { maxWidth: 1100, margin: "0 auto" },
-  h2: { fontSize: "clamp(26px, 4vw, 38px)", fontWeight: 800, margin: "0 0 16px", letterSpacing: "-0.5px" },
+  h2: { fontFamily: "var(--tk-font-display, 'Syne')", fontSize: "clamp(26px, 4vw, 38px)", fontWeight: 700, margin: "0 0 16px", letterSpacing: "-0.5px" },
   para: { fontSize: 16, color: "#64748b", lineHeight: 1.8, marginBottom: 16 },
   em: { fontStyle: "italic", color: "var(--tk-accent, #3B82F6)", fontWeight: 600 },
   storyBlock: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "center" },
@@ -332,7 +321,7 @@ const S = {
     background: "linear-gradient(135deg, #eef2ff, #f5f3ff)",
     border: "1px solid #e0e7ff", borderRadius: 16, padding: 32,
   },
-  quoteIcon: { fontSize: 48, color: "var(--tk-accent, #3B82F6)", lineHeight: 1, marginBottom: 12, fontFamily: "Georgia, serif" },
+  quoteIcon: { fontSize: 48, color: "var(--tk-accent, #3B82F6)", lineHeight: 1, marginBottom: 12 },
   quoteText: { fontSize: 18, color: "#1e293b", lineHeight: 1.7, fontStyle: "italic", marginBottom: 24 },
   quoteAuthor: { display: "flex", alignItems: "center", gap: 12 },
   avatar: {
@@ -349,7 +338,7 @@ const S = {
     padding: 28, transition: "box-shadow 0.2s",
   },
   diffIcon: { fontSize: 32, marginBottom: 12 },
-  diffTitle: { fontSize: 17, fontWeight: 700, margin: "0 0 8px", color: "#0f172a" },
+  diffTitle: { fontSize: 20, fontWeight: 700, margin: "0 0 8px", color: "#0f172a" },
   diffDesc: { fontSize: 14, color: "#64748b", lineHeight: 1.7, margin: 0 },
   timeline: { display: "flex", flexDirection: "column", gap: 0, maxWidth: 700, margin: "0 auto", position: "relative" },
   timelineItem: { display: "flex", gap: 24, position: "relative", paddingBottom: 40 },
@@ -379,12 +368,12 @@ const S = {
     padding: "14px 28px",
     background: "var(--tk-accent, #3B82F6)",
     color: "#fff", border: "none", borderRadius: 10,
-    fontSize: 15, fontWeight: 700, cursor: "pointer",
+    fontSize: 14, fontWeight: 700, cursor: "pointer",
   },
   ctaSecondary: {
     padding: "14px 28px", background: "none",
     border: "2px solid var(--tk-accent, #3B82F6)", color: "var(--tk-accent, #3B82F6)",
-    borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: "pointer",
+    borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer",
   },
   footer: { background: "#0f172a", padding: "20px 24px" },
   footerInner: {

@@ -296,7 +296,7 @@ function TeamMembersModal({ team, workspaceMembers, onClose, onUpdated }) {
                   style={{
                     background: m.role === "lead" ? "var(--tk-accent, #3B82F6)22" : "var(--border)",
                     border: m.role === "lead" ? "1px solid var(--tk-accent, #3B82F6)" : "1px solid transparent",
-                    borderRadius: 6, padding: "3px 10px",
+                    borderRadius: 8, padding: "3px 10px",
                     color: m.role === "lead" ? "var(--tk-accent, #3B82F6)" : "var(--text-secondary)",
                     fontSize: 11, fontWeight: 700, cursor: "pointer", textTransform: "uppercase",
                   }}
@@ -345,7 +345,7 @@ function TeamCard({ team, onEdit, onDelete, onManageMembers }) {
           {team.icon || "👥"}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>{team.name}</div>
+          <div style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 14 }}>{team.name}</div>
           {team.description && (
             <div style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {team.description}

@@ -31,7 +31,7 @@ export default function Privacy() {
           {[
             {
               title: "1. Introduction",
-              body: `Welcome to Taskora ("we," "our," or "us"). We are committed to protecting your personal information and your right to privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our platform at taskora.app.
+              body: `Welcome to Taskora ("we," "our," or "us"). We are committed to protecting your personal information and your right to privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our platform at taskora.io.
 
 Please read this policy carefully. If you disagree with its terms, please discontinue use of the platform.`,
             },
@@ -79,11 +79,11 @@ We use Render.com (or your configured hosting provider) for infrastructure. Thei
               body: `You have the right to:
 
 • Access all data associated with your account via the dashboard
-• Request a full export of your data (email support@taskora.app)
+• Request a full export of your data (email support@taskora.io)
 • Request deletion of your account and all associated data
 • Correct inaccurate data in your profile at any time
 
-To exercise any of these rights, email support@taskora.app. We will respond within 30 days.`,
+To exercise any of these rights, email support@taskora.io. We will respond within 30 days.`,
             },
             {
               title: "8. Children",
@@ -97,8 +97,8 @@ To exercise any of these rights, email support@taskora.app. We will respond with
               title: "10. Contact",
               body: `For privacy questions or requests, contact us at:
 
-Email: privacy@taskora.app
-Support: support@taskora.app
+Email: privacy@taskora.io
+Support: support@taskora.io
 
 Taskora is built and maintained by Ayush Sharma and the Taskora team.`,
             },

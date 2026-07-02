@@ -71,22 +71,22 @@ export default function Contact() {
                 {
                   icon: "📧",
                   title: "General support",
-                  lines: ["support@taskora.app", "We reply within 24 hours"],
+                  lines: ["support@taskora.io", "We reply within 24 hours"],
                 },
                 {
                   icon: "💼",
                   title: "Enterprise & sales",
-                  lines: ["enterprise@taskora.app", "Custom plans for teams of 20+"],
+                  lines: ["enterprise@taskora.io", "Custom plans for teams of 20+"],
                 },
                 {
                   icon: "🐛",
                   title: "Bug reports",
-                  lines: ["bugs@taskora.app", "Or open a GitHub issue"],
+                  lines: ["bugs@taskora.io", "Or open a GitHub issue"],
                 },
                 {
                   icon: "🗞️",
                   title: "Press & media",
-                  lines: ["press@taskora.app", "Media kit available on request"],
+                  lines: ["press@taskora.io", "Media kit available on request"],
                 },
               ].map(c => (
                 <div key={c.title} style={S.contactItem}>
@@ -202,7 +202,7 @@ export default function Contact() {
               { q: "How does the AI work?", a: "Our AI engine analyzes workload data, task complexity, team capacity, historical patterns, and dependency signals to predict delays and recommend actions." },
               { q: "Can I import from Jira or Trello?", a: "Jira CSV import is available in the Enterprise plan. Trello import is on our roadmap. In the meantime, tasks can be bulk-created via the API." },
               { q: "Is my data private?", a: "Yes. We don't sell your data, don't train on it, and you can export or delete it at any time. Full details in our Privacy Policy." },
-              { q: "How do I report a bug?", a: "Email bugs@taskora.app or open an issue on GitHub. We treat security reports with highest priority and respond within 4 hours during business hours." },
+              { q: "How do I report a bug?", a: "Email bugs@taskora.io or open an issue on GitHub. We treat security reports with highest priority and respond within 4 hours during business hours." },
             ].map(f => (
               <div key={f.q} style={S.faqCard}>
                 <div style={S.faqQ}>{f.q}</div>

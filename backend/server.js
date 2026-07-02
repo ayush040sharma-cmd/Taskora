@@ -334,9 +334,12 @@ async function seedSidebarPermissions() {
 if (process.env.NODE_ENV === "production") {
   const https = require("https");
   setInterval(() => {
-    const host = process.env.RENDER_EXTERNAL_URL
-      ? new URL(process.env.RENDER_EXTERNAL_URL).hostname
-      : "taskora-9sjl.onrender.com";
+    const externalUrl = process.env.RENDER_EXTERNAL_URL || process.env.BACKEND_URL;
+    if (!externalUrl) {
+      logger.warn("[keepalive] RENDER_EXTERNAL_URL/BACKEND_URL not set — skipping self-ping");
+      return;
+    }
+    const host = new URL(externalUrl).hostname;
     https.get(`https://${host}/health`, (res) => {
       logger.info(`[keepalive] ping ${res.statusCode}`);
     }).on("error", (e) => {

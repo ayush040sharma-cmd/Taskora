@@ -90,7 +90,7 @@ Our total liability to you for any claims under these terms shall not exceed the
             },
             {
               title: "9. Privacy",
-              body: `Your use of the Service is also governed by our Privacy Policy, which is incorporated into these Terms by reference. Please review it carefully at taskora.app/privacy.`,
+              body: `Your use of the Service is also governed by our Privacy Policy, which is incorporated into these Terms by reference. Please review it carefully at taskora.io/privacy.`,
             },
             {
               title: "10. Termination",
@@ -106,8 +106,8 @@ Upon termination, your right to use the Service ends. We will retain your data f
               title: "12. Contact",
               body: `For questions about these Terms, contact us at:
 
-Email: legal@taskora.app
-Support: support@taskora.app
+Email: legal@taskora.io
+Support: support@taskora.io
 
 Taskora is built and maintained by Ayush Sharma and the Taskora team.`,
             },

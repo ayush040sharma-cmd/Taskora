@@ -80,8 +80,8 @@ export default class ErrorBoundary extends React.Component {
           <div style={S.support}>
             <p style={S.supportText}>
               Still seeing this?{" "}
-              <a href="mailto:support@taskora.app" style={S.supportLink}>
-                Contact support@taskora.app
+              <a href="mailto:support@taskora.io" style={S.supportLink}>
+                Contact support@taskora.io
               </a>
             </p>
             <p style={{ ...S.supportText, marginTop: 4 }}>

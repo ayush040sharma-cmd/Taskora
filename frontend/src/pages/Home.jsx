@@ -80,7 +80,7 @@ function DashboardMockup() {
           <span style={{ background: "#ffbd2e" }} />
           <span style={{ background: "#27c93f" }} />
         </div>
-        <div className="lp-mock-url">taskora.app/dashboard</div>
+        <div className="lp-mock-url">taskora.io/dashboard</div>
       </div>
 
       <div className="lp-mock-body">
@@ -638,7 +638,7 @@ export default function Home() {
             <div className="lp-footer-col">
               <div className="lp-footer-col-title">Support</div>
               <a href="/contact">Help center</a>
-              <a href="mailto:support@taskora.app">Email support</a>
+              <a href="mailto:support@taskora.io">Email support</a>
               <a href="/contact">Report a bug</a>
             </div>
           </div>
@@ -646,7 +646,7 @@ export default function Home() {
         <div className="lp-footer-bottom">
           <span>© {new Date().getFullYear()} Taskora. All rights reserved.</span>
           <span>
-            Questions? <a href="mailto:support@taskora.app" style={{color:"#94a3b8"}}>support@taskora.app</a>
+            Questions? <a href="mailto:support@taskora.io" style={{color:"#94a3b8"}}>support@taskora.io</a>
           </span>
         </div>
       </footer>

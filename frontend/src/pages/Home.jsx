@@ -546,24 +546,24 @@ export default function Home() {
                 name: "Free",
                 price: "$0",
                 per: "forever",
-                features: ["1 workspace", "Up to 3 members", "Kanban + Calendar", "Basic workload view", "Community support"],
+                features: ["3 projects, 10 tasks each", "Up to 3 members", "Kanban + Calendar", "Basic workload view", "Community support"],
                 cta: "Get started",
                 highlight: false,
               },
               {
                 name: "Pro",
-                price: "$25",
+                price: "$7",
                 per: "per workspace / month",
-                features: ["Unlimited projects", "Unlimited members", "AI delay prediction", "What-if simulation", "Workload intelligence", "Priority support"],
+                features: ["Unlimited projects", "Up to 25 members", "AI delay prediction", "Gantt + Sprints", "Workload intelligence", "Priority support"],
                 cta: "Start Pro free",
                 highlight: true,
                 badge: "Most popular",
               },
               {
                 name: "Enterprise",
-                price: "Custom",
-                per: "contact us",
-                features: ["Everything in Pro", "Multi-agent AI system", "Slack + Jira integration", "SSO + SAML", "SLA + dedicated CSM", "Custom AI training"],
+                price: "$25",
+                per: "per workspace / month",
+                features: ["Everything in Pro", "Unlimited members", "What-if simulation", "Slack + Jira integration", "SSO + SAML", "SLA + dedicated CSM"],
                 cta: "Talk to sales",
                 highlight: false,
               },
@@ -582,7 +582,15 @@ export default function Home() {
                 </ul>
                 <button
                   className={p.highlight ? "lp-cta-primary" : "lp-cta-outline"}
-                  onClick={() => navigate("/register")}
+                  onClick={() => {
+                    const planId = p.name.toLowerCase();
+                    if (planId === "free") {
+                      localStorage.removeItem("taskora_intended_plan");
+                    } else {
+                      localStorage.setItem("taskora_intended_plan", JSON.stringify({ plan: planId, ts: Date.now() }));
+                    }
+                    navigate("/register");
+                  }}
                   style={{ width: "100%", justifyContent: "center" }}
                 >
                   {p.cta}

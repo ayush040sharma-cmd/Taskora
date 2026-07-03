@@ -3,6 +3,7 @@ import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/api";
 import Logo from "../components/Logo";
+import { consumeIntendedPlan } from "../utils/intendedPlan";
 
 const BACKEND_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
@@ -74,6 +75,11 @@ export default function Register() {
     setError(""); setLoading(true);
     try {
       await register(form.name, form.email, form.password, selectedRole.dbRole);
+      const intendedPlan = consumeIntendedPlan();
+      if (intendedPlan) {
+        navigate(`/payment?plan=${intendedPlan}`);
+        return;
+      }
       const redirect = searchParams.get("redirect");
       navigate(redirect || "/onboarding");
     } catch (err) {

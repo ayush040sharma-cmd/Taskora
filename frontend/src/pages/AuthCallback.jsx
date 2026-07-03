@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { consumeIntendedPlan } from "../utils/intendedPlan";
 
 export default function AuthCallback() {
   const [searchParams] = useSearchParams();
@@ -22,6 +23,13 @@ export default function AuthCallback() {
       try {
         const user = JSON.parse(decodeURIComponent(userStr));
         loginWithToken(token, user);
+
+        const intendedPlan = consumeIntendedPlan();
+        if (intendedPlan) {
+          navigate(`/payment?plan=${intendedPlan}`, { replace: true });
+          return;
+        }
+
         navigate("/dashboard", { replace: true });
       } catch {
         setError("Sign-in failed. Please try again.");

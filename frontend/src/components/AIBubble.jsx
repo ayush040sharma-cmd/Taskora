@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import api from "../api/api";
+import UpgradeModal from "./upgrade/UpgradeModal";
 
 const SUGGESTIONS = [
   "Create a task for FiberCops Demo for next week",
@@ -28,6 +29,7 @@ export default function AIBubble({ workspaceId }) {
   ]);
   const [input, setInput]     = useState("");
   const [loading, setLoading] = useState(false);
+  const [upgradeError, setUpgradeError] = useState(null);
   const bottomRef = useRef(null);
   const inputRef  = useRef(null);
 
@@ -83,10 +85,16 @@ export default function AIBubble({ workspaceId }) {
         setMsgs(m => [...m, { role: "assistant", text: replyText }]);
       }
     } catch (err) {
-      const msg = err.response?.status === 403
-        ? "You don't have access to this workspace."
-        : "Couldn't connect right now. Try again in a moment.";
-      setMsgs(m => [...m, { role: "assistant", text: msg }]);
+      const code = err.response?.data?.code;
+      if (code === "PLAN_UPGRADE_REQUIRED" || code === "LIMIT_EXCEEDED") {
+        setUpgradeError(err);
+        setMsgs(m => [...m, { role: "assistant", text: "This action needs a plan upgrade." }]);
+      } else {
+        const msg = err.response?.status === 403
+          ? "You don't have access to this workspace."
+          : "Couldn't connect right now. Try again in a moment.";
+        setMsgs(m => [...m, { role: "assistant", text: msg }]);
+      }
     } finally {
       setLoading(false);
     }
@@ -193,6 +201,14 @@ export default function AIBubble({ workspaceId }) {
         >
           <span style={{ fontSize: 22, lineHeight: 1 }}>✨</span>
         </button>
+      )}
+
+      {upgradeError && (
+        <UpgradeModal
+          feature={upgradeError.response?.data?.feature}
+          requiredPlan={(upgradeError.response?.data?.requiredPlan || "pro").toLowerCase()}
+          onClose={() => setUpgradeError(null)}
+        />
       )}
     </div>
   );

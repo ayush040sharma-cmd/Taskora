@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import api from "../api/api";
+import UpgradeGate from "./upgrade/UpgradeGate";
 
 const LOAD_COLOR = (pct) =>
   pct > 100 ? "#dc2626" : pct >= 80 ? "#f59e0b" : "#10b981";
@@ -100,6 +101,7 @@ export default function SimulationPanel({ workspaceId }) {
   const [applySuccess,   setApplySuccess]  = useState(false);
   const [applyError,     setApplyError]    = useState(null);
   const [travelWarning,  setTravelWarning] = useState(null);
+  const [upgradeError,   setUpgradeError]  = useState(null);
 
   const loadData = useCallback(async () => {
     if (!workspaceId) return;
@@ -130,7 +132,12 @@ export default function SimulationPanel({ workspaceId }) {
       });
       setResult(res.data);
     } catch (err) {
-      setResult({ error: err.response?.data?.message || "Simulation failed" });
+      const code = err.response?.data?.code;
+      if (code === "PLAN_UPGRADE_REQUIRED" || code === "LIMIT_EXCEEDED") {
+        setUpgradeError(err);
+      } else {
+        setResult({ error: err.response?.data?.message || "Simulation failed" });
+      }
     } finally {
       setLoading(false);
     }
@@ -154,7 +161,11 @@ export default function SimulationPanel({ workspaceId }) {
     try {
       const res = await api.get(`/simulate/suggest/${workspaceId}/${selectedTask}`);
       setSuggestions(res.data);
-    } catch (e) { console.error(e); }
+    } catch (err) {
+      const code = err.response?.data?.code;
+      if (code === "PLAN_UPGRADE_REQUIRED" || code === "LIMIT_EXCEEDED") setUpgradeError(err);
+      else console.error(err);
+    }
     finally { setSugLoading(false); }
   };
 
@@ -179,6 +190,7 @@ export default function SimulationPanel({ workspaceId }) {
   const sim = result?.simulation;
 
   return (
+    <UpgradeGate upgradeError={upgradeError}>
     <div className="sim-root">
 
       {/* ── Travel / Leave Warning Modal ── */}
@@ -507,5 +519,6 @@ export default function SimulationPanel({ workspaceId }) {
         )}
       </div>
     </div>
+    </UpgradeGate>
   );
 }

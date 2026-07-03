@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import api from "../api/api";
+import UpgradeGate from "./upgrade/UpgradeGate";
 
 const TABS = [
   { id: "import", label: "Import Tasks", icon: "📥" },
@@ -498,6 +499,7 @@ function StatusImportTab({ workspaceId }) {
 function ExportTab({ workspaceId }) {
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState(null);
+  const [upgradeError, setUpgradeError] = useState(null);
 
   const exportTasks = async () => {
     setDownloading(true); setError(null);
@@ -510,13 +512,24 @@ function ExportTab({ workspaceId }) {
       const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      setError(err.response?.data?.message || "Export failed");
+      // A blob-typed response returns the error body as a Blob too — read it back to JSON
+      // so the PLAN_UPGRADE_REQUIRED code is actually inspectable here.
+      let body = err.response?.data;
+      if (body instanceof Blob) {
+        try { body = JSON.parse(await body.text()); } catch { body = {}; }
+      }
+      if (body?.code === "PLAN_UPGRADE_REQUIRED" || body?.code === "LIMIT_EXCEEDED") {
+        setUpgradeError({ response: { data: body } });
+      } else {
+        setError(body?.message || "Export failed");
+      }
     } finally {
       setDownloading(false);
     }
   };
 
   return (
+    <UpgradeGate upgradeError={upgradeError}>
     <div style={{ textAlign: "center", padding: "40px 0" }}>
       <div style={{ fontSize: 56, marginBottom: 20 }}>📊</div>
       <h3 style={{ color: "var(--text-primary)", fontSize: 20, fontWeight: 800, margin: "0 0 8px" }}>Export all workspace tasks</h3>
@@ -542,6 +555,7 @@ function ExportTab({ workspaceId }) {
         {downloading ? "Preparing export…" : "⬇ Download Excel"}
       </button>
     </div>
+    </UpgradeGate>
   );
 }
 

@@ -21,6 +21,7 @@ import FilterBar from "../components/FilterBar";
 import IntegrationsPanel from "../components/IntegrationsPanel";
 import ActivityFeed from "../components/ActivityFeed";
 import SimulationPanel from "../components/SimulationPanel";
+import UpgradeGate from "../components/upgrade/UpgradeGate";
 import AIRiskHeatmap from "../components/AIRiskHeatmap";
 import NLChat from "../components/NLChat";
 import GanttChart from "../components/GanttChart";
@@ -198,6 +199,7 @@ export default function Dashboard() {
   const [allTasks, setAllTasks]                 = useState([]);
   const [sprints, setSprints]                   = useState([]);
   const [activeSprint, setActiveSprint]         = useState(null);
+  const [sprintsUpgradeError, setSprintsUpgradeError] = useState(null);
   const [loading, setLoading]                   = useState(true);
   const [wakeStatus, setWakeStatus]             = useState(null); // null | "waking" | "error"
   const [wakeAttempt, setWakeAttempt]           = useState(0);
@@ -282,8 +284,14 @@ export default function Dashboard() {
       const { data } = await api.get(`/sprints?workspace_id=${wsId}`);
       setSprints(data);
       setActiveSprint(prev => (prev && data.find(s => s.id === prev.id)) ? prev : (data[0] || null));
+      setSprintsUpgradeError(null);
     } catch (err) {
-      if (err.response?.status !== 401) showToast("Failed to load sprints", "error");
+      const code = err.response?.data?.code;
+      if (code === "PLAN_UPGRADE_REQUIRED" || code === "LIMIT_EXCEEDED") {
+        setSprintsUpgradeError(err);
+      } else if (err.response?.status !== 401) {
+        showToast("Failed to load sprints", "error");
+      }
     }
   }, [showToast]); // eslint-disable-line
 
@@ -690,7 +698,7 @@ export default function Dashboard() {
 
           {/* ── Sprints ── */}
           {view === "sprints" && (
-            <>
+            <UpgradeGate upgradeError={sprintsUpgradeError}>
               <div className="board-header">
                 <div className="board-title-area">
                   <h1>Sprint Planning</h1>
@@ -734,7 +742,7 @@ export default function Dashboard() {
                   )}
                 </div>
               )}
-            </>
+            </UpgradeGate>
           )}
 
           {/* ── Manager ── */}

@@ -1,27 +1,33 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "../../context/AuthContext";
-import { canAccess, requiredPlan } from "../../utils/canAccess";
 import { PLAN_LABELS } from "../../config/features";
 import { analytics } from "../../utils/analytics";
 import UpgradeModal from "./UpgradeModal";
 
 /**
- * Wraps children and blurs/overlays them if the user's plan doesn't meet
- * the feature requirement. Click on the overlay to open UpgradeModal.
+ * Wraps children and blurs/overlays them ONLY when the backend has actually
+ * rejected a request with a licensing 403 — PLAN_UPGRADE_REQUIRED or
+ * LIMIT_EXCEEDED (see backend/middleware/planEnforce.js). Nothing is
+ * pre-judged on the client from a local plan/feature map.
+ *
+ * Pass the caught axios error as `upgradeError` (or leave it null/undefined
+ * once the underlying request succeeds). Internal users and admins never
+ * receive this 403 from the backend in the first place, so this gate simply
+ * never triggers for them — no separate internal/admin check needed here.
  */
-export default function UpgradeGate({ feature, children, style = {} }) {
-  const { user } = useAuth();
-  const plan = user?.plan || "free";
+export default function UpgradeGate({ upgradeError, children, style = {} }) {
   const [showModal, setShowModal] = useState(false);
 
-  const allowed = canAccess(feature, plan, user?.is_admin);
-  const needed = requiredPlan(feature);
+  const code    = upgradeError?.response?.data?.code;
+  const blocked = code === "PLAN_UPGRADE_REQUIRED" || code === "LIMIT_EXCEEDED";
+
+  const feature = upgradeError?.response?.data?.feature;
+  const needed  = (upgradeError?.response?.data?.requiredPlan || "pro").toLowerCase();
 
   useEffect(() => {
-    if (!allowed) analytics.featureBlocked(feature, plan);
-  }, [allowed, feature, plan]); // eslint-disable-line
+    if (blocked) analytics.featureBlocked(feature, needed);
+  }, [blocked, feature, needed]);
 
-  if (allowed) return <>{children}</>;
+  if (!blocked) return <>{children}</>;
 
   return (
     <>

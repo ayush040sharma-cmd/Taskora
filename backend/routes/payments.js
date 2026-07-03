@@ -50,6 +50,12 @@ router.post("/create-order", auth, async (req, res) => {
     const rzp = getRazorpay();
     const { amount, currency } = PLAN_PRICES[plan];
 
+    // Defensive — amount always comes from PLAN_PRICES above, never from the
+    // request body, but Razorpay itself rejects orders below its minimum too.
+    if (amount < 100) {
+      return res.status(400).json({ message: "Order amount below Razorpay's minimum (100 in the smallest currency unit)" });
+    }
+
     const order = await rzp.orders.create({
       amount,
       currency,
@@ -77,6 +83,13 @@ router.post("/create-order", auth, async (req, res) => {
         mock:     true,
       });
     }
+    // Razorpay rejects the request itself due to bad/revoked key credentials —
+    // surface as 401 rather than a generic 500, per Razorpay's error shape
+    // (statusCode 401, error.code "BAD_REQUEST_ERROR" with an auth-related description).
+    if (err.statusCode === 401 || /authentication|key_id/i.test(err.error?.description || "")) {
+      logger.error(`Razorpay authentication failed: ${err.error?.description || err.message}`);
+      return res.status(401).json({ message: "Payment gateway authentication failed" });
+    }
     logger.error(`Razorpay order creation failed: ${err.message}`);
     res.status(500).json({ message: "Payment initiation failed" });
   }
@@ -88,6 +101,9 @@ router.post("/verify", auth, async (req, res) => {
 
   if (!PLAN_PRICES[plan]) {
     return res.status(400).json({ message: "Invalid plan" });
+  }
+  if (!mock && (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature)) {
+    return res.status(400).json({ message: "razorpay_payment_id, razorpay_order_id, and razorpay_signature are required" });
   }
 
   try {

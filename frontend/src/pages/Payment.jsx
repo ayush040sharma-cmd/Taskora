@@ -75,7 +75,7 @@ export default function Payment() {
       }
 
       const options = {
-        key: order.key,
+        key: order.key_id,
         amount: order.amount,
         currency: order.currency,
         name: "Taskora",
@@ -110,6 +110,10 @@ export default function Payment() {
       };
 
       const rz = new window.Razorpay(options);
+      rz.on("payment.failed", (response) => {
+        setError(response.error?.description || "Payment failed. Please try again.");
+        setLoading(false);
+      });
       rz.open();
     } catch (err) {
       setError(err.response?.data?.error || err.message || "Something went wrong. Please try again.");

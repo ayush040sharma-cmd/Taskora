@@ -9,7 +9,7 @@ const PLANS = [
   {
     id: "free",
     title: "Free",
-    price: "₹0",
+    price: "$0",
     period: "forever",
     description: "For individuals getting started with personal task tracking.",
     features: [
@@ -25,7 +25,7 @@ const PLANS = [
   {
     id: "pro",
     title: "Pro",
-    price: "₹699",
+    price: "$7",
     period: "/month",
     description: "For growing teams that need unlimited projects and sprint planning.",
     badge: "Most popular",
@@ -44,7 +44,7 @@ const PLANS = [
   {
     id: "enterprise",
     title: "Enterprise",
-    price: "₹2,499",
+    price: "$25",
     period: "/month",
     description: "For organisations that need AI, integrations, and unlimited scale.",
     features: [
@@ -176,7 +176,7 @@ export default function Pricing() {
 
         {/* FAQ footer */}
         <div style={{ textAlign: "center", marginTop: 48, color: "#475569", fontSize: 13 }}>
-          All prices in INR (₹) · GST applicable · Secure payment via Razorpay
+          All prices in USD · Secure payment via Razorpay
         </div>
       </div>
     </div>

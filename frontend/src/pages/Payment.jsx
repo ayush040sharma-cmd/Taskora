@@ -7,16 +7,16 @@ import api from "../api/api";
 const PLAN_DETAILS = {
   pro: {
     title: "Pro",
-    price: "₹699",
-    amount: 699,
+    price: "$7",
+    amount: 7,
     description: "Unlimited projects, Gantt, Sprints, 500 AI requests/month",
     color: "#3B82F6",
     features: ["Unlimited projects & tasks", "25 team members", "Gantt + Sprints", "Task approvals", "500 AI requests/month"],
   },
   enterprise: {
     title: "Enterprise",
-    price: "₹2,499",
-    amount: 2499,
+    price: "$25",
+    amount: 25,
     description: "Everything in Pro plus AI Risk, Simulation, Integrations, unlimited members",
     color: "#8b5cf6",
     features: ["Everything in Pro", "Unlimited members", "AI Risk Heatmap", "Simulation engine", "Integrations + SLA"],
@@ -246,7 +246,7 @@ export default function Payment() {
                 </button>
 
                 <p style={{ textAlign: "center", fontSize: 12, color: "#475569" }}>
-                  🔒 Secure payment · Cancel anytime · GST applicable
+                  🔒 Secure payment · Cancel anytime
                 </p>
               </div>
             </div>

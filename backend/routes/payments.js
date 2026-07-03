@@ -13,8 +13,8 @@ const auth     = require("../middleware/auth");
 const logger   = require("../utils/logger");
 
 const PLAN_PRICES = {
-  pro:        { amount: 69900,  currency: "INR", label: "Pro",        period: "month" },
-  enterprise: { amount: 249900, currency: "INR", label: "Enterprise", period: "month" },
+  pro:        { amount: 700,  currency: "USD", label: "Pro",        period: "month" },
+  enterprise: { amount: 2500, currency: "USD", label: "Enterprise", period: "month" },
 };
 
 // Lazy-load Razorpay so the server starts even without keys
@@ -32,9 +32,9 @@ function getRazorpay() {
 // GET /api/payments/plans — public
 router.get("/plans", (req, res) => {
   res.json({
-    free:       { amount: 0,      currency: "INR", label: "Free",       period: "forever" },
-    pro:        { amount: 699,    currency: "INR", label: "Pro",        period: "month" },
-    enterprise: { amount: 2499,   currency: "INR", label: "Enterprise", period: "month" },
+    free:       { amount: 0,  currency: "USD", label: "Free",       period: "forever" },
+    pro:        { amount: 7,  currency: "USD", label: "Pro",        period: "month" },
+    enterprise: { amount: 25, currency: "USD", label: "Enterprise", period: "month" },
   });
 });
 

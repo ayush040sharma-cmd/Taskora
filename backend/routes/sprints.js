@@ -2,9 +2,11 @@ const express = require("express");
 const router = express.Router();
 const pool = require("../db");
 const auth = require("../middleware/auth");
+const { requireFeature } = require("../middleware/planEnforce");
+const { FEATURES }       = require("../config/licensing");
 
 // GET /api/sprints?workspace_id=X
-router.get("/", auth, async (req, res) => {
+router.get("/", auth, requireFeature(FEATURES.SPRINTS), async (req, res) => {
   const { workspace_id } = req.query;
   if (!workspace_id) return res.status(400).json({ message: "workspace_id required" });
   try {
@@ -35,7 +37,7 @@ router.get("/", auth, async (req, res) => {
 });
 
 // POST /api/sprints
-router.post("/", auth, async (req, res) => {
+router.post("/", auth, requireFeature(FEATURES.SPRINTS), async (req, res) => {
   const { name, goal, start_date, end_date, workspace_id } = req.body;
   if (!name || !start_date || !end_date || !workspace_id) {
     return res.status(400).json({ message: "name, start_date, end_date, workspace_id required" });
@@ -60,7 +62,7 @@ router.post("/", auth, async (req, res) => {
 });
 
 // PUT /api/sprints/:id  (update status, name, etc.)
-router.put("/:id", auth, async (req, res) => {
+router.put("/:id", auth, requireFeature(FEATURES.SPRINTS), async (req, res) => {
   const { name, goal, start_date, end_date, status } = req.body;
   try {
     const check = await pool.query(
@@ -89,7 +91,7 @@ router.put("/:id", auth, async (req, res) => {
 });
 
 // DELETE /api/sprints/:id
-router.delete("/:id", auth, async (req, res) => {
+router.delete("/:id", auth, requireFeature(FEATURES.SPRINTS), async (req, res) => {
   try {
     const check = await pool.query(
       `SELECT s.id FROM sprints s
@@ -109,7 +111,7 @@ router.delete("/:id", auth, async (req, res) => {
 });
 
 // GET /api/sprints/:id/burndown  — daily remaining task count
-router.get("/:id/burndown", auth, async (req, res) => {
+router.get("/:id/burndown", auth, requireFeature(FEATURES.SPRINTS), async (req, res) => {
   try {
     const sprint = await pool.query(
       `SELECT s.* FROM sprints s

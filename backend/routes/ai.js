@@ -13,6 +13,8 @@ const router  = express.Router();
 const pool    = require("../db");
 const auth    = require("../middleware/auth");
 const { requireMinRole } = require("../middleware/rbac");
+const { requireFeature }  = require("../middleware/planEnforce");
+const { FEATURES }        = require("../config/licensing");
 const ai      = require("../services/aiEngine");
 
 // ── POST /api/ai/predict/:taskId ──────────────────────────────────────────────
@@ -110,7 +112,7 @@ router.post("/predict/:taskId", auth, async (req, res) => {
 
 // ── POST /api/ai/analyze/:workspaceId ─────────────────────────────────────────
 // Batch workspace analysis — manager+ only (mirrors ai-risk MANAGER_ONLY_VIEW)
-router.post("/analyze/:workspaceId", auth, requireMinRole("manager"), async (req, res) => {
+router.post("/analyze/:workspaceId", auth, requireMinRole("manager"), requireFeature(FEATURES.AI_REASONING), async (req, res) => {
   const start = Date.now();
   try {
     // Verify access (owner or workspace member)
@@ -194,7 +196,7 @@ router.post("/analyze/:workspaceId", auth, requireMinRole("manager"), async (req
 
 // ── GET /api/ai/health/:workspaceId ──────────────────────────────────────────
 // Workspace health score — manager+ only
-router.get("/health/:workspaceId", auth, requireMinRole("manager"), async (req, res) => {
+router.get("/health/:workspaceId", auth, requireMinRole("manager"), requireFeature(FEATURES.AI_REASONING), async (req, res) => {
   try {
     const ws = await pool.query(
       `SELECT w.id FROM workspaces w
@@ -222,7 +224,7 @@ router.get("/health/:workspaceId", auth, requireMinRole("manager"), async (req, 
 
 // ── GET /api/ai/alerts/:workspaceId ──────────────────────────────────────────
 // Prescriptive alerts — manager+ only
-router.get("/alerts/:workspaceId", auth, requireMinRole("manager"), async (req, res) => {
+router.get("/alerts/:workspaceId", auth, requireMinRole("manager"), requireFeature(FEATURES.AI_REASONING), async (req, res) => {
   try {
     const ws = await pool.query(
       `SELECT w.id FROM workspaces w

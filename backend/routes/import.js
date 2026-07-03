@@ -15,6 +15,8 @@ const multer  = require("multer");
 const XLSX    = require("xlsx");
 const pool    = require("../db");
 const auth    = require("../middleware/auth");
+const { requireFeature } = require("../middleware/planEnforce");
+const { FEATURES }       = require("../config/licensing");
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -382,7 +384,7 @@ router.post("/tasks/:workspaceId/confirm", auth, async (req, res) => {
 });
 
 // ── GET /api/import/tasks/:workspaceId/export — download tasks as Excel ───────
-router.get("/tasks/:workspaceId/export", auth, async (req, res) => {
+router.get("/tasks/:workspaceId/export", auth, requireFeature(FEATURES.EXPORT), async (req, res) => {
   const { workspaceId } = req.params;
 
   if (!(await canAccess(req.user.id, workspaceId))) {

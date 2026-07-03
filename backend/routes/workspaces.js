@@ -3,6 +3,13 @@ const router = express.Router();
 const pool = require("../db");
 const auth = require("../middleware/auth");
 const { validate, schemas } = require("../utils/validate");
+const { enforceLimit } = require("../middleware/planEnforce");
+const { FEATURES }     = require("../config/licensing");
+
+async function countOwnedWorkspaces(req) {
+  const { rows } = await pool.query("SELECT COUNT(*)::int AS c FROM workspaces WHERE user_id = $1", [req.user.id]);
+  return rows[0].c;
+}
 
 // GET /api/workspaces
 // Returns workspaces the user owns OR is a member of
@@ -121,7 +128,7 @@ async function seedWorkspaceTemplate(workspaceId, userId, template) {
 }
 
 // POST /api/workspaces
-router.post("/", auth, validate(schemas.createWorkspace), async (req, res) => {
+router.post("/", auth, validate(schemas.createWorkspace), enforceLimit(FEATURES.PROJECT_LIMIT, countOwnedWorkspaces), async (req, res) => {
   const { name, template } = req.body;
   if (!name) return res.status(400).json({ message: "Workspace name is required" });
 

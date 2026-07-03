@@ -13,8 +13,19 @@ const pool    = require("../db");
 const auth    = require("../middleware/auth");
 const { validate, schemas } = require("../utils/validate");
 const { sendWorkspaceInvite, sendWorkspaceAddedNotification } = require("../services/emailService");
+const { enforceLimit } = require("../middleware/planEnforce");
+const { FEATURES }     = require("../config/licensing");
 
 const VALID_ROLES = ["manager", "member", "viewer"];
+
+// +1 to count the workspace owner themselves as a member for limit purposes.
+async function countWorkspaceMembers(req) {
+  const { rows } = await pool.query(
+    "SELECT (1 + COUNT(*))::int AS c FROM workspace_members WHERE workspace_id = $1",
+    [req.body.workspace_id]
+  );
+  return rows[0].c;
+}
 
 // Auto-create workspace_invites table on server start
 pool.query(`
@@ -109,7 +120,7 @@ router.get("/", auth, async (req, res) => {
 
 // ── POST /api/members ─────────────────────────────────────────────────────────
 // Add a member to a workspace by email
-router.post("/", auth, validate(schemas.addMember), async (req, res) => {
+router.post("/", auth, validate(schemas.addMember), enforceLimit(FEATURES.MEMBER_LIMIT, countWorkspaceMembers), async (req, res) => {
   const { workspace_id, email, role = "member" } = req.body;
 
   if (!workspace_id || !email) {

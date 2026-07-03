@@ -6,6 +6,13 @@ const { refreshUserWorkloadLog } = require("../services/workloadLogger");
 const { audit } = require("../services/auditService");
 const { validate, schemas } = require("../utils/validate");
 const { notifyOne } = require("../services/notificationService");
+const { enforceLimit } = require("../middleware/planEnforce");
+const { FEATURES }     = require("../config/licensing");
+
+async function countTasksInWorkspace(req) {
+  const { rows } = await pool.query("SELECT COUNT(*)::int AS c FROM tasks WHERE workspace_id = $1", [req.body.workspace_id]);
+  return rows[0].c;
+}
 
 // GET /api/tasks/workspace/:workspaceId
 router.get("/workspace/:workspaceId", auth, async (req, res) => {
@@ -136,7 +143,7 @@ router.get("/:id", auth, async (req, res) => {
 });
 
 // POST /api/tasks
-router.post("/", auth, validate(schemas.createTask), async (req, res) => {
+router.post("/", auth, validate(schemas.createTask), enforceLimit(FEATURES.TASK_LIMIT, countTasksInWorkspace), async (req, res) => {
   const {
     title, description, status, priority, due_date, start_date,
     workspace_id, type, estimated_days, progress, assigned_user_id, sprint_id,

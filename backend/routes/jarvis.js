@@ -17,6 +17,8 @@ const express = require("express");
 const router  = express.Router();
 const pool    = require("../db");
 const auth    = require("../middleware/auth");
+const { requireFeature }         = require("../middleware/planEnforce");
+const { FEATURES }               = require("../config/licensing");
 const { audit }                  = require("../services/auditService");
 const { refreshUserWorkloadLog } = require("../services/workloadLogger");
 
@@ -375,7 +377,7 @@ async function findMember(nameHint, workspaceId) {
 }
 
 // ── POST /api/jarvis/command ──────────────────────────────────────────────────
-router.post("/command", auth, async (req, res) => {
+router.post("/command", auth, requireFeature(FEATURES.JARVIS), async (req, res) => {
   const { message, workspace_id } = req.body;
 
   if (!message?.trim()) {

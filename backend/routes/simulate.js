@@ -10,11 +10,13 @@ const router  = express.Router();
 const pool    = require("../db");
 const auth    = require("../middleware/auth");
 const { requireMinRole } = require("../middleware/rbac");
+const { requireFeature }  = require("../middleware/planEnforce");
+const { FEATURES }        = require("../config/licensing");
 const wl      = require("../services/workloadEngine");
 
 // ── POST /api/simulate/assign ────────────────────────────────────────────────
 // What-if simulation — manager+ only (mirrors MANAGER_ONLY_VIEWS simulation gate)
-router.post("/assign", auth, requireMinRole("manager"), async (req, res) => {
+router.post("/assign", auth, requireMinRole("manager"), requireFeature(FEATURES.SIMULATION), async (req, res) => {
   const { task_id, user_id, workspace_id, estimated_hours } = req.body;
   if (!task_id || !user_id || !workspace_id) {
     return res.status(400).json({ message: "task_id, user_id, workspace_id required" });
@@ -68,7 +70,7 @@ router.post("/assign", auth, requireMinRole("manager"), async (req, res) => {
 
 // ── GET /api/simulate/suggest/:wsId/:taskId ───────────────────────────────────
 // AI suggestion for best assignee — manager+ only
-router.get("/suggest/:wsId/:taskId", auth, requireMinRole("manager"), async (req, res) => {
+router.get("/suggest/:wsId/:taskId", auth, requireMinRole("manager"), requireFeature(FEATURES.SMART_ASSIGNMENT), async (req, res) => {
   const { wsId, taskId } = req.params;
   try {
     // Verify requester is owner or member

@@ -56,7 +56,7 @@ export default function About() {
             <div style={S.storyText}>
               <h2 style={S.h2}>The moment it clicked</h2>
               <p style={S.para}>
-                It was a Thursday afternoon in 2026. Ayush Sharma — coming from a non-technical background but now trying to build his first real product — was staring at a Kanban board filled with neatly organized green tasks. On the surface, everything looked on track. But in reality, three clients were about to be told their deliveries would slip. Again.
+                It was a Thursday afternoon in 2026. Sharma — coming from a non-technical background but now trying to build his first real product — was staring at a Kanban board filled with neatly organized green tasks. On the surface, everything looked on track. But in reality, three clients were about to be told their deliveries would slip. Again.
               </p>
               <p style={S.para}>
                 He hadn't started as a developer. There was no formal training, no engineering degree — just a growing frustration with how work was being managed. Tasks looked simple on boards, timelines looked achievable on paper, and yet execution kept falling apart. Deadlines slipped, workloads were misjudged, and no tool seemed to reflect what was actually happening behind the scenes.
@@ -84,9 +84,9 @@ export default function About() {
                   Taskora was built on a simple belief: teams shouldn’t have to rely on fragmented updates, manual follow-ups, and incomplete visibility to get work done. We help bring clarity, accountability, and momentum to execution.
                 </p>
                 <div style={S.quoteAuthor}>
-                  <div style={S.avatar}>AS</div>
+                  <div style={S.avatar}>S</div>
                   <div>
-                    <div style={S.authorName}>Ayush Sharma</div>
+                    <div style={S.authorName}>Sharma</div>
                     <div style={S.authorRole}>Founder & Creator, Taskora</div>
                   </div>
                 </div>
@@ -152,7 +152,7 @@ export default function About() {
               {
                 year: "Late 2025",
                 title: "The frustration phase",
-                desc: "Ayush starts building a personal Kanban tool after a rough sprint at work. It's just a simple board — no AI, no analytics. But it syncs in real time and that already feels different.",
+                desc: "Sharma starts building a personal Kanban tool after a rough sprint at work. It's just a simple board — no AI, no analytics. But it syncs in real time and that already feels different.",
               },
               {
                 year: "Early 2026",

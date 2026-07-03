@@ -109,7 +109,7 @@ Upon termination, your right to use the Service ends. We will retain your data f
 Email: legal@taskora.io
 Support: support@taskora.io
 
-Taskora is built and maintained by Ayush Sharma and the Taskora team.`,
+Taskora is built and maintained by Sharma and the Taskora team.`,
             },
           ].map(s => (
             <div key={s.title} style={S.docSection}>

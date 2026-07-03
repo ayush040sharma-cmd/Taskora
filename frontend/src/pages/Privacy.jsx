@@ -100,7 +100,7 @@ To exercise any of these rights, email support@taskora.io. We will respond withi
 Email: privacy@taskora.io
 Support: support@taskora.io
 
-Taskora is built and maintained by Ayush Sharma and the Taskora team.`,
+Taskora is built and maintained by Sharma and the Taskora team.`,
             },
           ].map(s => (
             <div key={s.title} style={S.docSection}>

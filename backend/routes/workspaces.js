@@ -5,6 +5,7 @@ const auth = require("../middleware/auth");
 const { validate, schemas } = require("../utils/validate");
 const { enforceLimit } = require("../middleware/planEnforce");
 const { FEATURES }     = require("../config/licensing");
+const logger = require("../utils/logger");
 
 async function countOwnedWorkspaces(req) {
   const { rows } = await pool.query("SELECT COUNT(*)::int AS c FROM workspaces WHERE user_id = $1", [req.user.id]);
@@ -268,6 +269,7 @@ router.delete("/:id", auth, async (req, res) => {
     await pool.query("DELETE FROM workspaces WHERE id = $1", [req.params.id]);
     res.json({ message: "Workspace deleted" });
   } catch (err) {
+    logger.error(`Delete workspace error: ${err.message}`, { workspaceId: req.params.id, userId: req.user.id, stack: err.stack });
     res.status(500).json({ message: "Server error" });
   }
 });

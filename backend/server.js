@@ -10,7 +10,6 @@ const cookieParser = require("cookie-parser");
 const logger       = require("./utils/logger");
 const firewall     = require("./middleware/firewall");
 const alertService = require("./services/alertService");
-const planEnforce  = require("./middleware/planEnforce");
 
 const app        = express();
 const httpServer = createServer(app);
@@ -102,9 +101,6 @@ app.use("/api", globalLimiter);
 
 // ── Firewall — threat detection on every API request ─────────────────────────
 app.use("/api", firewall);
-
-// ── Plan enforcement — gate pro/enterprise routes ─────────────────────────────
-app.use("/api", planEnforce);
 
 // ── Socket.io setup ───────────────────────────────────────────────────────────
 const io = new Server(httpServer, {

@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import Logo from "../components/Logo";
+import { useAuth } from "../context/AuthContext";
 
 // ── Animated counter ──────────────────────────────────────────────────────────
 function Counter({ end, suffix = "", duration = 2000 }) {
@@ -176,6 +177,7 @@ function DashboardMockup() {
 // ── Main landing page ─────────────────────────────────────────────────────────
 export default function Home() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -584,6 +586,17 @@ export default function Home() {
                   className={p.highlight ? "lp-cta-primary" : "lp-cta-outline"}
                   onClick={() => {
                     const planId = p.name.toLowerCase();
+
+                    // Already signed in: /register and / both bounce logged-in
+                    // visitors straight to /dashboard (see App.jsx's PublicRoute),
+                    // so routing a paid-plan click through /register would never
+                    // even reach the plan-carrying logic there. Go straight to
+                    // checkout instead, same as Pricing.jsx already does.
+                    if (user) {
+                      navigate(planId === "free" ? "/dashboard" : `/payment?plan=${planId}`);
+                      return;
+                    }
+
                     if (planId === "free") {
                       localStorage.removeItem("taskora_intended_plan");
                     } else {

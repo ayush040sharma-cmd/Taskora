@@ -12,9 +12,20 @@ const pool     = require("../db");
 const auth     = require("../middleware/auth");
 const logger   = require("../utils/logger");
 
+// Currency + whole-unit prices are env-configurable; PLAN_PRICES (Razorpay's
+// smallest-unit amount) and the /plans display endpoint below both derive
+// from these same three values, so they can no longer drift apart.
+// NOTE: the *100 conversion assumes a 2-decimal currency (USD, INR, EUR, GBP,
+// etc.) — Razorpay's own convention for "amount in the smallest unit". If
+// this is ever set to a zero-decimal currency (e.g. JPY), this multiplier
+// would need to change too.
+const CURRENCY           = process.env.PAYMENT_CURRENCY || "USD";
+const PRO_PRICE          = Number(process.env.PRO_PLAN_PRICE)        || 7;
+const ENTERPRISE_PRICE   = Number(process.env.ENTERPRISE_PLAN_PRICE) || 25;
+
 const PLAN_PRICES = {
-  pro:        { amount: 700,  currency: "USD", label: "Pro",        period: "month" },
-  enterprise: { amount: 2500, currency: "USD", label: "Enterprise", period: "month" },
+  pro:        { amount: PRO_PRICE * 100,        currency: CURRENCY, label: "Pro",        period: "month" },
+  enterprise: { amount: ENTERPRISE_PRICE * 100, currency: CURRENCY, label: "Enterprise", period: "month" },
 };
 
 // Lazy-load Razorpay so the server starts even without keys
@@ -32,9 +43,9 @@ function getRazorpay() {
 // GET /api/payments/plans — public
 router.get("/plans", (req, res) => {
   res.json({
-    free:       { amount: 0,  currency: "USD", label: "Free",       period: "forever" },
-    pro:        { amount: 7,  currency: "USD", label: "Pro",        period: "month" },
-    enterprise: { amount: 25, currency: "USD", label: "Enterprise", period: "month" },
+    free:       { amount: 0,               currency: CURRENCY, label: "Free",       period: "forever" },
+    pro:        { amount: PRO_PRICE,        currency: CURRENCY, label: "Pro",        period: "month" },
+    enterprise: { amount: ENTERPRISE_PRICE, currency: CURRENCY, label: "Enterprise", period: "month" },
   });
 });
 

@@ -258,12 +258,27 @@ router.put("/:id", auth, async (req, res) => {
 // DELETE /api/workspaces/:id
 router.delete("/:id", auth, async (req, res) => {
   try {
+    // Split the "doesn't exist" and "exists but you can't delete it" cases so
+    // the error message can actually say which one happened, instead of a
+    // single ambiguous "not found" covering both.
+    //
+    // Allowed to delete: the owner, or a workspace_members row with the
+    // per-workspace role "manager" (workspace_members.role -- distinct from
+    // the platform-wide users.role). Plain "member"/"viewer" workspace roles
+    // still cannot delete.
     const check = await pool.query(
-      "SELECT id FROM workspaces WHERE id = $1 AND user_id = $2",
+      `SELECT w.id, w.user_id,
+              (SELECT role FROM workspace_members WHERE workspace_id = w.id AND user_id = $2) AS member_role
+       FROM workspaces w WHERE w.id = $1`,
       [req.params.id, req.user.id]
     );
     if (check.rows.length === 0) {
       return res.status(404).json({ message: "Workspace not found" });
+    }
+    const ws = check.rows[0];
+    const canDelete = ws.user_id === req.user.id || ws.member_role === "manager";
+    if (!canDelete) {
+      return res.status(403).json({ message: "Only the workspace owner or a workspace manager can delete this workspace" });
     }
 
     await pool.query("DELETE FROM workspaces WHERE id = $1", [req.params.id]);

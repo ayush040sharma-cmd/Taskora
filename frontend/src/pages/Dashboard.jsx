@@ -472,8 +472,8 @@ export default function Dashboard() {
         setAllTasks([]);
       }
       showToast("Workspace deleted");
-    } catch {
-      showToast("Failed to delete workspace", "error");
+    } catch (err) {
+      showToast(err.response?.data?.message || "Failed to delete workspace", "error");
     }
   };
 

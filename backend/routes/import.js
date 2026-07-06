@@ -286,6 +286,44 @@ router.post("/tasks/:workspaceId/confirm", auth, async (req, res) => {
     return res.status(403).json({ message: "Access denied" });
   }
 
+  // The preview step (above) computes and validates status/priority/type and
+  // resolves assignee/team to this workspace's own members/teams -- but this
+  // endpoint only ever received the client's re-submission of that preview,
+  // with no re-check. A client could edit the request between preview and
+  // confirm to inject an invalid enum value, or an assignee_id/team_id from a
+  // completely different workspace. Re-validate everything server-side here,
+  // the same way the preview step already does.
+  const [memberRes, teamRes] = await Promise.all([
+    pool.query(
+      `SELECT user_id AS id FROM workspace_members WHERE workspace_id=$1
+       UNION SELECT user_id AS id FROM workspaces WHERE id=$1`,
+      [workspaceId]
+    ),
+    pool.query("SELECT id FROM teams WHERE workspace_id=$1", [workspaceId]),
+  ]);
+  const validMemberIds = new Set(memberRes.rows.map(r => r.id));
+  const validTeamIds   = new Set(teamRes.rows.map(r => r.id));
+
+  function validateRow(task) {
+    const rowErrors = [];
+    if (task.status && !VALID_STATUSES.includes(task.status)) {
+      rowErrors.push(`Invalid status "${task.status}"`);
+    }
+    if (task.priority && !VALID_PRIORITIES.includes(task.priority)) {
+      rowErrors.push(`Invalid priority "${task.priority}"`);
+    }
+    if (task.type && !VALID_TYPES.includes(task.type)) {
+      rowErrors.push(`Invalid type "${task.type}"`);
+    }
+    if (task.assignee_id && !validMemberIds.has(parseInt(task.assignee_id))) {
+      rowErrors.push("assignee_id is not a member of this workspace");
+    }
+    if (task.team_id && !validTeamIds.has(parseInt(task.team_id))) {
+      rowErrors.push("team_id does not belong to this workspace");
+    }
+    return rowErrors;
+  }
+
   let createdCount = 0, updatedCount = 0, errorCount = 0;
   const errors = [];
 
@@ -295,6 +333,12 @@ router.post("/tasks/:workspaceId/confirm", auth, async (req, res) => {
 
     // INSERT new tasks
     for (const task of created) {
+      const rowErrors = validateRow(task);
+      if (rowErrors.length) {
+        errors.push({ title: task.title, error: rowErrors.join("; ") });
+        errorCount++;
+        continue;
+      }
       try {
         const maxPos = await client.query(
           "SELECT COALESCE(MAX(position),0) AS p FROM tasks WHERE workspace_id=$1 AND status=$2",
@@ -324,8 +368,14 @@ router.post("/tasks/:workspaceId/confirm", auth, async (req, res) => {
 
     // UPDATE existing tasks
     for (const task of updated) {
+      const rowErrors = validateRow(task);
+      if (rowErrors.length) {
+        errors.push({ task_id: task.task_id, error: rowErrors.join("; ") });
+        errorCount++;
+        continue;
+      }
       try {
-        await client.query(
+        const result = await client.query(
           `UPDATE tasks SET
              title=$1, description=COALESCE($2,description),
              status=$3, priority=$4, type=$5,
@@ -343,7 +393,12 @@ router.post("/tasks/:workspaceId/confirm", auth, async (req, res) => {
             task.team_id || null, task.task_id, workspaceId,
           ]
         );
-        updatedCount++;
+        if (result.rowCount === 0) {
+          errors.push({ task_id: task.task_id, error: "Task not found in this workspace" });
+          errorCount++;
+        } else {
+          updatedCount++;
+        }
       } catch (e) {
         errors.push({ task_id: task.task_id, error: e.message });
         errorCount++;

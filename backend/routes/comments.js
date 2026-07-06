@@ -10,10 +10,27 @@ const express = require("express");
 const router  = express.Router();
 const pool    = require("../db");
 const auth    = require("../middleware/auth");
+const { validate, schemas } = require("../utils/validate");
+
+async function canAccessTask(taskId, userId) {
+  const { rows } = await pool.query(
+    `SELECT 1 FROM tasks t
+     WHERE t.id = $1
+       AND (
+         EXISTS (SELECT 1 FROM workspaces WHERE id = t.workspace_id AND user_id = $2)
+         OR EXISTS (SELECT 1 FROM workspace_members WHERE workspace_id = t.workspace_id AND user_id = $2)
+       )`,
+    [taskId, userId]
+  );
+  return rows.length > 0;
+}
 
 // GET /api/comments/:taskId
 router.get("/:taskId", auth, async (req, res) => {
   try {
+    if (!(await canAccessTask(req.params.taskId, req.user.id))) {
+      return res.status(404).json({ message: "Task not found" });
+    }
     const result = await pool.query(
       `SELECT c.*, u.name AS author_name, u.email AS author_email
        FROM task_comments c
@@ -30,14 +47,13 @@ router.get("/:taskId", auth, async (req, res) => {
 });
 
 // POST /api/comments/:taskId
-router.post("/:taskId", auth, async (req, res) => {
+router.post("/:taskId", auth, validate(schemas.addComment), async (req, res) => {
   const { content } = req.body;
-  if (!content?.trim()) return res.status(400).json({ message: "Comment cannot be empty" });
 
   try {
-    // Verify task exists (basic check)
-    const taskCheck = await pool.query("SELECT id FROM tasks WHERE id=$1", [req.params.taskId]);
-    if (!taskCheck.rows.length) return res.status(404).json({ message: "Task not found" });
+    if (!(await canAccessTask(req.params.taskId, req.user.id))) {
+      return res.status(404).json({ message: "Task not found" });
+    }
 
     const result = await pool.query(
       `INSERT INTO task_comments (task_id, user_id, content)

@@ -575,7 +575,7 @@ function AuditTab() {
 }
 
 // ── Departments & Teams Tab ───────────────────────────────────────────────────
-function DepartmentsTeamsTab() {
+function DepartmentsTeamsTab({ workspaceId }) {
   const [depts, setDepts]           = useState([]);
   const [teams, setTeams]           = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -586,33 +586,38 @@ function DepartmentsTeamsTab() {
   const [teamForm, setTeamForm]     = useState({ name: "", department_id: "" });
 
   const load = useCallback(async () => {
+    if (!workspaceId) return;
     setLoading(true);
     try {
       const [dRes, tRes] = await Promise.all([
-        api.get("/user-mgmt/departments"),
-        api.get("/user-mgmt/teams"),
+        api.get("/user-mgmt/departments", { params: { workspace_id: workspaceId } }),
+        api.get("/user-mgmt/teams", { params: { workspace_id: workspaceId } }),
       ]);
       setDepts(dRes.data); setTeams(tRes.data);
     } catch {}
     finally { setLoading(false); }
-  }, []);
+  }, [workspaceId]);
 
   useEffect(() => { load(); }, [load]);
 
   async function createDept() {
-    if (!deptForm.name) return;
+    if (!deptForm.name || !workspaceId) return;
     try {
-      await api.post("/user-mgmt/departments", { workspace_id: 1, name: deptForm.name });
+      await api.post("/user-mgmt/departments", { workspace_id: workspaceId, name: deptForm.name });
       setShowDeptForm(false); setDeptForm({ name: "" }); load();
     } catch (err) { alert(err.response?.data?.message || "Failed"); }
   }
 
   async function createTeam() {
-    if (!teamForm.name) return;
+    if (!teamForm.name || !workspaceId) return;
     try {
-      await api.post("/user-mgmt/teams", { workspace_id: 1, name: teamForm.name, department_id: teamForm.department_id || undefined });
+      await api.post("/user-mgmt/teams", { workspace_id: workspaceId, name: teamForm.name, department_id: teamForm.department_id || undefined });
       setShowTeamForm(false); setTeamForm({ name: "", department_id: "" }); load();
     } catch (err) { alert(err.response?.data?.message || "Failed"); }
+  }
+
+  if (!workspaceId) {
+    return <div style={{ textAlign: "center", color: "#9ca3af", padding: "40px 0" }}>No workspace selected. Open a workspace first.</div>;
   }
 
   return (
@@ -714,7 +719,7 @@ function DepartmentsTeamsTab() {
 }
 
 // ── Root Component ────────────────────────────────────────────────────────────
-export default function AccessControlPanel({ hideHeader = false }) {
+export default function AccessControlPanel({ hideHeader = false, workspaceId }) {
   const { refreshSidebarViews } = useAuth();
   const [tab, setTab]         = useState("users");
   const [roles, setRoles]     = useState([]);
@@ -778,7 +783,7 @@ export default function AccessControlPanel({ hideHeader = false }) {
 
       {tab === "users"  && <UsersTab roles={roles} />}
       {tab === "roles"  && <RolesTab roles={roles} catalog={catalog} reload={handleRolesReload} />}
-      {tab === "depts"  && <DepartmentsTeamsTab />}
+      {tab === "depts"  && <DepartmentsTeamsTab workspaceId={workspaceId} />}
       {tab === "audit"  && <AuditTab />}
     </div>
   );

@@ -23,6 +23,20 @@ const pool    = require("../db");
 const auth    = require("../middleware/auth");
 const { requirePerm } = require("../middleware/permission");
 
+// requirePerm alone doesn't scope to a specific workspace, so an omitted
+// workspace_id was returning every workspace's departments/teams, and even
+// a supplied workspace_id was never checked against the caller's own
+// membership -- either way, any user with the generic view permission could
+// read another workspace's org data.
+async function canAccessWorkspace(userId, workspaceId) {
+  const { rows } = await pool.query(
+    `SELECT 1 WHERE EXISTS (SELECT 1 FROM workspaces WHERE id=$1 AND user_id=$2)
+        OR EXISTS (SELECT 1 FROM workspace_members WHERE workspace_id=$1 AND user_id=$2)`,
+    [workspaceId, userId]
+  );
+  return rows.length > 0;
+}
+
 const auditLog = async (actorId, action, entityType, entityId, oldVal, newVal, targetUserId, workspaceId) => {
   try {
     await pool.query(
@@ -298,17 +312,21 @@ router.get("/audit", auth, requirePerm("audit_logs:view"), async (req, res) => {
 
 router.get("/departments", auth, requirePerm("user_management:view"), async (req, res) => {
   const wsId = req.query.workspace_id;
+  if (!wsId) return res.status(400).json({ message: "workspace_id required" });
   try {
+    if (!(await canAccessWorkspace(req.user.id, wsId))) {
+      return res.status(403).json({ message: "Access denied" });
+    }
     const { rows } = await pool.query(
       `SELECT d.*, u.name AS head_name,
               COUNT(DISTINCT us.id)::int AS member_count
        FROM departments d
        LEFT JOIN users u  ON u.id = d.head_user_id
        LEFT JOIN users us ON us.department_id = d.id
-       WHERE ($1::int IS NULL OR d.workspace_id=$1)
+       WHERE d.workspace_id=$1
        GROUP BY d.id, u.name
        ORDER BY d.name`,
-      [wsId || null]
+      [wsId]
     );
     res.json(rows);
   } catch (err) {
@@ -320,6 +338,9 @@ router.post("/departments", auth, requirePerm("user_management:create"), async (
   const { workspace_id, name, head_user_id } = req.body;
   if (!workspace_id || !name) return res.status(400).json({ message: "workspace_id and name required" });
   try {
+    if (!(await canAccessWorkspace(req.user.id, workspace_id))) {
+      return res.status(403).json({ message: "Access denied" });
+    }
     const { rows } = await pool.query(
       "INSERT INTO departments (workspace_id, name, head_user_id) VALUES ($1,$2,$3) RETURNING *",
       [workspace_id, name, head_user_id || null]
@@ -334,7 +355,11 @@ router.post("/departments", auth, requirePerm("user_management:create"), async (
 
 router.get("/teams", auth, requirePerm("user_management:view"), async (req, res) => {
   const wsId = req.query.workspace_id;
+  if (!wsId) return res.status(400).json({ message: "workspace_id required" });
   try {
+    if (!(await canAccessWorkspace(req.user.id, wsId))) {
+      return res.status(403).json({ message: "Access denied" });
+    }
     const { rows } = await pool.query(
       `SELECT ot.*, d.name AS department_name, mu.name AS manager_name,
               COUNT(DISTINCT otm.user_id)::int AS member_count
@@ -342,10 +367,10 @@ router.get("/teams", auth, requirePerm("user_management:view"), async (req, res)
        LEFT JOIN departments d ON d.id = ot.department_id
        LEFT JOIN users mu      ON mu.id = ot.manager_id
        LEFT JOIN org_team_members otm ON otm.team_id = ot.id
-       WHERE ($1::int IS NULL OR ot.workspace_id=$1)
+       WHERE ot.workspace_id=$1
        GROUP BY ot.id, d.name, mu.name
        ORDER BY ot.name`,
-      [wsId || null]
+      [wsId]
     );
     res.json(rows);
   } catch (err) {
@@ -357,6 +382,9 @@ router.post("/teams", auth, requirePerm("user_management:create"), async (req, r
   const { workspace_id, department_id, name, manager_id } = req.body;
   if (!workspace_id || !name) return res.status(400).json({ message: "workspace_id and name required" });
   try {
+    if (!(await canAccessWorkspace(req.user.id, workspace_id))) {
+      return res.status(403).json({ message: "Access denied" });
+    }
     const { rows } = await pool.query(
       "INSERT INTO org_teams (workspace_id, department_id, name, manager_id) VALUES ($1,$2,$3,$4) RETURNING *",
       [workspace_id, department_id || null, name, manager_id || null]

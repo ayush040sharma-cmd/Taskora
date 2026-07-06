@@ -32,6 +32,18 @@ async function isWorkspaceOwner(userId, workspaceId) {
   return r.rows.length > 0;
 }
 
+// ── Helper: verify manager-level access (owner, or workspace_members role='manager') ──
+// canAccessWorkspace above checks *membership only* -- correct for read routes,
+// but every mutating route below was using it too, which let a "viewer" role
+// (documented as read-only) create/edit teams and manage their membership.
+async function isWorkspaceManagerOrOwner(userId, workspaceId) {
+  const [owner, manager] = await Promise.all([
+    pool.query("SELECT id FROM workspaces WHERE id=$1 AND user_id=$2", [workspaceId, userId]),
+    pool.query("SELECT user_id FROM workspace_members WHERE workspace_id=$1 AND user_id=$2 AND role='manager'", [workspaceId, userId]),
+  ]);
+  return owner.rows.length > 0 || manager.rows.length > 0;
+}
+
 // ── GET /api/teams?workspace_id=X ────────────────────────────────────────────
 router.get("/", auth, async (req, res) => {
   const { workspace_id } = req.query;
@@ -69,8 +81,8 @@ router.post("/", auth, async (req, res) => {
   }
 
   try {
-    if (!(await canAccessWorkspace(req.user.id, workspace_id))) {
-      return res.status(403).json({ message: "Access denied" });
+    if (!(await isWorkspaceManagerOrOwner(req.user.id, workspace_id))) {
+      return res.status(403).json({ message: "Only this workspace's owner or a manager can create teams" });
     }
 
     const { rows } = await pool.query(
@@ -103,8 +115,8 @@ router.put("/:id", auth, async (req, res) => {
     if (!teamRes.rows.length) return res.status(404).json({ message: "Team not found" });
     const team = teamRes.rows[0];
 
-    if (!(await canAccessWorkspace(req.user.id, team.workspace_id))) {
-      return res.status(403).json({ message: "Access denied" });
+    if (!(await isWorkspaceManagerOrOwner(req.user.id, team.workspace_id))) {
+      return res.status(403).json({ message: "Only this workspace's owner or a manager can edit teams" });
     }
 
     const { rows } = await pool.query(
@@ -184,8 +196,8 @@ router.post("/:id/members", auth, async (req, res) => {
     const teamRes = await pool.query("SELECT * FROM teams WHERE id=$1", [req.params.id]);
     if (!teamRes.rows.length) return res.status(404).json({ message: "Team not found" });
 
-    if (!(await canAccessWorkspace(req.user.id, teamRes.rows[0].workspace_id))) {
-      return res.status(403).json({ message: "Access denied" });
+    if (!(await isWorkspaceManagerOrOwner(req.user.id, teamRes.rows[0].workspace_id))) {
+      return res.status(403).json({ message: "Only this workspace's owner or a manager can add team members" });
     }
 
     // Verify target user is a workspace member
@@ -225,8 +237,8 @@ router.put("/:id/members/:userId", auth, async (req, res) => {
     const teamRes = await pool.query("SELECT * FROM teams WHERE id=$1", [req.params.id]);
     if (!teamRes.rows.length) return res.status(404).json({ message: "Team not found" });
 
-    if (!(await canAccessWorkspace(req.user.id, teamRes.rows[0].workspace_id))) {
-      return res.status(403).json({ message: "Access denied" });
+    if (!(await isWorkspaceManagerOrOwner(req.user.id, teamRes.rows[0].workspace_id))) {
+      return res.status(403).json({ message: "Only this workspace's owner or a manager can change a member's team role" });
     }
 
     const { rows } = await pool.query(
@@ -247,8 +259,8 @@ router.delete("/:id/members/:userId", auth, async (req, res) => {
     const teamRes = await pool.query("SELECT * FROM teams WHERE id=$1", [req.params.id]);
     if (!teamRes.rows.length) return res.status(404).json({ message: "Team not found" });
 
-    if (!(await canAccessWorkspace(req.user.id, teamRes.rows[0].workspace_id))) {
-      return res.status(403).json({ message: "Access denied" });
+    if (!(await isWorkspaceManagerOrOwner(req.user.id, teamRes.rows[0].workspace_id))) {
+      return res.status(403).json({ message: "Only this workspace's owner or a manager can remove team members" });
     }
 
     await pool.query(

@@ -13,9 +13,24 @@ const express = require("express");
 const router  = express.Router();
 const pool    = require("../db");
 const auth    = require("../middleware/auth");
-const { requireMinRole } = require("../middleware/rbac");
 const wl = require("../services/workloadEngine");
 const { audit } = require("../services/auditService");
+
+// requireMinRole checks the platform-wide users.role, which is the wrong
+// scope here -- a platform "manager" has no inherent relationship to an
+// arbitrary workspace, and a user who is a *workspace*-scoped manager
+// (workspace_members.role = 'manager') was being wrongly denied. Team
+// capacity routes are keyed by :wsId, so authorize against that workspace
+// specifically: its owner, or a workspace_members row with role='manager'.
+async function isWorkspaceManager(wsId, userId) {
+  const { rows } = await pool.query(
+    `SELECT 1 AS ok
+     WHERE EXISTS (SELECT 1 FROM workspaces WHERE id = $1 AND user_id = $2)
+        OR EXISTS (SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2 AND role = 'manager')`,
+    [wsId, userId]
+  );
+  return rows.length > 0;
+}
 
 // ── Helper: get or create capacity row (atomic upsert — no TOCTOU race) ─────
 async function getOrCreate(userId) {
@@ -148,9 +163,12 @@ router.put("/leave", auth, async (req, res) => {
 
 // ── GET /api/capacity/team/:wsId ─────────────────────────────────────────────
 // Manager/Super Boss: see full team workload summary
-router.get("/team/:wsId", auth, requireMinRole("manager"), async (req, res) => {
+router.get("/team/:wsId", auth, async (req, res) => {
   const { wsId } = req.params;
   try {
+    if (!(await isWorkspaceManager(wsId, req.user.id))) {
+      return res.status(403).json({ message: "Only this workspace's owner or manager can view team capacity" });
+    }
     // All members + owner of this workspace (UNION so owner is never excluded)
     const members = await pool.query(
       `SELECT DISTINCT u.id, u.name, u.email, u.role,
@@ -200,11 +218,14 @@ router.get("/team/:wsId", auth, requireMinRole("manager"), async (req, res) => {
 
 // ── PUT /api/capacity/team/:wsId/:uid ────────────────────────────────────────
 // Manager: update a team member's capacity / leave / travel
-router.put("/team/:wsId/:uid", auth, requireMinRole("manager"), async (req, res) => {
+router.put("/team/:wsId/:uid", auth, async (req, res) => {
   const targetUid = parseInt(req.params.uid);
   const updates   = req.body;
 
   try {
+    if (!(await isWorkspaceManager(req.params.wsId, req.user.id))) {
+      return res.status(403).json({ message: "Only this workspace's owner or manager can update team capacity" });
+    }
     await getOrCreate(targetUid);
     const fields = [
       "daily_hours","customer_facing_hours","internal_hours",
@@ -242,10 +263,13 @@ router.put("/team/:wsId/:uid", auth, requireMinRole("manager"), async (req, res)
 
 // ── GET /api/capacity/predict/:wsId ─────────────────────────────────────────
 // AI future load prediction for team (next 14 working days)
-router.get("/predict/:wsId", auth, requireMinRole("manager"), async (req, res) => {
+router.get("/predict/:wsId", auth, async (req, res) => {
   const { wsId } = req.params;
   const days     = parseInt(req.query.days) || 14;
   try {
+    if (!(await isWorkspaceManager(wsId, req.user.id))) {
+      return res.status(403).json({ message: "Only this workspace's owner or manager can view capacity predictions" });
+    }
     const members = await pool.query(
       `SELECT DISTINCT u.id, u.name, u.role, uc.*
        FROM (
@@ -354,6 +378,9 @@ router.get("/requests", auth, async (req, res) => {
   if (!workspace_id) return res.status(400).json({ message: "workspace_id required" });
 
   try {
+    if (!(await isWorkspaceManager(workspace_id, req.user.id))) {
+      return res.status(403).json({ message: "Only this workspace's owner or manager can view capacity requests" });
+    }
     const r = await pool.query(
       `SELECT cr.*,
               u.name AS requester_name, u.email AS requester_email, u.role AS requester_role
@@ -378,6 +405,9 @@ router.put("/requests/:id/approve", auth, async (req, res) => {
     const reqR = await pool.query("SELECT * FROM capacity_requests WHERE id=$1", [id]);
     if (!reqR.rows.length) return res.status(404).json({ message: "Request not found" });
     const cr = reqR.rows[0];
+    if (!(await isWorkspaceManager(cr.workspace_id, req.user.id))) {
+      return res.status(403).json({ message: "Only this workspace's owner or manager can approve this request" });
+    }
 
     // Apply the capacity change
     await getOrCreate(cr.user_id);
@@ -423,6 +453,9 @@ router.put("/requests/:id/reject", auth, async (req, res) => {
     const reqR = await pool.query("SELECT * FROM capacity_requests WHERE id=$1", [id]);
     if (!reqR.rows.length) return res.status(404).json({ message: "Request not found" });
     const cr = reqR.rows[0];
+    if (!(await isWorkspaceManager(cr.workspace_id, req.user.id))) {
+      return res.status(403).json({ message: "Only this workspace's owner or manager can reject this request" });
+    }
 
     const updated = await pool.query(
       "UPDATE capacity_requests SET status='rejected', rejection_reason=$1, manager_id=$2, resolved_at=NOW() WHERE id=$3 RETURNING *",

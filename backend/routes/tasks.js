@@ -432,6 +432,17 @@ router.post("/:id/dependencies", auth, async (req, res) => {
     return res.status(400).json({ message: "A task cannot depend on itself" });
   }
   try {
+    const taskCheck = await pool.query(
+      `SELECT t.id FROM tasks t
+       WHERE t.id = $1
+         AND (
+           EXISTS (SELECT 1 FROM workspaces WHERE id = t.workspace_id AND user_id = $2)
+           OR EXISTS (SELECT 1 FROM workspace_members WHERE workspace_id = t.workspace_id AND user_id = $2)
+         )`,
+      [req.params.id, req.user.id]
+    );
+    if (!taskCheck.rows.length) return res.status(404).json({ message: "Task not found" });
+
     await pool.query(
       `INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ($1, $2)
        ON CONFLICT DO NOTHING`,
@@ -446,6 +457,17 @@ router.post("/:id/dependencies", auth, async (req, res) => {
 // ── DELETE /api/tasks/:id/dependencies/:depId ─────────────────────────────────
 router.delete("/:id/dependencies/:depId", auth, async (req, res) => {
   try {
+    const taskCheck = await pool.query(
+      `SELECT t.id FROM tasks t
+       WHERE t.id = $1
+         AND (
+           EXISTS (SELECT 1 FROM workspaces WHERE id = t.workspace_id AND user_id = $2)
+           OR EXISTS (SELECT 1 FROM workspace_members WHERE workspace_id = t.workspace_id AND user_id = $2)
+         )`,
+      [req.params.id, req.user.id]
+    );
+    if (!taskCheck.rows.length) return res.status(404).json({ message: "Task not found" });
+
     await pool.query(
       "DELETE FROM task_dependencies WHERE task_id=$1 AND depends_on_task_id=$2",
       [req.params.id, req.params.depId]

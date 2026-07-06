@@ -521,14 +521,14 @@ function IntegrationsSection({ workspaceId }) {
 }
 
 // ── Section: User Management & Access Control ─────────────────────────────────
-function UserMgmtSection() {
+function UserMgmtSection({ workspaceId }) {
   return (
     <div>
       <SectionHeading
         title="User Management & Access Control"
         desc="Create users, assign roles, configure permissions, manage departments and teams, and review the audit log."
       />
-      <AccessControlPanel hideHeader />
+      <AccessControlPanel hideHeader workspaceId={workspaceId} />
     </div>
   );
 }
@@ -609,7 +609,7 @@ export default function SettingsPage({ currentWorkspaceId }) {
       case "project":       return <ProjectSection />;
       case "workflow":      return <WorkflowSection />;
       case "integrations":  return <IntegrationsSection workspaceId={currentWorkspaceId} />;
-      case "user-mgmt":     return <UserMgmtSection />;
+      case "user-mgmt":     return <UserMgmtSection workspaceId={currentWorkspaceId} />;
       default:              return null;
     }
   }

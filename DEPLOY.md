@@ -60,6 +60,10 @@ Recommended stack: **Vercel (frontend) + Render (backend) + Neon (database)** �
    | `FROM_EMAIL` | `Taskora <support@taskora.io>` |
    | `EMAIL_REPLY_TO` | `support@taskora.io` |
    | `NODE_ENV` | `production` |
+   | `INTERNAL_DOMAINS` | *(optional)* comma-separated email domains (e.g. `taskora.io`) whose users bypass all plan/licensing restrictions. Leave unset to disable. |
+   | `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | From [dashboard.razorpay.com/app/keys](https://dashboard.razorpay.com/app/keys) — test keys start with `rzp_test_`, live with `rzp_live_`. `KEY_SECRET` is server-side only, never expose to frontend code. Without these set, `/api/payments/create-order` returns a mock order (dev-only behavior). |
+   | `PAYMENT_CURRENCY` | *(optional)* defaults to `USD` |
+   | `PRO_PLAN_PRICE` / `ENTERPRISE_PLAN_PRICE` | *(optional)* whole-currency-unit prices (e.g. `7` = $7.00, not cents) — defaults `7` / `25`, matching current production pricing |
 
 6. Deploy — note your Render URL. If you later add `api.taskora.io` as a
    custom domain in Render, update `BACKEND_URL` to match and redeploy.
@@ -148,7 +152,8 @@ Users can also use the **Contact** page at `/contact` with a subject dropdown in
 
 ## 7. Final checklist before going live
 
-- [ ] Run `backend/schema-v8.sql` in your production database
+- [ ] Run `backend/schema.sql` through `backend/schema-v11.sql` (in order) against your production
+      database, plus `backend/migrations/enterprise-rbac.sql` if using enterprise roles
 - [ ] `JWT_SECRET` is set to a strong random string (not the default)
 - [ ] `FRONTEND_URL` and `BACKEND_URL` env vars match your deployed URLs
 - [ ] Test demo login at `/login` → "Try with demo account"
@@ -174,6 +179,23 @@ RESEND_API_KEY=                     # from resend.com — required to actually s
 FROM_EMAIL="Taskora <support@taskora.io>"
 EMAIL_REPLY_TO=support@taskora.io
 NODE_ENV=development
+
+# Licensing — comma-separated email domains that bypass all plan/pricing
+# restrictions. Leave unset to disable (no one is treated as internal).
+INTERNAL_DOMAINS=
+
+# Payments — Razorpay (https://dashboard.razorpay.com/app/keys). Test-mode
+# keys start with rzp_test_, live keys with rzp_live_. KEY_SECRET is
+# server-side only. Without these, /api/payments/create-order returns a mock
+# order for dev.
+RAZORPAY_KEY_ID=
+RAZORPAY_KEY_SECRET=
+
+# Pricing — whole-currency-unit prices (e.g. 7 = $7.00), not the smallest
+# unit Razorpay's API expects — payments.js converts internally.
+PAYMENT_CURRENCY=USD
+PRO_PLAN_PRICE=7
+ENTERPRISE_PLAN_PRICE=25
 ```
 
 ### Frontend (.env.local for local, Vercel env vars for production)

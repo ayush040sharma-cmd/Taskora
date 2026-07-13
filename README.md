@@ -67,6 +67,7 @@ npm run dev            # runs on port 3001
 ```bash
 cd frontend
 npm install
+
 npm run dev            # runs on port 5173
 ```
 

@@ -1,15 +1,19 @@
 # Taskora — Deployment Guide
 
 This guide covers how to deploy Taskora so real users can access it.
-Recommended stack: **Vercel (frontend) + Render (backend) + Supabase (database)** — all have free tiers.
+Recommended stack: **Vercel (frontend) + Render (backend) + Neon (database)** — all have free tiers.
 
 ---
 
-## 1. Database — Supabase (free)
+## 1. Database — Neon (free)
 
-1. Go to [supabase.com](https://supabase.com) → New project
-2. Copy the **Connection string** (looks like `postgresql://postgres:[password]@db.xxxx.supabase.co:5432/postgres`)
-3. In the Supabase SQL editor, run the schema files **in order**:
+1. Go to [neon.tech](https://neon.tech) → New project
+2. Copy the **pooled connection string** from the project dashboard (looks like
+   `postgresql://<user>:<password>@<endpoint>-pooler.<region>.aws.neon.tech/<db>?sslmode=require&channel_binding=require`)
+   — use the pooled (`-pooler`) endpoint, not the direct one, since the backend's connection pool
+   (`backend/db.js`, `max: 20`) expects it.
+3. In the Neon SQL editor (or via `psql "$DATABASE_URL"`), run the schema files **in order** —
+   there are 12, not 8:
    ```
    backend/schema.sql
    backend/schema-v2.sql
@@ -18,8 +22,16 @@ Recommended stack: **Vercel (frontend) + Render (backend) + Supabase (database)*
    backend/schema-v5.sql
    backend/schema-v6.sql
    backend/schema-v7.sql
-   backend/schema-v8.sql   ← important: fixes type/status constraints
+   backend/schema-v8.sql    ← fixes type/status constraints
+   backend/schema-v9.sql    ← security_events, blocked_ips (firewall)
+   backend/schema-v10.sql
+   backend/schema-v11.sql   ← teams, team_members, import_logs, workspace template
    ```
+4. Separately, run `backend/migrations/enterprise-rbac.sql` if you need the enterprise
+   roles/permissions layer (`roles`, `permissions_catalog`, `departments`, etc.) — it's **not**
+   part of the numbered schema chain and isn't run automatically anywhere.
+5. `backend/db.js` auto-detects Neon and enables strict SSL (`rejectUnauthorized: true`) whenever
+   `DATABASE_URL` contains `neon.tech`; on any other host it only does so when `NODE_ENV=production`.
 
 ---
 
@@ -37,7 +49,7 @@ Recommended stack: **Vercel (frontend) + Render (backend) + Supabase (database)*
 
    | Key | Value |
    |-----|-------|
-   | `DATABASE_URL` | Your Supabase connection string |
+   | `DATABASE_URL` | Your Neon pooled connection string |
    | `JWT_SECRET` | Any random 32+ char string (e.g. `openssl rand -hex 32`) |
    | `PORT` | `3001` |
    | `FRONTEND_URL` | `https://taskora.io` |

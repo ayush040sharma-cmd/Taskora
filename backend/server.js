@@ -201,6 +201,10 @@ app.use("/api/approvals-engine", approvalEngine.router);
 app.use("/api/teams",         require("./routes/teams"));
 app.use("/api/import",        require("./routes/import"));
 app.use("/api/analytics",     require("./routes/analytics"));
+app.use("/api/internal",      require("./routes/internal"));
+app.use("/api/webhooks",      require("./routes/webhooks"));
+app.use("/api/briefing-preferences", require("./routes/briefingPreferences"));
+app.use("/api/briefing-actions",     require("./routes/briefingActions"));
 
 // ── System info (admin only) ──────────────────────────────────────────────────
 const authMiddleware = require("./middleware/auth");

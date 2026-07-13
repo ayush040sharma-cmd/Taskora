@@ -2,10 +2,18 @@
  * Multi-Agent Automation Runner — Phase 15
  *
  * Runs background agents on a schedule:
- *   Agent 1 (Risk Monitor)   — every hour: re-score all tasks, fire Slack alerts for new critical
- *   Agent 2 (Overdue Tagger) — every 6 hours: detect newly overdue tasks, notify workspace owners
- *   Agent 3 (Workload Sync)  — every 30 min: refresh workload_logs for all active users
- *   Agent 4 (Digest Mailer)  — daily 8am: send daily digest (when email configured)
+ *   Agent 1 (Risk Monitor)     — every hour: re-score all tasks, fire Slack alerts for new critical
+ *   Agent 2 (Overdue Tagger)   — every 6 hours: detect newly overdue tasks, notify workspace owners
+ *   Agent 3 (Workload Sync)    — every 30 min: refresh workload_logs for all active users
+ *   Agent 4 (Digest Mailer)    — daily 8am: send daily digest (when email configured)
+ *   Agent 5 (Metrics Snapshot) — daily 23:50: write execution_score/sprint_confidence/focus_time
+ *                                 to metric_snapshots (briefing engine Phase 1, see
+ *                                 docs/briefing-engine-plan.md §3.2 — must run before the
+ *                                 briefing engine's first send or there's no trend history)
+ *   Agent 6 (Briefing Scheduler)— hourly at :00: dispatch due daily briefing emails
+ *                                 (briefing engine Phase 4, §6.4 — Option A from §0.1;
+ *                                 routes/internal.js's tick endpoint is the Option C
+ *                                 external fallback for the same underlying tick)
  *
  * All agents are non-blocking and log to agent_runs table.
  */
@@ -15,6 +23,8 @@ const pool   = require("../db");
 const ai     = require("./aiEngine");
 const axios  = require("axios");
 const { refreshUserWorkloadLog } = require("./workloadLogger");
+const { runDailySnapshot }       = require("./metrics");
+const { runSchedulerTick }       = require("./briefing");
 
 let started = false;
 
@@ -199,6 +209,28 @@ async function runWorkloadSync() {
   }
 }
 
+// ── Agent 5: Metrics Snapshot ─────────────────────────────────────────────────
+async function runMetricsSnapshot() {
+  try {
+    const summary = await runDailySnapshot();
+    await logRun("metrics_snapshot", null, summary);
+  } catch (e) {
+    console.error("[Agent:MetricsSnapshot]", e.message);
+    await logRun("metrics_snapshot", null, {}, "error", e.message);
+  }
+}
+
+// ── Agent 6: Briefing Scheduler ───────────────────────────────────────────────
+async function runBriefingScheduler() {
+  try {
+    const summary = await runSchedulerTick();
+    await logRun("briefing_scheduler", null, summary);
+  } catch (e) {
+    console.error("[Agent:BriefingScheduler]", e.message);
+    await logRun("briefing_scheduler", null, {}, "error", e.message);
+  }
+}
+
 // ── Start all agents ──────────────────────────────────────────────────────────
 function startAgents() {
   if (started) return;
@@ -219,7 +251,22 @@ function startAgents() {
     runWorkloadSync().catch(e => console.error("[Agent:WorkloadSync] uncaught:", e.message));
   });
 
-  console.log("✅ Background agents started (RiskMonitor, OverdueTagger, WorkloadSync)");
+  // Agent 5: Metrics Snapshot — daily at 23:50 (server time)
+  cron.schedule("50 23 * * *", () => {
+    runMetricsSnapshot().catch(e => console.error("[Agent:MetricsSnapshot] uncaught:", e.message));
+  });
+
+  // Agent 6: Briefing Scheduler — hourly at :00, matches docs/briefing-engine-plan.md §6.4
+  if (process.env.BRIEFINGS_ENABLED !== "false") {
+    cron.schedule("0 * * * *", () => {
+      runBriefingScheduler().catch(e => console.error("[Agent:BriefingScheduler] uncaught:", e.message));
+    });
+  }
+
+  console.log("✅ Background agents started (RiskMonitor, OverdueTagger, WorkloadSync, MetricsSnapshot, BriefingScheduler)");
 }
 
-module.exports = { startAgents, runRiskMonitor, runOverdueTagger, runWorkloadSync };
+module.exports = {
+  startAgents, runRiskMonitor, runOverdueTagger, runWorkloadSync,
+  runMetricsSnapshot, runBriefingScheduler,
+};

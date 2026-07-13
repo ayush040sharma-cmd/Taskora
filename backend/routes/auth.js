@@ -192,13 +192,27 @@ router.post("/logout", (req, res) => {
 
 // PUT /api/auth/profile  — update name
 router.put("/profile", auth, async (req, res) => {
-  const { name } = req.body;
+  const { name, timezone } = req.body;
   if (!name?.trim()) return res.status(400).json({ message: "Name is required" });
+  if (timezone !== undefined && (typeof timezone !== "string" || timezone.length > 50)) {
+    return res.status(400).json({ message: "Invalid timezone" });
+  }
   try {
-    const result = await pool.query(
-      "UPDATE users SET name = $1 WHERE id = $2 RETURNING id, name, email",
-      [name.trim(), req.user.id]
-    );
+    // timezone defaults to 'UTC' in the DB (schema-v5.sql) and was never
+    // actually settable from the frontend before this — RegionalSection's
+    // timezone picker only wrote to localStorage. See
+    // docs/briefing-engine-plan.md §6.4 for why this matters: the briefing
+    // scheduler sends at each user's local hour, so an unset/wrong
+    // users.timezone means briefings arrive at the wrong time.
+    const result = timezone !== undefined
+      ? await pool.query(
+          "UPDATE users SET name = $1, timezone = $2 WHERE id = $3 RETURNING id, name, email, timezone",
+          [name.trim(), timezone, req.user.id]
+        )
+      : await pool.query(
+          "UPDATE users SET name = $1 WHERE id = $2 RETURNING id, name, email, timezone",
+          [name.trim(), req.user.id]
+        );
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ message: "Server error" });

@@ -173,21 +173,122 @@ function NotificationsSection() {
         </Row>
       ))}
       <SaveRow onSave={save} saved={saved} label="Save preferences" />
+
+      <div style={{ marginTop: 32, paddingTop: 24, borderTop: "1px solid var(--border)" }}>
+        <BriefingPreferencesSection />
+      </div>
+    </div>
+  );
+}
+
+// ── AI Daily Briefing — docs/briefing-engine-plan.md §7.2 ──────────────────────
+// Deliberately its own save action, separate from the localStorage-only
+// toggles above: this one is real, backend-persisted (briefing_preferences
+// table), not a stub.
+function BriefingPreferencesSection() {
+  const [prefs, setPrefs] = useState(null);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get("/briefing-preferences")
+      .then(({ data }) => setPrefs(data))
+      .catch(() => setError("Couldn't load briefing preferences."))
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function save() {
+    setError("");
+    try {
+      const { data } = await api.put("/briefing-preferences", prefs);
+      setPrefs(data);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      setError(err.response?.data?.message || "Couldn't save briefing preferences.");
+    }
+  }
+
+  if (loading) return null;
+  if (!prefs) return <p style={{ fontSize: 13, color: "#dc2626" }}>{error}</p>;
+
+  const hourOptions = Array.from({ length: 24 }, (_, h) => (
+    <option key={h} value={h}>{String(h).padStart(2, "0")}:00</option>
+  ));
+
+  return (
+    <div>
+      <SectionHeading
+        title="AI Daily Briefing"
+        desc="A short email summarizing what matters most today — computed from your tasks, never a fabricated number."
+      />
+
+      <Row label="Morning briefing" desc="Sent once a day at the time below.">
+        <Toggle on={prefs.morning_enabled} onChange={v => setPrefs(p => ({ ...p, morning_enabled: v }))} />
+      </Row>
+      {prefs.morning_enabled && (
+        <div style={{ marginBottom: 12, marginLeft: 4 }}>
+          <select
+            value={prefs.send_hour_morning}
+            onChange={e => setPrefs(p => ({ ...p, send_hour_morning: parseInt(e.target.value, 10) }))}
+            style={{ border: "1px solid var(--border)", borderRadius: 8, padding: "6px 10px", fontSize: 13, background: "var(--card-bg)", color: "var(--text-primary)" }}
+          >
+            {hourOptions}
+          </select>
+        </div>
+      )}
+
+      <Row label="Evening recap" desc="A second briefing with the day's progress. Off by default.">
+        <Toggle on={prefs.evening_enabled} onChange={v => setPrefs(p => ({ ...p, evening_enabled: v }))} />
+      </Row>
+      {prefs.evening_enabled && (
+        <div style={{ marginBottom: 12, marginLeft: 4 }}>
+          <select
+            value={prefs.send_hour_evening}
+            onChange={e => setPrefs(p => ({ ...p, send_hour_evening: parseInt(e.target.value, 10) }))}
+            style={{ border: "1px solid var(--border)", borderRadius: 8, padding: "6px 10px", fontSize: 13, background: "var(--card-bg)", color: "var(--text-primary)" }}
+          >
+            {hourOptions}
+          </select>
+        </div>
+      )}
+
+      <p style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 8 }}>
+        Sent using your timezone from Language &amp; Region — set that first if briefings arrive at the wrong time.
+      </p>
+
+      {error && <p style={{ color: "#dc2626", fontSize: 13, marginTop: 8 }}>{error}</p>}
+      <SaveRow onSave={save} saved={saved} label="Save briefing settings" />
     </div>
   );
 }
 
 // ── Section: Language & Region ───────────────────────────────────────────────
 function RegionalSection() {
-  const [timezone,   setTimezone]   = useState(localStorage.getItem("taskora-timezone") || "Asia/Kolkata");
+  const { user, updateUser } = useAuth();
+  const [timezone,   setTimezone]   = useState(user?.timezone || localStorage.getItem("taskora-timezone") || "Asia/Kolkata");
   const [dateFormat, setDateFormat] = useState(localStorage.getItem("taskora-date-fmt") || "DD/MM/YYYY");
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
 
-  function save() {
+  // Previously this only wrote to localStorage — users.timezone in the DB
+  // stayed at its 'UTC' default forever, regardless of what was picked
+  // here. That's a real problem for the daily briefing scheduler (see
+  // docs/briefing-engine-plan.md §6.4), which sends at each user's local
+  // hour — so this now also persists to the backend.
+  async function save() {
+    setError("");
     localStorage.setItem("taskora-timezone", timezone);
     localStorage.setItem("taskora-date-fmt", dateFormat);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    try {
+      const { data } = await api.put("/auth/profile", { name: user.name, timezone });
+      updateUser({ ...user, timezone: data.timezone });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      setError(err.response?.data?.message || "Couldn't save timezone. Please try again.");
+    }
   }
 
   return (
@@ -219,6 +320,7 @@ function RegionalSection() {
         </select>
       </div>
 
+      {error && <p style={{ color: "#dc2626", fontSize: 13, marginTop: 12 }}>{error}</p>}
       <SaveRow onSave={save} saved={saved} />
     </div>
   );

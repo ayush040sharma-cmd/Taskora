@@ -32,7 +32,7 @@ assistant ("Jarvis").
 | Database | PostgreSQL |
 | Payments | Razorpay |
 | Email | Resend |
-| Deployment | Vercel (frontend) + Render (backend) + managed PostgreSQL (Render/Neon/Supabase) |
+| Deployment | Vercel (frontend) + Render (backend) + Neon (PostgreSQL) |
 
 ## Repo Structure
 
@@ -48,7 +48,7 @@ DEPLOY.md    Full deployment walkthrough (Vercel + Render + DB + OAuth + email)
 
 ### Prerequisites
 - Node.js 18+
-- PostgreSQL (local, or a hosted instance — Neon/Supabase/Render all work)
+- PostgreSQL (local, or any hosted instance — production runs on [Neon](https://neon.tech))
 - Python 3.11+ (optional, only needed for the AI agent service)
 
 ### Backend
@@ -107,8 +107,9 @@ VITE_API_URL=https://your-render-backend.onrender.com
 See **[DEPLOY.md](DEPLOY.md)** for the full walkthrough (database, Render, Vercel, custom
 domain, Google OAuth, Resend email). Short version:
 
-- **Database**: create a managed PostgreSQL instance, run `schema.sql` then `schema-v2.sql`
-  through `schema-v11.sql` in order
+- **Database**: create a [Neon](https://neon.tech) Postgres project (use the pooled connection
+  string), run `schema.sql` then `schema-v2.sql` through `schema-v11.sql` in order, plus
+  `backend/migrations/enterprise-rbac.sql` if using enterprise roles
 - **Backend → Render**: root `backend/`, build `npm install`, start `npm start`, set env vars
   from `backend/.env.example`
 - **Frontend → Vercel**: root `frontend/`, set `VITE_API_URL`

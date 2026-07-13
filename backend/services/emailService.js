@@ -204,4 +204,9 @@ async function sendPasswordReset({ toEmail, userName, resetLink }) {
   });
 }
 
-module.exports = { sendWorkspaceInvite, sendWorkspaceAddedNotification, sendPasswordReset };
+module.exports = {
+  sendWorkspaceInvite, sendWorkspaceAddedNotification, sendPasswordReset,
+  // Exposed so other senders (e.g. services/briefing/) reuse the same Resend
+  // client, From/Reply-To config, and visual shell instead of duplicating it.
+  sendEmail, emailShell,
+};

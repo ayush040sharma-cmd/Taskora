@@ -14,7 +14,7 @@
   align-items: center;
   justify-content: center;
   background: #0a0f1e;
-  padding: 48px 24px 64px;
+  padding: 10px 24px 12px;
 }
 
 .auth-split-glow {
@@ -31,12 +31,12 @@
 .auth-page-inner {
   position: relative; z-index: 1;
   display: flex; flex-direction: column; align-items: center;
-  gap: 20px;
+  gap: 8px;
   width: 100%;
 }
 
 /* ---- Page-level brand lockup ---- */
-.auth-lockup { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.auth-lockup { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .auth-lockup-tagline {
   display: inline-flex; align-items: center; gap: 8px;
   font-size: 12px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
@@ -72,13 +72,35 @@
   box-sizing: border-box;
   background: #ffffff;
   border-radius: 18px;
-  padding: 36px;
+  padding: 20px;
   box-shadow: 0 20px 50px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.05);
   animation: authCardIn 0.5s cubic-bezier(0.4,0,0.2,1) both;
+  /* This card is a fixed light surface -- it must render with light native
+     form controls even if the visitor's OS/browser is set to dark, or if
+     Chrome applies its own autofill styling (see input rules below). */
+  color-scheme: light;
 }
 @keyframes authCardIn {
   from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Chrome (and other Chromium browsers) paint autofilled inputs with their
+   own UA-level background, which can render dark under a dark OS/browser
+   theme -- overriding the input's own inline background because autofill
+   styling isn't subject to normal CSS specificity. This is invisible in
+   a fresh test profile with no saved credentials, which is why it only
+   shows up for a returning visitor who has actually signed in before.
+   The delayed-transition trick prevents the browser's own color from
+   ever painting before ours takes over. */
+.auth-login-card input:-webkit-autofill,
+.auth-login-card input:-webkit-autofill:hover,
+.auth-login-card input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #0f172a;
+  -webkit-box-shadow: 0 0 0 1000px #f8fafc inset;
+  box-shadow: 0 0 0 1000px #f8fafc inset;
+  caret-color: #0f172a;
+  transition: background-color 9999s ease-in-out 0s;
 }
 
 /* ---- Showcase: hidden below 1180px, where there's no room to do it
@@ -94,7 +116,7 @@
   font-size: clamp(28px, 2.8vw, 40px);
   line-height: 1.14;
   letter-spacing: -0.5px;
-  margin: 0 0 32px;
+  margin: 0 0 6px;
   color: #F8FAFC;
   /* Solid color + shadow, not a background-clip gradient -- guarantees
      legibility no matter what's behind it (glow, mockup edge, anything). */
@@ -173,7 +195,7 @@
    depth without building out a full second illustration. */
 .auth-status-float {
   position: absolute;
-  bottom: -14px; left: 28px;
+  bottom: -8px; left: 28px;
   z-index: 2;
   display: inline-flex; align-items: center; gap: 7px;
   background: #101827;
@@ -192,7 +214,7 @@
 
 /* ---- Trust strip: a page-wide credibility banner instead of fabricated
    numeric stats -- capability claims, not unverifiable metrics. ---- */
-.auth-trust-strip { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; max-width: 640px; }
+.auth-trust-strip { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; max-width: 640px; }
 .auth-trust-label {
   font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
   color: #475569;
@@ -220,9 +242,9 @@
 }
 
 @media (max-width: 480px) {
-  .auth-canvas { padding: 32px 16px 64px; }
-  .auth-login-card { padding: 28px 24px; }
-  .auth-page-inner { gap: 16px; }
+  .auth-canvas { padding: 24px 16px 40px; }
+  .auth-login-card { padding: 24px 20px; }
+  .auth-page-inner { gap: 12px; }
   .auth-trust-items { flex-direction: column; align-items: stretch; }
   .auth-trust-item { justify-content: center; }
 }

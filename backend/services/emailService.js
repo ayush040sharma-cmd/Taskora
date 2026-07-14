@@ -4,6 +4,9 @@
  */
 
 const logger = require("../utils/logger");
+const { TASKORA_LOGO_PNG_BASE64 } = require("./emailAssets");
+
+const LOGO_DATA_URI = `data:image/png;base64,${TASKORA_LOGO_PNG_BASE64}`;
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL      = process.env.FROM_EMAIL || "Taskora <support@taskora.io>";
@@ -34,13 +37,25 @@ function emailShell({ title, bodyHtml }) {
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#020617;padding:40px 0;">
     <tr><td align="center">
       <table width="520" cellpadding="0" cellspacing="0" style="background:#0B1220;border:1px solid #1E293B;border-radius:16px;overflow:hidden;">
-        <tr><td style="background:linear-gradient(90deg,#3B82F6,#06B6D4);height:4px;"></td></tr>
+        <tr><td bgcolor="#3B82F6" style="background-color:#3B82F6;background-image:linear-gradient(90deg,#3B82F6,#06B6D4);height:4px;line-height:4px;font-size:1px;">&nbsp;</td></tr>
         <tr><td style="padding:32px 40px 0;">
           <table cellpadding="0" cellspacing="0"><tr>
-            <td style="background:linear-gradient(135deg,#3B82F6,#06B6D4);border-radius:8px;width:32px;height:32px;text-align:center;vertical-align:middle;">
-              <span style="color:#fff;font-size:16px;font-weight:700;line-height:32px;">T</span>
+            <td width="32" height="32" style="width:32px;height:32px;vertical-align:middle;">
+              <!--[if mso]>
+              <table cellpadding="0" cellspacing="0"><tr>
+                <td bgcolor="#3B82F6" width="32" height="32" style="background-color:#3B82F6;border-radius:8px;text-align:center;vertical-align:middle;">
+                  <span style="color:#fff;font-size:16px;font-weight:700;line-height:32px;font-family:Georgia,'Times New Roman',serif;">T</span>
+                </td>
+              </tr></table>
+              <![endif]-->
+              <!--[if !mso]><!-->
+              <img src="${LOGO_DATA_URI}" width="32" height="32" alt="Taskora" style="display:block;width:32px;height:32px;border:0;" />
+              <!--<![endif]-->
             </td>
-            <td style="padding-left:10px;font-size:20px;font-weight:700;color:#E2E8F0;vertical-align:middle;">Taskora</td>
+            <td style="padding-left:10px;font-size:20px;font-weight:800;letter-spacing:-0.01em;vertical-align:middle;font-family:'Syne',Georgia,'Segoe UI',Arial,sans-serif;">
+              <span style="color:#E2E8F0;">Task</span><!--
+              --><span style="color:#06B6D4;background:linear-gradient(90deg,#3B82F6,#06B6D4);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">ora</span>
+            </td>
           </tr></table>
         </td></tr>
         <tr><td style="padding:28px 40px 36px;">${bodyHtml}</td></tr>

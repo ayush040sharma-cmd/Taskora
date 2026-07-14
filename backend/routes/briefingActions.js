@@ -19,11 +19,45 @@ const { verifyActionToken, consumeActionToken } = require("../services/briefing/
 router.get("/:token", auth, async (req, res) => {
   try {
     const { action } = await verifyActionToken(req.params.token);
-    res.json({ kind: action.kind, params: action.params, run_id: action.run_id });
+    const summary = await buildSummary(action.kind, action.params);
+    res.json({ kind: action.kind, params: action.params, run_id: action.run_id, summary });
   } catch (e) {
     res.status(400).json({ message: e.message });
   }
 });
+
+/**
+ * Resolves human-readable names for the confirm sheet — the raw params
+ * (task_id, to_user_id, approval_id) aren't enough to render a sentence a
+ * person can actually confirm. Read-only, same as the rest of this GET route.
+ */
+async function buildSummary(kind, params) {
+  switch (kind) {
+    case "REASSIGN": {
+      const r = await pool.query(
+        `SELECT t.title AS task_title, u.name AS to_user_name
+         FROM tasks t, users u
+         WHERE t.id = $1 AND u.id = $2`,
+        [params.task_id, params.to_user_id]
+      );
+      return r.rows[0] || {};
+    }
+    case "APPROVE": {
+      const r = await pool.query(
+        `SELECT t.title AS task_title FROM approvals a JOIN tasks t ON t.id = a.task_id WHERE a.id = $1`,
+        [params.approval_id]
+      );
+      return r.rows[0] || {};
+    }
+    case "OPEN_TASK":
+    case "REVIEW_BLOCKER": {
+      const r = await pool.query(`SELECT title AS task_title FROM tasks WHERE id = $1`, [params.task_id]);
+      return r.rows[0] || {};
+    }
+    default:
+      return {};
+  }
+}
 
 // ── POST /api/briefing-actions/:token/confirm ─────────────────────────────────
 router.post("/:token/confirm", auth, async (req, res) => {

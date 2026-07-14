@@ -205,10 +205,19 @@ try:
     async def _tasks():
         return {"tasks": []}
 
+    @_test_app.get("/api/ping")
+    async def _ping():
+        return {"ok": True}
+
     @_test_app.post("/api/auth/login")
     async def _login():
         return {"token": "test"}
 
+    # jwt_secret="" here is deliberate: these tests exercise attack-pattern
+    # scanning (steps 1-5 of dispatch()), not JWT auth, so they intentionally
+    # use routes outside PROTECTED_PREFIXES to stay isolated from auth
+    # behavior. See test_jwt_fail_closed.py-adjacent tests below for the
+    # empty-secret-on-a-protected-route case specifically.
     _test_app.add_middleware(JarvisFirewallMiddleware, jwt_secret="")
 
     class TestMiddleware:
@@ -216,13 +225,23 @@ try:
             self.client = TestClient(_test_app, raise_server_exceptions=False)
 
         def test_clean_request_passes(self):
-            r = self.client.get("/api/tasks")
+            # /api/ping is not in PROTECTED_PREFIXES — this tests that
+            # scanning doesn't false-positive on a benign request, not auth.
+            r = self.client.get("/api/ping")
             assert r.status_code == 200
 
         def test_sql_injection_in_query_blocked(self):
             r = self.client.get("/api/tasks?search=' UNION SELECT 1 --")
             assert r.status_code == 400
             assert r.json()["attack_type"] == "sql_injection"
+
+        def test_protected_route_fails_closed_without_jwt_secret(self):
+            # Regression test: a protected route (/api/tasks is in
+            # PROTECTED_PREFIXES) must be REJECTED, not silently allowed,
+            # when jwt_secret is empty. Previously `if self._jwt_secret and
+            # ...` made an empty secret skip JWT verification entirely.
+            r = self.client.get("/api/tasks")
+            assert r.status_code == 503
 
         def test_xss_in_body_blocked(self):
             r = self.client.post(

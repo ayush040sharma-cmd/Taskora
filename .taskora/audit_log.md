@@ -16,6 +16,13 @@ No previous entry exists in this log — this is the first run, so there is no b
 | C-2 | `ai-agent/main.py` | 106 | Global exception handler (`@app.exception_handler(Exception)`) returns `{"detail": "Internal server error", "error": str(exc)}` to the client for **every** unhandled exception across the whole API — raw internal error text is exposed regardless of which route failed. |
 | C-3 | `ai-agent/config.py` (default) + `ai-agent/firewall/middleware.py` | 22 / 173 | `jwt_secret: str = ""` defaults to an empty string, and `firewall/middleware.py:173` guards JWT verification with `if self._jwt_secret and ...` — when the secret is empty, JWT verification is **skipped entirely** rather than failing closed. If `JWT_SECRET` is unset in an environment, protected routes are silently left unauthenticated instead of blocked. Confirmed by `firewall/tests/test_firewall.py:212`, which uses `jwt_secret=""` specifically to bypass auth while testing unrelated behavior. |
 
+### Remediation (same day)
+All three Critical issues above were fixed within this audit run, before publication, given the repo is public and C-1/C-2/C-3 were exploitable-as-documented:
+- **C-1** — removed the `"*"` wildcard from `ai-agent/main.py`'s `allow_origins`; only the two explicit dev origins remain.
+- **C-2** — `ai-agent/main.py`'s global exception handler no longer includes `str(exc)` in the client-facing response body; full detail still goes to the server log via `logger.error(..., exc_info=True)`.
+- **C-3** — `ai-agent/config.py`'s `jwt_secret` is now a required field (no empty-string default), and `firewall/middleware.py`'s dispatch logic now fails **closed**: a protected route with no configured secret returns `503 "Service misconfigured"` instead of skipping JWT verification. Added a regression test (`test_protected_route_fails_closed_without_jwt_secret`) and repointed `test_clean_request_passes` at a genuinely unprotected route so it no longer relies on the auth-bypass behavior it was inadvertently testing. Verified directly (pytest collection for this file is separately broken — see new Medium finding below) — fix confirmed via isolated script: protected route + empty secret → `503`; unprotected route → `200`.
+- Discovered while verifying: **the real `ai-agent/.env` on this machine has `JWT_SECRET` unset** — C-3 was not theoretical, it reflects the actual current local configuration. The service will now correctly refuse to start until a real secret is set there.
+
 ### High Severity Issues Found
 | ID | File | Line | Issue |
 |----|------|------|-------|
@@ -33,6 +40,7 @@ No previous entry exists in this log — this is the first run, so there is no b
 - `backend/routes/webhooks.js` — Resend webhook signature (svix) still not verified. Self-documented as a known gap in the file's own header comment — still open.
 - `backend/routes/payments.js:154-167` — `POST /mock-upgrade` has no try/catch around its `await pool.query(...)`. Low real-world risk since the route 404s outside `NODE_ENV !== "production"`, but inconsistent with every other handler in the file.
 - `frontend/src/components/JarvisVoiceAssistant.jsx:564` — `disabled={processingRef.current}` passes a ref value directly to a prop. Ref mutations don't trigger re-renders, so the button's disabled state can lag behind the actual processing state.
+- `ai-agent/firewall/tests/test_firewall.py:15` — discovered while verifying the C-3 fix: this test module fails to even *collect* (`ImportError: cannot import name 'RateLimitResult' from 'firewall.rate_limiter'`). `rate_limiter.py` only exports `RateLimit`/`RateLimiter`, not `RateLimitResult`, and 8 assertions in a separate `RateLimiter`-focused test class compare against `RateLimitResult.ALLOWED`/`.BLOCKED` — an enum-based API that doesn't match the real implementation (`limiter.check_ip()` returns a `(allowed, retry_after)` tuple per its actual usage in `middleware.py`). Every test in this file has been silently failing to run at all, including in CI (`.github/workflows/jarvis_daily.yml`). Not fixed in this pass — out of scope for the JWT/CORS/error-leak fixes, needs its own investigation into which API was intended.
 
 **Low (counted only):**
 - ~13 `useEffect` hooks across the frontend suppress `exhaustive-deps` via `// eslint-disable-line` (Dashboard.jsx, ActivityFeed.jsx, CalendarView.jsx ×2, IntegrationsPanel.jsx, ManagerDashboard.jsx, TaskDetailModal.jsx ×4, useSpeechRecognition.js, and others).
@@ -48,4 +56,4 @@ No baseline exists — every issue listed above (C-1 through C-3, H-1 through H-
 ### Fixed Issues Since Last Audit
 None — no prior audit entry exists to diff against.
 
-**Summary:** 3 critical, 3 high, 7 medium, ~100+ low (counted, not individually itemized) — 13 new, 0 fixed
+**Summary:** 3 critical (all fixed same-day, see Remediation), 3 high, 8 medium, ~100+ low (counted, not individually itemized) — 14 new, 3 fixed

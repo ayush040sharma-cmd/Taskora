@@ -18,8 +18,12 @@ class Settings(BaseSettings):
     github_owner: str = ""
     github_repo: str = ""
 
-    # Security
-    jwt_secret: str = ""
+    # Security — required, no default. An empty/missing secret used to
+    # silently disable JWT verification on protected routes entirely
+    # (see firewall/middleware.py) rather than fail closed; removing the
+    # default means the service now refuses to start without a real one,
+    # matching anthropic_api_key's existing required-field pattern above.
+    jwt_secret: str
 
     # Orchestrator behaviour
     dry_run: bool = False

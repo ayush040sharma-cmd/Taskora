@@ -589,10 +589,10 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 120px 32px 80px;
+  padding: 96px 32px 64px;
   position: relative;
   overflow: hidden;
-  gap: 56px;
+  gap: 32px;
 }
 .lp-hero-bg { position: absolute; inset: 0; pointer-events: none; }
 .lp-hero-glow {
@@ -727,7 +727,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
   background: rgba(255,255,255,0.05); border-radius: 6px;
   padding: 4px 12px; max-width: 200px; margin: 0 auto;
 }
-.lp-mock-body { display: flex; height: 380px; }
+.lp-mock-body { display: flex; height: 320px; }
 .lp-mock-sidebar {
   width: 44px; background: #111827;
   border-right: 1px solid rgba(255,255,255,0.06);
@@ -830,7 +830,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
 /* ── Stats ───────────────────────────────────────────────────── */
 .lp-stats {
   background: #f8fafc; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;
-  padding: 56px 32px;
+  padding: 48px 32px;
 }
 .lp-stats-inner {
   max-width: 900px; margin: 0 auto;
@@ -868,7 +868,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
 .lp-text-red { color: #dc2626; }
 
 /* ── Problem ─────────────────────────────────────────────────── */
-.lp-problem { padding: 100px 32px; background: white; }
+.lp-problem { padding: 72px 32px; background: white; }
 .lp-problem-grid {
   display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px;
 }
@@ -883,7 +883,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
 .lp-problem-card p  { font-size: 14px; color: #64748b; line-height: 1.6; margin: 0; }
 
 /* ── Solution ────────────────────────────────────────────────── */
-.lp-solution { padding: 100px 32px; background: #f8fafc; }
+.lp-solution { padding: 80px 32px; background: #f8fafc; }
 .lp-solution-grid {
   display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: start;
 }
@@ -927,9 +927,9 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
 }
 
 /* ── Features grid ───────────────────────────────────────────── */
-.lp-features { padding: 100px 32px; background: white; }
+.lp-features { padding: 72px 32px; background: white; }
 .lp-features-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
 }
 .lp-feature-card {
   background: #f8fafc; border: 1px solid #f1f5f9;
@@ -952,7 +952,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
 .lp-feature-card p  { font-size: 13px; color: #64748b; line-height: 1.6; margin: 0; }
 
 /* ── How it works ────────────────────────────────────────────── */
-.lp-how { padding: 100px 32px; background: #f8fafc; }
+.lp-how { padding: 80px 32px; background: #f8fafc; }
 .lp-steps {
   display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px;
   margin-top: 8px; position: relative;
@@ -976,7 +976,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
 .lp-step p  { font-size: 13px; color: #64748b; line-height: 1.6; }
 
 /* ── Testimonials ────────────────────────────────────────────── */
-.lp-testimonials { padding: 100px 32px; background: white; }
+.lp-testimonials { padding: 80px 32px; background: white; }
 .lp-testi-grid {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
 }
@@ -1002,7 +1002,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
 .lp-testi-role { font-size: 12px; color: #64748b; }
 
 /* ── Pricing ─────────────────────────────────────────────────── */
-.lp-pricing { padding: 100px 32px; background: #f8fafc; }
+.lp-pricing { padding: 72px 32px; background: #f8fafc; }
 .lp-pricing-grid {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; align-items: start;
 }
@@ -1037,7 +1037,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
 
 /* ── Final CTA ───────────────────────────────────────────────── */
 .lp-final-cta {
-  padding: 120px 32px;
+  padding: 96px 32px;
   background: #0a0f1e;
   text-align: center; position: relative; overflow: hidden;
 }
@@ -1054,7 +1054,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
 /* ── Footer ──────────────────────────────────────────────────── */
 .lp-footer { background: #0a0f1e; border-top: 1px solid rgba(255,255,255,0.06); }
 .lp-footer-inner {
-  max-width: 1100px; margin: 0 auto; padding: 64px 32px 40px;
+  max-width: 1100px; margin: 0 auto; padding: 56px 32px 32px;
   display: flex; gap: 64px;
 }
 .lp-footer-brand { max-width: 260px; }
@@ -1074,16 +1074,26 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
 }
 
 /* ── Responsive ──────────────────────────────────────────────── */
+@media (min-width: 1280px) {
+  /* Same 4 cards, half the height, on any desktop-width visit -- the
+     2x2 grid was fixed regardless of how much horizontal room a wide
+     viewport actually has to give it. */
+  .lp-problem-grid { grid-template-columns: repeat(4, 1fr); }
+}
 @media (max-width: 1024px) {
+  /* Nav collapses here too, not at 768px -- it was previously out of sync
+     with these content-grid breakpoints, leaving a 769-1023px zone where
+     the grids had already gone tablet but the nav still tried to render
+     five links + two buttons in one row and wrapped over the hero. */
+  .lp-nav-links { display: none; }
+  .lp-hamburger { display: flex; }
+  .lp-nav-actions { display: none; }
   .lp-solution-grid { grid-template-columns: 1fr; gap: 40px; }
   .lp-features-grid { grid-template-columns: repeat(2, 1fr); }
   .lp-steps         { grid-template-columns: repeat(2, 1fr); }
   .lp-step-line     { display: none; }
 }
 @media (max-width: 768px) {
-  .lp-nav-links { display: none; }
-  .lp-hamburger { display: flex; }
-  .lp-nav-actions { display: none; }
   .lp-hero { padding: 100px 20px 60px; gap: 40px; }
   .lp-stats-inner { grid-template-columns: repeat(2, 1fr); }
   .lp-problem-grid  { grid-template-columns: 1fr; }

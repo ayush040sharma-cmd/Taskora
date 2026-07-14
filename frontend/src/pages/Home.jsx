@@ -98,7 +98,6 @@ export default function Home() {
 
   return (
     <div className="lp-root">
-
       {/* ── Navigation ──────────────────────────────────────────── */}
       <nav className={`lp-nav ${scrolled ? "lp-nav--scrolled" : ""}`}>
         <div className="lp-nav-inner">

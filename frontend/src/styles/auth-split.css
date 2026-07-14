@@ -57,7 +57,7 @@
 .auth-stage-inner {
   display: flex;
   align-items: center;
-  gap: 72px;
+  gap: 56px;
   width: 100%;
   max-width: 1360px;
 }
@@ -236,9 +236,23 @@
   font-size: 12px; color: #475569;
 }
 
-@media (max-width: 1320px) {
+/* Compact (card-only) layout is reserved for tablet/mobile widths. Any
+   standard desktop viewport -- including a non-maximized window or a
+   modest 13" laptop -- should still get the hero. 1024px is the
+   conventional tablet/desktop line (iPad landscape and below stay
+   compact; anything wider gets the full experience). */
+@media (max-width: 1024px) {
   .auth-stage-showcase { display: none; }
   .auth-stage-inner { justify-content: center; }
+}
+
+/* Between the compact cutoff and the container's preferred width, tighten
+   the gap and mockup ceiling so the hero doesn't feel cramped rather than
+   just letting flex-shrink fight it out on its own. */
+@media (min-width: 1025px) and (max-width: 1360px) {
+  .auth-stage-inner { gap: 40px; }
+  .auth-stage-mockup { max-width: 560px; }
+  .auth-login-card { flex-basis: 360px; }
 }
 
 @media (max-width: 480px) {

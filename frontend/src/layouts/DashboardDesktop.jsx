@@ -1,5 +1,6 @@
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
+import DemoSessionBadge from "../components/DemoSessionBadge";
 
 /**
  * Desktop layout: fixed left sidebar + top navbar + scrollable content area.
@@ -55,6 +56,8 @@ export default function DashboardDesktop({
           {children}
         </div>
       </div>
+
+      <DemoSessionBadge />
     </>
   );
 }

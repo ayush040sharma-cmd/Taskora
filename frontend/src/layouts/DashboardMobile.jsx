@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import DemoSessionBadge from "../components/DemoSessionBadge";
 
 /* ── Bottom tab definitions ─────────────────────────────── */
 const TABS = [
@@ -168,6 +169,8 @@ export default function DashboardMobile({
           </button>
         </div>
       </header>
+
+      <DemoSessionBadge variant="top-banner" />
 
       {/* ── Scrollable content ─────────────────────────────── */}
       <main className="mob-content">

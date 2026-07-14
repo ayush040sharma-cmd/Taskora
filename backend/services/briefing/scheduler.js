@@ -4,6 +4,11 @@ const { dispatchOne } = require("./dispatch");
 
 const BATCH_CONCURRENCY = 10;
 
+function toISODate(value) {
+  if (typeof value === "string") return value.slice(0, 10);
+  return value.toISOString().slice(0, 10);
+}
+
 /**
  * One scheduler tick — docs/briefing-engine-plan.md §6.4. Finds every user
  * whose local time currently matches their configured send hour and
@@ -25,7 +30,12 @@ async function runSchedulerTick() {
   for (let i = 0; i < due.rows.length; i += BATCH_CONCURRENCY) {
     const batch = due.rows.slice(i, i + BATCH_CONCURRENCY);
     const settled = await Promise.allSettled(
-      batch.map(row => dispatchOne(row.user_id, row.brief_type, row.local_date))
+      // row.local_date comes back from `pg` as a JS Date object (DATE
+      // columns are parsed, not returned as strings) — buildContext.js's
+      // Zod schema requires facts.date to be a string. Format here, not in
+      // the SQL, so the NOT EXISTS comparison in findDueUsers() still
+      // compares DATE to DATE (Postgres has no date = text operator).
+      batch.map(row => dispatchOne(row.user_id, row.brief_type, toISODate(row.local_date)))
     );
     for (const s of settled) {
       if (s.status !== "fulfilled") { results.failed++; continue; }

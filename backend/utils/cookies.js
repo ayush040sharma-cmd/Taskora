@@ -25,4 +25,28 @@ function clearAuthCookie(res) {
   });
 }
 
-module.exports = { setAuthCookie, clearAuthCookie };
+/**
+ * CSRF state cookie for the OAuth flow (currently Google; reusable for any
+ * future provider). Short-lived -- only needs to survive the redirect
+ * roundtrip to the provider and back, not a real session.
+ */
+function setOAuthStateCookie(res, state) {
+  res.cookie("taskora_oauth_state", state, {
+    httpOnly: true,
+    secure:   IS_PROD,
+    sameSite: IS_PROD ? "none" : "lax",
+    maxAge:   10 * 60 * 1000, // 10 minutes
+    path:     "/",
+  });
+}
+
+function clearOAuthStateCookie(res) {
+  res.clearCookie("taskora_oauth_state", {
+    httpOnly: true,
+    secure:   IS_PROD,
+    sameSite: IS_PROD ? "none" : "lax",
+    path:     "/",
+  });
+}
+
+module.exports = { setAuthCookie, clearAuthCookie, setOAuthStateCookie, clearOAuthStateCookie };

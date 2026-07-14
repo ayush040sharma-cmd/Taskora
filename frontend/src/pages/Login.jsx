@@ -224,8 +224,7 @@ export default function Login() {
             {demoLoading ? "Loading demo…" : "🚀 Or explore a live demo →"}
           </button>
 
-          <div style={styles.divider}><span>Don't have an account?</span></div>
-          <Link to="/register" style={styles.switchLink}>
+          <Link to="/register" style={{...styles.switchLink, marginTop: 10}}>
             Create a free account
           </Link>
 
@@ -365,7 +364,6 @@ const styles = {
   submitBtn: { width: "100%", padding: "11px", background: "var(--tk-gradient, linear-gradient(90deg,#3B82F6,#06B6D4))", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: "pointer", marginTop: 2, letterSpacing: "0.2px", transition: "opacity 0.15s" },
   btnInner: { display: "flex", alignItems: "center", justifyContent: "center", gap: 8 },
   spinner: { animation: "spin 0.7s linear infinite" },
-  divider: { textAlign: "center", margin: "10px 0 6px", fontSize: 13, color: "#64748b" },
   switchLink: { display: "block", textAlign: "center", padding: "7px", border: "1.5px solid #e2e8f0", borderRadius: 10, fontSize: 14, fontWeight: 600, color: "var(--tk-accent, #3B82F6)", textDecoration: "none" },
   helpRow: { display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 6 },
   helpLink: { fontSize: 12, color: "#64748b", textDecoration: "none" },

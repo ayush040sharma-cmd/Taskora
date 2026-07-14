@@ -54,7 +54,8 @@ async def analyze_code(req: AnalyzeCodeRequest):
             workspace_id=req.workspace_id,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Code analysis error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Code analysis failed. Please try again.")
 
     issues = []
     summary = text

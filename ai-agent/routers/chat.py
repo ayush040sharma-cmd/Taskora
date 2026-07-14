@@ -35,8 +35,8 @@ async def chat(req: ChatRequest, db: AsyncSession = Depends(get_db)):
             workspace_id=req.workspace_id,
         )
     except Exception as e:
-        logger.error(f"Chat agent error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Chat agent error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Chat failed. Please try again.")
 
     # Persist to memory
     short_term.append_message(session_id, "user", req.message)

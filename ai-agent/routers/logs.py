@@ -15,7 +15,8 @@ async def get_logs(req: LogsRequest):
     try:
         result = await read_audit_logs(client, req.workspace_id, req.limit, req.filter_action)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Log fetch error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Could not fetch logs. Please try again.")
 
     entries = []
     for i, log in enumerate(result.get("logs", [])):

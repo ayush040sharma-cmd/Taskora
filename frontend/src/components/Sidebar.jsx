@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { canViewSidebar } from "../utils/canAccess";
+import { getInitials } from "../utils/avatar";
 import Logo from "./Logo";
 
 // ── All views organized by section ─────────────────────────────────────────────
@@ -45,10 +46,6 @@ const SECTIONS = [
     ],
   },
 ];
-
-function getInitials(name = "") {
-  return name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2) || "?";
-}
 
 function WorkspaceAvatar({ name, size = 28 }) {
   const colors = ["#3B82F6", "#8b5cf6", "#06b6d4", "#10b981", "#f59e0b", "#ef4444"];

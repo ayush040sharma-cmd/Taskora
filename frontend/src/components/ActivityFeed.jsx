@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import api from "../api/api";
+import { getInitials } from "../utils/avatar";
 
 // ── Action config ────────────────────────────────────────────────────────────
 const ACTION_MAP = {
@@ -47,10 +48,6 @@ function dayLabel(dateStr) {
   if (day >= today) return "Today";
   if (day >= yest)  return "Yesterday";
   return d.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
-}
-
-function getInitials(name = "") {
-  return name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0,2) || "?";
 }
 
 const AVATAR_COLORS = ["#6366f1","#8b5cf6","#06b6d4","#10b981","#f59e0b","#ef4444","#ec4899"];

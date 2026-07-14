@@ -117,12 +117,15 @@ export default function FilterBar({ filters, onChange, assignees = [], totalTask
         </button>
       )}
 
-      {/* Result count */}
-      <span className="filter-count">
-        {hasAnyFilter
-          ? `${filteredCount} of ${totalTasks} task${totalTasks !== 1 ? "s" : ""}`
-          : `${totalTasks} task${totalTasks !== 1 ? "s" : ""}`}
-      </span>
+      {/* Result count — only shown while filtering. Unfiltered, this was
+          repeating the exact same "N tasks" text already shown in the page
+          header above (Dashboard.jsx's "N tasks · Press N to add"), with
+          zero added information. */}
+      {hasAnyFilter && (
+        <span className="filter-count">
+          {`${filteredCount} of ${totalTasks} task${totalTasks !== 1 ? "s" : ""}`}
+        </span>
+      )}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import ProfileModal from "./ProfileModal";
 import NotificationBell from "./NotificationBell";
 import { useTheme } from "../hooks/useTheme";
 import api from "../api/api";
+import { getInitials } from "../utils/avatar";
 import { LuSearch, LuPlus, LuUser, LuSettings, LuLogOut } from "react-icons/lu";
 
 const IconSearch   = () => <LuSearch size={14} />;
@@ -30,9 +31,6 @@ export default function Navbar({ workspaceName, workspaceId, onCreateTask, onMen
       else setMyStatus(null);
     }).catch(() => {});
   }, [user?.id]);
-
-  const getInitials = (name = "") =>
-    name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
 
   // Close on outside click
   useEffect(() => {
@@ -68,9 +66,9 @@ export default function Navbar({ workspaceName, workspaceId, onCreateTask, onMen
       </div>
 
       <div className="navbar-actions">
-        <button className="btn-create" onClick={onCreateTask}>
+        <button className="btn-create" onClick={onCreateTask} title="Create a new task">
           <IconPlus />
-          Create
+          New task
         </button>
         <NotificationBell />
 

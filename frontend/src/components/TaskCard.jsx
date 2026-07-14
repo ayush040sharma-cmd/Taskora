@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Draggable } from "@hello-pangea/dnd";
 import { LuTrash2, LuSquarePen, LuCalendar, LuMessageSquare, LuLink, LuBrain, LuClock, LuCircleAlert, LuClipboardList, LuBug, LuBookOpen, LuFileStack, LuFilePenLine, LuPresentation, LuArrowUp, LuFlaskConical } from "react-icons/lu";
 import api from "../api/api";
+import { getInitials } from "../utils/avatar";
 
 const IconTrash  = () => <LuTrash2 size={13} />;
 const IconEdit   = () => <LuSquarePen size={13} />;

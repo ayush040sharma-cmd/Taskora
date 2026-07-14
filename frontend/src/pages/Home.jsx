@@ -353,8 +353,10 @@ export default function Home() {
               { icon: "🏢", title: "Team RBAC", desc: "Manager, Member, Viewer roles — control who sees what, workspace by workspace.", tag: "Security" },
             ].map(f => (
               <div key={f.title} className="lp-feature-card lp-animate">
-                <div className="lp-feature-icon">{f.icon}</div>
-                <div className="lp-feature-tag">{f.tag}</div>
+                <div className="lp-feature-top">
+                  <div className="lp-feature-icon">{f.icon}</div>
+                  <div className="lp-feature-tag">{f.tag}</div>
+                </div>
                 <h3>{f.title}</h3>
                 <p>{f.desc}</p>
               </div>

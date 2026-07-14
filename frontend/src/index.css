@@ -927,13 +927,16 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
 }
 
 /* ── Features grid ───────────────────────────────────────────── */
-.lp-features { padding: 72px 32px; background: white; }
+/* Denser tier than the standard "dense grid" section padding (72px) --
+   9 cards in a 3x3 grid carries more visual weight per row than the
+   4-card Problem grid, so it earns a tighter frame. */
+.lp-features { padding: 56px 32px; background: white; }
 .lp-features-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
 }
 .lp-feature-card {
   background: #f8fafc; border: 1px solid #f1f5f9;
-  border-radius: 16px; padding: 28px;
+  border-radius: 16px; padding: 24px;
   transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
   position: relative;
 }
@@ -941,15 +944,19 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
   box-shadow: 0 12px 40px rgba(0,82,204,0.08);
   transform: translateY(-3px); border-color: #bfdbfe;
 }
-.lp-feature-icon { font-size: 32px; margin-bottom: 14px; }
+/* Icon and badge share a row instead of stacking -- they're both
+   metadata about the card, not sequential content, so there's no
+   storytelling reason for two lines here. This is the single biggest
+   height saving in the card and it's structural, not a padding cut. */
+.lp-feature-top { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.lp-feature-icon { font-size: 24px; line-height: 1; }
 .lp-feature-tag {
   display: inline-block; font-size: 10px; font-weight: 700;
   color: #0052cc; background: #eff6ff; padding: 2px 8px;
   border-radius: 4px; letter-spacing: 0.05em; text-transform: uppercase;
-  margin-bottom: 10px;
 }
-.lp-feature-card h3 { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
-.lp-feature-card p  { font-size: 13px; color: #64748b; line-height: 1.6; margin: 0; }
+.lp-feature-card h3 { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 6px; }
+.lp-feature-card p  { font-size: 13px; color: #64748b; line-height: 1.55; margin: 0; }
 
 /* ── How it works ────────────────────────────────────────────── */
 .lp-how { padding: 80px 32px; background: #f8fafc; }

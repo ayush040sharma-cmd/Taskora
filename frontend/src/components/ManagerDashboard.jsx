@@ -1531,30 +1531,6 @@ function TaskDistributionChart({ tasks, team, onOpenDrawer }) {
 
   const activeTasks = tasks.filter(t => t.status !== "done");
 
-  // ── DEBUG: log raw data on every render ──────────────────────────────────
-  console.group("[TDC] render");
-  console.log("tasks.length:", tasks.length, "| activeTasks.length:", activeTasks.length);
-  console.log("selectedMember:", selectedMember, "| selectedCategory:", selectedCategory);
-  if (team.length) {
-    console.log("team[0] keys:", Object.keys(team[0]));
-    console.log("team members:", team.map(m => ({ user_id: m.user_id, id: m.id, name: m.name })));
-  }
-  if (activeTasks.length) {
-    const t0 = activeTasks[0];
-    console.log("task[0] key fields:", {
-      id: t0.id,
-      assigned_user_id:    t0.assigned_user_id,
-      effective_assignee_id: t0.effective_assignee_id,
-      workspace_owner_id:  t0.workspace_owner_id,
-      assignee_name:       t0.assignee_name,
-      type:                t0.type,
-      task_type:           t0.task_type,
-      status:              t0.status,
-    });
-  }
-  console.groupEnd();
-  // ── END DEBUG ─────────────────────────────────────────────────────────────
-
   // Build per-member data
   const memberMap = {};
   activeTasks.forEach(t => {
@@ -1565,9 +1541,6 @@ function TaskDistributionChart({ tasks, team, onOpenDrawer }) {
     memberMap[uid].cats[cat] = (memberMap[uid].cats[cat] || 0) + 1;
   });
 
-  console.log("[TDC] memberMap keys:", Object.keys(memberMap));
-  console.log("[TDC] memberMap entries:", Object.values(memberMap).map(m => ({ uid: m.uid, name: m.name, taskCount: Object.values(m.cats).reduce((s,v)=>s+v,0) })));
-
   // All categories present across visible tasks
   const allCats = [...new Set(activeTasks.map(t =>
     (t.task_type || t.type || "task").toLowerCase()
@@ -1577,8 +1550,6 @@ function TaskDistributionChart({ tasks, team, onOpenDrawer }) {
   const entries = Object.values(memberMap).filter(m =>
     !selectedMember || m.uid === selectedMember
   );
-
-  console.log("[TDC] entries after filter:", entries.map(m => ({ uid: m.uid, name: m.name })));
 
   // Y-axis max — scale to category max when a type is filtered
   const globalMax = Math.max(1, ...Object.values(memberMap).map(m =>

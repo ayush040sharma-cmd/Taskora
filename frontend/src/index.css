@@ -735,10 +735,9 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
   padding: 12px 0; gap: 4px;
 }
 .lp-mock-logo {
-  width: 28px; height: 28px; border-radius: 7px;
-  background: linear-gradient(135deg, #0052cc, #7c3aed);
+  width: 28px; height: 28px;
   display: flex; align-items: center; justify-content: center;
-  color: white; font-weight: 800; font-size: 12px; margin-bottom: 8px;
+  margin-bottom: 8px;
 }
 .lp-mock-nav-item {
   width: 32px; height: 32px; border-radius: 8px;

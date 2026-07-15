@@ -79,6 +79,17 @@
   background: var(--tk-card);
   cursor: pointer;
   transition: background var(--tk-duration-fast, 0.15s) var(--tk-ease, ease);
+  /* Reset native <button> chrome -- this is a button for keyboard/screen
+     reader users, styled to look like the row it's always looked like. */
+  width: 100%;
+  border: none;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+.mt-row:focus-visible {
+  outline: 2px solid var(--tk-accent);
+  outline-offset: -2px;
 }
 .mt-row:hover {
   background: var(--tk-card-2);

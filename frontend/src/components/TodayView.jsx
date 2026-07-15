@@ -146,14 +146,15 @@ export default function TodayView({ onOpenTask }) {
       )}
       <div className="tv-priorities">
         {facts.priorities.map(p => (
-          <div key={p.task_id} className="tv-priority-row" onClick={() => openPriority(p.task_id)}>
-            <span className="tv-priority-stars" title={`${p.stars}/5 priority`}>{"★".repeat(p.stars)}{"☆".repeat(5 - p.stars)}</span>
+          <button type="button" key={p.task_id} className="tv-priority-row" onClick={() => openPriority(p.task_id)}>
+            <span className="tv-priority-stars" aria-hidden="true">{"★".repeat(p.stars)}{"☆".repeat(5 - p.stars)}</span>
+            <span className="tk-sr-only">{p.stars} out of 5 priority.</span>
             <span className="tv-priority-title">{p.title}</span>
             {p.due_date && <span className="tv-priority-due">{fmtDue(p.due_date)}</span>}
             {p.effort_minutes != null && <span className="tv-priority-effort">{fmtMinutes(p.effort_minutes)}</span>}
             {opening === p.task_id && <span className="tv-priority-loading">…</span>}
-            {p.recommended_action && <div className="tv-priority-reason">{p.recommended_action}</div>}
-          </div>
+            {p.recommended_action && <span className="tv-priority-reason">{p.recommended_action}</span>}
+          </button>
         ))}
       </div>
     </div>

@@ -192,9 +192,12 @@ body.tk-theme {
   font-weight: 600;
   letter-spacing: 0.04em;
 }
-.tk-pill--ok     { background: var(--tk-status-ok-bg);     color: var(--tk-status-ok); }
-.tk-pill--warn   { background: var(--tk-status-warn-bg);   color: var(--tk-status-warn); }
-.tk-pill--danger { background: var(--tk-status-danger-bg); color: var(--tk-status-danger); }
+/* color falls back to --tk-status-* (dark theme, where the base token
+   already clears 4.5:1 on its own -bg tint -- see -text token comment
+   above for why light theme needs a separate darker value). */
+.tk-pill--ok     { background: var(--tk-status-ok-bg);     color: var(--tk-status-ok-text, var(--tk-status-ok)); }
+.tk-pill--warn   { background: var(--tk-status-warn-bg);   color: var(--tk-status-warn-text, var(--tk-status-warn)); }
+.tk-pill--danger { background: var(--tk-status-danger-bg); color: var(--tk-status-danger-text, var(--tk-status-danger)); }
 
 /* --- Section labels / eyebrows --- */
 .tk-eyebrow {
@@ -313,4 +316,14 @@ h1, h2, h3, h4, h5, h6 {
   --tk-status-warn-bg:  #FFFAE6;
   --tk-status-danger:   #DE350B;
   --tk-status-danger-bg: #FFEBE6;
+
+  /* Pill TEXT only -- the status colors above are also used for dots/icons
+     against the page background (where they clear WCAG's 3:1 non-text
+     threshold fine), but as 11px text on their own -bg tints above they
+     measure well under the 4.5:1 AA text threshold (warn: ~2.2:1, ok/danger:
+     ~3.9-4.0:1). These darker variants exist only to fix that text case
+     without recoloring the dots/icons/charts that reuse the base tokens. */
+  --tk-status-ok-text:     #166534;
+  --tk-status-warn-text:   #92400E;
+  --tk-status-danger-text: #B91C1C;
 }

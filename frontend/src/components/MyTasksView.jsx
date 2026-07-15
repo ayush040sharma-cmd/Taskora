@@ -95,7 +95,7 @@ export default function MyTasksView({ onOpenTask }) {
             {group.tasks.map(task => {
               const overdue = isOverdue(task.due_date);
               return (
-                <div key={task.id} className="mt-row" onClick={() => onOpenTask?.(task)}>
+                <button type="button" key={task.id} className="mt-row" onClick={() => onOpenTask?.(task)}>
                   <span className={`tk-pill ${PRIORITY_PILL[task.priority] || "tk-pill--warn"}`}>
                     {task.priority ? task.priority.charAt(0).toUpperCase() + task.priority.slice(1) : "—"}
                   </span>
@@ -106,7 +106,7 @@ export default function MyTasksView({ onOpenTask }) {
                       {formatDate(task.due_date)}
                     </span>
                   )}
-                </div>
+                </button>
               );
             })}
           </div>

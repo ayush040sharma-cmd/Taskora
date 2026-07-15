@@ -116,7 +116,7 @@ export default function AccountSettingsModal({ onClose, currentWorkspaceId }) {
     { id: "appearance",    label: "Appearance",    icon: "🎨" },
     { id: "notifications", label: "Notifications", icon: "🔔" },
     { id: "regional",      label: "Language & Region", icon: "🌍" },
-    { id: "workspace",     label: "Workspace",     icon: "⚙️" },
+    { id: "workspace",     label: "Display",       icon: "🖼️" },
     { id: "security",      label: "Security",      icon: "🔒" },
     { id: "demo",          label: "Demo Data",     icon: "🚀" },
   ];
@@ -265,10 +265,14 @@ export default function AccountSettingsModal({ onClose, currentWorkspaceId }) {
             </div>
           )}
 
-          {/* ── WORKSPACE PREFERENCES ── */}
+          {/* ── DISPLAY PREFERENCES ──
+               Personal to this browser (localStorage-backed default view +
+               card density) -- "Workspace Preferences" implied these were
+               workspace-wide/shared, which they never were. ── */}
           {section === "workspace" && (
             <div>
-              <h3 style={{ fontWeight: 700, fontSize: 16, color: "var(--text-primary)", marginBottom: 20 }}>Workspace Preferences</h3>
+              <h3 style={{ fontWeight: 700, fontSize: 16, color: "var(--text-primary)", marginBottom: 4 }}>Display Preferences</h3>
+              <p style={{ fontSize: 12.5, color: "var(--text-secondary)", marginBottom: 20 }}>Personal to this browser — not shared with teammates.</p>
               <div className="modal-field">
                 <label className="modal-label">Default view when opening workspace</label>
                 <select className="modal-input" value={defaultView} onChange={e => setDefaultView(e.target.value)}>

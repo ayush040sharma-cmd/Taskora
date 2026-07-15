@@ -438,27 +438,34 @@ function SecuritySection() {
 }
 
 // ── Section: Workspace Preferences ───────────────────────────────────────────
+// NOTE: these persist to localStorage, scoped per workspaceId so switching
+// workspaces doesn't leak one workspace's defaults into another -- but this
+// is still per-browser, not server-side. "Workspace-level" in the old copy
+// here overstated that: these don't sync to teammates or other devices yet.
+// True multi-user-synced workspace settings would need a backend column/
+// table and API route, which is a separate, larger change from this fix.
 function WorkspacePreferencesSection({ workspaceId }) {
-  const [taskPrefix,      setTaskPrefix]      = useState(localStorage.getItem("taskora-task-prefix") || "TASK");
-  const [sprintDuration,  setSprintDuration]  = useState(localStorage.getItem("taskora-sprint-days") || "14");
-  const [defaultPriority, setDefaultPriority] = useState(localStorage.getItem("taskora-default-priority") || "medium");
-  const [autoArchiveDays, setAutoArchiveDays] = useState(localStorage.getItem("taskora-auto-archive-days") || "30");
-  const [showCompleted,   setShowCompleted]   = useState(localStorage.getItem("taskora-show-completed") !== "false");
+  const k = (name) => `taskora-${name}-${workspaceId}`;
+  const [taskPrefix,      setTaskPrefix]      = useState(localStorage.getItem(k("task-prefix")) || "TASK");
+  const [sprintDuration,  setSprintDuration]  = useState(localStorage.getItem(k("sprint-days")) || "14");
+  const [defaultPriority, setDefaultPriority] = useState(localStorage.getItem(k("default-priority")) || "medium");
+  const [autoArchiveDays, setAutoArchiveDays] = useState(localStorage.getItem(k("auto-archive-days")) || "30");
+  const [showCompleted,   setShowCompleted]   = useState(localStorage.getItem(k("show-completed")) !== "false");
   const [saved,           setSaved]           = useState(false);
 
   function save() {
-    localStorage.setItem("taskora-task-prefix",        taskPrefix.trim() || "TASK");
-    localStorage.setItem("taskora-sprint-days",        sprintDuration);
-    localStorage.setItem("taskora-default-priority",   defaultPriority);
-    localStorage.setItem("taskora-auto-archive-days",  autoArchiveDays);
-    localStorage.setItem("taskora-show-completed",     String(showCompleted));
+    localStorage.setItem(k("task-prefix"),        taskPrefix.trim() || "TASK");
+    localStorage.setItem(k("sprint-days"),        sprintDuration);
+    localStorage.setItem(k("default-priority"),   defaultPriority);
+    localStorage.setItem(k("auto-archive-days"),  autoArchiveDays);
+    localStorage.setItem(k("show-completed"),     String(showCompleted));
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }
 
   return (
     <div>
-      <SectionHeading title="Workspace Preferences" desc="Configure workspace-level defaults and task behavior." />
+      <SectionHeading title="Workspace Preferences" desc="Task defaults for this workspace. Saved to this browser only — not yet synced to teammates or other devices." />
 
       <Row label="Task ID prefix" desc="Short prefix shown before task numbers (e.g. TASK-001, ENG-042).">
         <input
@@ -706,7 +713,7 @@ export default function SettingsPage({ currentWorkspaceId }) {
       case "notifications": return <NotificationsSection />;
       case "regional":      return <RegionalSection />;
       case "security":      return <SecuritySection />;
-      case "workspace":     return <WorkspacePreferencesSection workspaceId={currentWorkspaceId} />;
+      case "workspace":     return <WorkspacePreferencesSection key={currentWorkspaceId} workspaceId={currentWorkspaceId} />;
       case "demo":          return <DemoSection workspaceId={currentWorkspaceId} />;
       case "project":       return <ProjectSection />;
       case "workflow":      return <WorkflowSection />;

@@ -50,6 +50,7 @@ export default function DashboardDesktop({
           onCreateTask={onCreateTask}
           onMenuToggle={onSidebarToggle}
           onOpenSettings={onOpenSettings}
+          onOpenPalette={onOpenPalette}
           user={user}
         />
         <div className="board-content">

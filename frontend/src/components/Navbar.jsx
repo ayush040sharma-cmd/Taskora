@@ -14,7 +14,7 @@ const IconUser     = () => <LuUser size={15} />;
 const IconSettings = () => <LuSettings size={15} />;
 const IconLogout   = () => <LuLogOut size={15} />;
 
-export default function Navbar({ workspaceName, workspaceId, onCreateTask, onMenuToggle, onOpenSettings, user }) {
+export default function Navbar({ workspaceName, workspaceId, onCreateTask, onMenuToggle, onOpenSettings, onOpenPalette, user }) {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const { isDark, toggle: toggleTheme } = useTheme();
@@ -60,9 +60,9 @@ export default function Navbar({ workspaceName, workspaceId, onCreateTask, onMen
         <span className="navbar-breadcrumb-current">{workspaceName || "Select a workspace"}</span>
       </div>
 
-      <div className="navbar-search">
+      <div className="navbar-search" onClick={onOpenPalette} role="button" tabIndex={0} onKeyDown={e => { if (e.key === "Enter") onOpenPalette?.(); }}>
         <div className="navbar-search-icon"><IconSearch /></div>
-        <input type="text" placeholder="Search tasks… (⌘K)" readOnly style={{ cursor: "pointer" }} />
+        <input type="text" placeholder="Search tasks… (⌘K)" readOnly style={{ cursor: "pointer" }} tabIndex={-1} />
       </div>
 
       <div className="navbar-actions">

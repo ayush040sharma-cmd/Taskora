@@ -3559,6 +3559,14 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
 .td-col-main { flex: 1; min-width: 0; }
 .td-col-meta { width: 220px; flex-shrink: 0; }
 
+@media (max-width: 640px) {
+  /* Fixed 220px meta column left barely any room for .td-col-main on a
+     ~350px-wide modal, squeezing the description/progress fields into a
+     sliver. Stack instead of sitting side by side. */
+  .td-two-col { flex-direction: column; gap: 20px; }
+  .td-col-meta { width: 100%; }
+}
+
 /* Description */
 .td-section-label {
   font-size: 11px;

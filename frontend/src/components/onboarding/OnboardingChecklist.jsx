@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { analytics } from "../../utils/analytics";
+import { useIsMobile } from "../../hooks/useIsMobile";
 
 const ITEMS = [
   { id: "role",       label: "Choose your role",              check: (u) => !!u?.onboarding_role },
@@ -14,6 +15,7 @@ const STORAGE_KEY = "onboarding_checklist_dismissed";
 
 export default function OnboardingChecklist({ onViewChange }) {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [dismissed, setDismissed] = useState(() => {
     return localStorage.getItem(STORAGE_KEY) === "true";
   });
@@ -49,14 +51,19 @@ export default function OnboardingChecklist({ onViewChange }) {
   return (
     <div style={{
       position: "fixed",
-      bottom: 24,
+      // Mobile uses a fixed 58px bottom tab bar (.mob-tabbar, index.css) --
+      // bottom: 24 alone would sit this panel half-behind it.
+      bottom: isMobile ? 74 : 24,
       right: 24,
       width: minimised ? 220 : 280,
       background: "#0f172a",
       border: "1.5px solid rgba(59,130,246,0.3)",
       borderRadius: 16,
       fontFamily: "'DM Sans', sans-serif",
-      zIndex: 1000,
+      // Below .mob-sheet-overlay (z-index: 500, index.css) so opening any
+      // mobile bottom sheet (workspace switcher, More views, profile) isn't
+      // partially hidden behind this -- still above ordinary page content.
+      zIndex: 490,
       boxShadow: "0 20px 60px rgba(0,0,0,0.6)",
       overflow: "hidden",
     }}>

@@ -13,6 +13,8 @@ const TABS = [
 ];
 
 const MORE_ITEMS = [
+  { id: "today",        icon: "☀️", label: "Today" },
+  { id: "my-tasks",     icon: "✅", label: "My Tasks" },
   { id: "sprints",      icon: "🏃", label: "Sprints" },
   { id: "gantt",        icon: "🗓", label: "Gantt" },
   { id: "activity",     icon: "⚡", label: "Activity" },

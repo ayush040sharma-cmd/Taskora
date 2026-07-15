@@ -6,7 +6,10 @@ const STATUS_COLOR  = { todo: "#94a3b8", inprogress: "#3B82F6", in_progress: "#3
 const RISK_COLOR    = (score) => score >= 75 ? "#dc2626" : score >= 50 ? "#ef4444" : score >= 25 ? "#f59e0b" : "#10b981";
 const PRIORITY_COLOR_DOT = { critical: "#EF4444", high: "#F97316", medium: "#F59E0B", low: "#22C55E" };
 const PriorityDot = ({ priority }) => priority ? (
-  <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: PRIORITY_COLOR_DOT[priority] || "#94A3B8", flexShrink: 0 }} />
+  <span
+    style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: PRIORITY_COLOR_DOT[priority] || "#94A3B8", flexShrink: 0 }}
+    title={`${priority} priority`}
+  />
 ) : null;
 
 const NODE_W  = 160;

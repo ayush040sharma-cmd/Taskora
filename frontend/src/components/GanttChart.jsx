@@ -240,7 +240,10 @@ export default function GanttChart({ workspaceId }) {
                     whiteSpace: "nowrap", textOverflow: "ellipsis",
                     display: "flex", alignItems: "center", gap: 4, height: "100%",
                   }}>
-                    <span style={{ width: 6, height: 6, background: priColor, borderRadius: "50%", flexShrink: 0 }} />
+                    <span
+                      style={{ width: 6, height: 6, background: priColor, borderRadius: "50%", flexShrink: 0 }}
+                      title={t.priority ? `${t.priority} priority` : undefined}
+                    />
                     {t.title}
                   </div>
                 </foreignObject>

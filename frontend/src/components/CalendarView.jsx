@@ -412,7 +412,7 @@ export default function CalendarView({ workspaceId, tasks = [], onTaskClick }) {
                           key={`dl-${t.id}`}
                           className="cal-ev-chip cal-ev-chip--deadline"
                           style={{ borderLeft: `2px solid ${PRIORITY_COLOR[t.priority] || "#999"}` }}
-                          title={t.title}
+                          title={t.priority ? `${t.title} (${t.priority} priority)` : t.title}
                         >
                           🚩 {t.title}
                         </div>

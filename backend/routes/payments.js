@@ -5,12 +5,24 @@
  * POST /api/payments/verify        → verify + update plan
  * GET  /api/payments/plans         → return plan pricing info
  */
-const express  = require("express");
-const router   = express.Router();
-const crypto   = require("crypto");
-const pool     = require("../db");
-const auth     = require("../middleware/auth");
-const logger   = require("../utils/logger");
+const express   = require("express");
+const router    = express.Router();
+const crypto    = require("crypto");
+const rateLimit = require("express-rate-limit");
+const pool      = require("../db");
+const auth      = require("../middleware/auth");
+const logger    = require("../utils/logger");
+
+// Order creation and verification are money-adjacent and worth protecting
+// from scripted abuse (e.g. hammering Razorpay order creation), independent
+// of the per-user auth already required on these routes.
+const paymentsLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many payment requests. Please try again in a few minutes." },
+});
 
 // Currency + whole-unit prices are env-configurable; PLAN_PRICES (Razorpay's
 // smallest-unit amount) and the /plans display endpoint below both derive
@@ -50,7 +62,7 @@ router.get("/plans", (req, res) => {
 });
 
 // POST /api/payments/create-order
-router.post("/create-order", auth, async (req, res) => {
+router.post("/create-order", auth, paymentsLimiter, async (req, res) => {
   if (req.user.is_admin) return res.status(403).json({ message: "Admin accounts do not require a plan purchase." });
   const { plan } = req.body;
   if (!PLAN_PRICES[plan]) {
@@ -107,7 +119,7 @@ router.post("/create-order", auth, async (req, res) => {
 });
 
 // POST /api/payments/verify
-router.post("/verify", auth, async (req, res) => {
+router.post("/verify", auth, paymentsLimiter, async (req, res) => {
   const { razorpay_payment_id, razorpay_order_id, razorpay_signature, plan, mock } = req.body;
 
   if (!PLAN_PRICES[plan]) {
@@ -151,7 +163,7 @@ router.post("/verify", auth, async (req, res) => {
 });
 
 // POST /api/payments/mock-upgrade (dev only — instant plan change without payment)
-router.post("/mock-upgrade", auth, async (req, res) => {
+router.post("/mock-upgrade", auth, paymentsLimiter, async (req, res) => {
   if (process.env.NODE_ENV === "production") {
     return res.status(404).json({ message: "Not found" });
   }
@@ -159,11 +171,16 @@ router.post("/mock-upgrade", auth, async (req, res) => {
   if (!["free","pro","enterprise"].includes(plan)) {
     return res.status(400).json({ message: "Invalid plan" });
   }
-  const { rows } = await pool.query(
-    "UPDATE users SET plan = $1 WHERE id = $2 RETURNING id, name, email, role, onboarding_role, team_size, onboarding_complete, plan",
-    [plan, req.user.id]
-  );
-  res.json({ success: true, user: rows[0] });
+  try {
+    const { rows } = await pool.query(
+      "UPDATE users SET plan = $1 WHERE id = $2 RETURNING id, name, email, role, onboarding_role, team_size, onboarding_complete, plan",
+      [plan, req.user.id]
+    );
+    res.json({ success: true, user: rows[0] });
+  } catch (err) {
+    logger.error(`Mock upgrade failed: ${err.message}`);
+    res.status(500).json({ message: "Mock upgrade failed" });
+  }
 });
 
 module.exports = router;

@@ -561,7 +561,7 @@ export default function JarvisVoiceAssistant({ workspaceId }) {
             </div>
 
             {/* Manual input fallback */}
-            <ManualInput onSend={handleManualSend} disabled={processingRef.current} />
+            <ManualInput onSend={handleManualSend} disabled={assistantState === STATES.PROCESSING} />
 
             {/* Footer */}
             <div className="jarvis-panel-footer">

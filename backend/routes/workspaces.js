@@ -6,6 +6,9 @@ const { validate, schemas } = require("../utils/validate");
 const { enforceLimit } = require("../middleware/planEnforce");
 const { FEATURES }     = require("../config/licensing");
 const logger = require("../utils/logger");
+const { sendWorkspaceInvite, sendWorkspaceAddedNotification } = require("../services/emailService");
+
+const VALID_ACCESS_LEVELS = ["viewer", "editor", "full"];
 
 async function countOwnedWorkspaces(req) {
   const { rows } = await pool.query("SELECT COUNT(*)::int AS c FROM workspaces WHERE user_id = $1", [req.user.id]);
@@ -17,7 +20,8 @@ async function countOwnedWorkspaces(req) {
 router.get("/", auth, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT DISTINCT w.*
+      `SELECT DISTINCT w.*,
+              CASE WHEN w.user_id = $1 THEN 'full' ELSE wm.access_level END AS my_access_level
        FROM workspaces w
        LEFT JOIN workspace_members wm ON wm.workspace_id = w.id AND wm.user_id = $1
        WHERE w.user_id = $1 OR wm.user_id = $1
@@ -128,21 +132,72 @@ async function seedWorkspaceTemplate(workspaceId, userId, template) {
   }
 }
 
+// Adds one invitee at workspace-creation time: existing Taskora users are
+// added directly with the chosen access_level, others get an invite email
+// carrying that access_level so it applies once they accept. Best-effort --
+// one bad invite (typo'd email, etc.) shouldn't fail the whole workspace
+// creation, so callers should catch per-invite.
+async function inviteAtCreation({ workspaceId, workspaceName, inviterId, inviterName, email, accessLevel }) {
+  const userRow = await pool.query("SELECT id, name, email FROM users WHERE email ILIKE $1", [email.trim()]);
+
+  if (!userRow.rows.length) {
+    const inviteR = await pool.query(
+      `INSERT INTO workspace_invites (workspace_id, created_by, role, access_level)
+       VALUES ($1,$2,'member',$3) RETURNING token`,
+      [workspaceId, inviterId, accessLevel]
+    );
+    await sendWorkspaceInvite({
+      toEmail: email.trim(), inviterName, workspaceName, role: "member", inviteToken: inviteR.rows[0].token,
+    }).catch(() => {});
+    return;
+  }
+
+  const target = userRow.rows[0];
+  if (target.id === inviterId) return;
+
+  await pool.query(
+    `INSERT INTO workspace_members (workspace_id, user_id, role, invited_by, access_level)
+     VALUES ($1,$2,'member',$3,$4) ON CONFLICT DO NOTHING`,
+    [workspaceId, target.id, inviterId, accessLevel]
+  );
+  await pool.query(`INSERT INTO user_capacity (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`, [target.id]);
+  sendWorkspaceAddedNotification({
+    toEmail: target.email, toName: target.name, inviterName, workspaceName, workspaceId,
+  }).catch(() => {});
+}
+
 // POST /api/workspaces
 router.post("/", auth, validate(schemas.createWorkspace), enforceLimit(FEATURES.PROJECT_LIMIT, countOwnedWorkspaces), async (req, res) => {
-  const { name, template } = req.body;
+  const { name, template, workspace_type = "team", invites } = req.body;
   if (!name) return res.status(400).json({ message: "Workspace name is required" });
+  if (!["individual", "team"].includes(workspace_type)) {
+    return res.status(400).json({ message: "workspace_type must be 'individual' or 'team'" });
+  }
 
   try {
     const result = await pool.query(
-      "INSERT INTO workspaces (name, user_id, template) VALUES ($1, $2, $3) RETURNING *",
-      [name, req.user.id, template || null]
+      "INSERT INTO workspaces (name, user_id, template, workspace_type) VALUES ($1, $2, $3, $4) RETURNING *",
+      [name, req.user.id, template || null, workspace_type]
     );
     const workspace = result.rows[0];
 
     // Seed template tasks and teams (non-blocking)
     if (template && WORKSPACE_TEMPLATES[template]) {
       seedWorkspaceTemplate(workspace.id, req.user.id, template).catch(() => {});
+    }
+
+    // Team workspaces can optionally invite people right away, each with
+    // their own access level. Best-effort per invite.
+    if (workspace_type === "team" && Array.isArray(invites)) {
+      for (const inv of invites) {
+        if (!inv?.email) continue;
+        const accessLevel = VALID_ACCESS_LEVELS.includes(inv.access_level) ? inv.access_level : "editor";
+        inviteAtCreation({
+          workspaceId: workspace.id, workspaceName: workspace.name,
+          inviterId: req.user.id, inviterName: req.user.name,
+          email: inv.email, accessLevel,
+        }).catch(err => console.error("Invite at creation failed:", err.message));
+      }
     }
 
     res.status(201).json(workspace);
@@ -239,14 +294,28 @@ router.get("/:id/summary", auth, async (req, res) => {
   }
 });
 
-// PUT /api/workspaces/:id — rename workspace
+// PUT /api/workspaces/:id — rename workspace and/or change its type
 router.put("/:id", auth, async (req, res) => {
-  const { name } = req.body;
-  if (!name?.trim()) return res.status(400).json({ message: "Name is required" });
+  const { name, workspace_type } = req.body;
+  if (name !== undefined && !name.trim()) return res.status(400).json({ message: "Name is required" });
+  if (workspace_type !== undefined && !["individual", "team"].includes(workspace_type)) {
+    return res.status(400).json({ message: "workspace_type must be 'individual' or 'team'" });
+  }
+  if (name === undefined && workspace_type === undefined) {
+    return res.status(400).json({ message: "Nothing to update" });
+  }
+
   try {
+    const setClauses = [];
+    const params = [];
+    let idx = 1;
+    if (name !== undefined) { setClauses.push(`name = $${idx++}`); params.push(name.trim()); }
+    if (workspace_type !== undefined) { setClauses.push(`workspace_type = $${idx++}`); params.push(workspace_type); }
+    params.push(req.params.id, req.user.id);
+
     const result = await pool.query(
-      "UPDATE workspaces SET name = $1 WHERE id = $2 AND user_id = $3 RETURNING *",
-      [name.trim(), req.params.id, req.user.id]
+      `UPDATE workspaces SET ${setClauses.join(", ")} WHERE id = $${idx++} AND user_id = $${idx} RETURNING *`,
+      params
     );
     if (!result.rows.length) return res.status(404).json({ message: "Workspace not found" });
     res.json(result.rows[0]);

@@ -23,7 +23,7 @@ const COLUMNS = [
 // still renders through the exact same Draggable path once revealed.
 const INITIAL_CARDS_PER_COLUMN = 60;
 
-export default function KanbanBoard({ columns, onDragEnd, onAddTask, onDeleteTask, onUpdateTask, onOpenDetail }) {
+export default function KanbanBoard({ columns, onDragEnd, onAddTask, onDeleteTask, onUpdateTask, onOpenDetail, canEdit = true }) {
   const [revealCounts, setRevealCounts] = useState({});
 
   return (
@@ -43,15 +43,17 @@ export default function KanbanBoard({ columns, onDragEnd, onAddTask, onDeleteTas
                   <span className="tk-board-col-name">{col.label}</span>
                   <span className="tk-board-col-count">{allTasks.length}</span>
                 </div>
-                <button
-                  className="tk-board-col-add-btn"
-                  title={`Add task to ${col.label}`}
-                  onClick={() => onAddTask(col.id)}
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                  </svg>
-                </button>
+                {canEdit && (
+                  <button
+                    className="tk-board-col-add-btn"
+                    title={`Add task to ${col.label}`}
+                    onClick={() => onAddTask(col.id)}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                  </button>
+                )}
               </div>
 
               {/* Droppable body */}
@@ -70,13 +72,15 @@ export default function KanbanBoard({ columns, onDragEnd, onAddTask, onDeleteTas
                           <line x1="12" y1="8" x2="12" y2="16"/>
                         </svg>
                         <span>No tasks yet</span>
-                        <button
-                          className="tk-btn-secondary"
-                          style={{ fontSize: 12, padding: "6px 14px" }}
-                          onClick={() => onAddTask(col.id)}
-                        >
-                          Add task
-                        </button>
+                        {canEdit && (
+                          <button
+                            className="tk-btn-secondary"
+                            style={{ fontSize: 12, padding: "6px 14px" }}
+                            onClick={() => onAddTask(col.id)}
+                          >
+                            Add task
+                          </button>
+                        )}
                       </div>
                     )}
 
@@ -89,6 +93,7 @@ export default function KanbanBoard({ columns, onDragEnd, onAddTask, onDeleteTas
                         onDelete={onDeleteTask}
                         onUpdate={onUpdateTask}
                         onOpenDetail={onOpenDetail}
+                        canEdit={canEdit}
                       />
                     ))}
                     {provided.placeholder}

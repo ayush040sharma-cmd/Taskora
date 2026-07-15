@@ -10,6 +10,26 @@ const ROLES = [
 
 const roleInfo = Object.fromEntries(ROLES.map(r => [r.value, r]));
 
+// ── Task access tier config ──────────────────────────────────────────────────
+// Separate from the workspace Role above (which governs workspace-level things
+// like managing members) -- this is specifically what a member can do with
+// tasks: view only, create/edit, or full (also manage members/invites).
+const ACCESS_LEVELS = [
+  { value: "viewer", label: "Viewer", icon: "👁", desc: "Can view tasks, not create or edit them" },
+  { value: "editor", label: "Editor", icon: "✏️", desc: "Can create, edit, and move tasks" },
+  { value: "full",   label: "Full",   icon: "🔑", desc: "Can also invite and manage members" },
+];
+const accessInfo = Object.fromEntries(ACCESS_LEVELS.map(a => [a.value, a]));
+
+function AccessBadge({ level }) {
+  const info = accessInfo[level] || accessInfo.editor;
+  return (
+    <span className="member-role-badge" style={{ background: "#f4f5f7", color: "#5e6c84" }}>
+      {info.icon} {info.label}
+    </span>
+  );
+}
+
 function RoleBadge({ role }) {
   const info = roleInfo[role] || { label: role, color: "#5e6c84", bg: "#f4f5f7", icon: "👤" };
   return (
@@ -107,6 +127,7 @@ function AddMemberForm({ onAdd, onCancel, workspaceId }) {
   const [tab, setTab]         = useState("email"); // "email" | "link"
   const [email, setEmail]     = useState("");
   const [role, setRole]       = useState("member");
+  const [accessLevel, setAccessLevel] = useState("editor");
   const [error, setError]     = useState("");
   const [loading, setLoading] = useState(false);
   const [inviteLink, setInviteLink] = useState(null);
@@ -118,8 +139,8 @@ function AddMemberForm({ onAdd, onCancel, workspaceId }) {
     if (!email.trim()) return setError("Email is required");
     setError(""); setLoading(true);
     try {
-      await onAdd(email.trim(), role, (data) => setInvited(data));
-      setEmail(""); setRole("member");
+      await onAdd(email.trim(), role, accessLevel, (data) => setInvited(data));
+      setEmail(""); setRole("member"); setAccessLevel("editor");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to add member");
     } finally {
@@ -130,7 +151,7 @@ function AddMemberForm({ onAdd, onCancel, workspaceId }) {
   const generateLink = async () => {
     setLoading(true); setError("");
     try {
-      const { data } = await api.post("/members/invite", { workspace_id: workspaceId, role });
+      const { data } = await api.post("/members/invite", { workspace_id: workspaceId, role, access_level: accessLevel });
       const url = `${window.location.origin}/join/${data.token}`;
       setInviteLink({ url, expires_at: data.expires_at, role: data.role });
     } catch (err) {
@@ -240,6 +261,12 @@ function AddMemberForm({ onAdd, onCancel, workspaceId }) {
             </select>
           </div>
           <div className="member-role-desc">{roleInfo[role]?.desc}</div>
+          <div className="member-add-row" style={{ marginTop: 8 }}>
+            <select className="modal-select" value={accessLevel} onChange={e => setAccessLevel(e.target.value)} style={{ width: "100%" }}>
+              {ACCESS_LEVELS.map(a => <option key={a.value} value={a.value}>{a.icon} Task access: {a.label}</option>)}
+            </select>
+          </div>
+          <div className="member-role-desc">{accessInfo[accessLevel]?.desc}</div>
           <div style={{ fontSize: 11, color: "var(--tk-text-muted, #94A3B8)", marginBottom: 8 }}>
             💡 Works for both existing Taskora users and new invites — we'll send them an email if they don't have an account yet.
           </div>
@@ -261,6 +288,16 @@ function AddMemberForm({ onAdd, onCancel, workspaceId }) {
               {ROLES.map(r => <option key={r.value} value={r.value}>{r.icon} {r.label}</option>)}
             </select>
             <div className="member-role-desc">{roleInfo[role]?.desc}</div>
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 11, fontWeight: 700, color: "var(--tk-text-muted, #94A3B8)", textTransform: "uppercase", letterSpacing: "0.08em", display: "block", marginBottom: 6 }}>
+              Task access for invited user
+            </label>
+            <select className="modal-select" value={accessLevel} onChange={e => { setAccessLevel(e.target.value); setInviteLink(null); }} style={{ width: "100%" }}>
+              {ACCESS_LEVELS.map(a => <option key={a.value} value={a.value}>{a.icon} {a.label}</option>)}
+            </select>
+            <div className="member-role-desc">{accessInfo[accessLevel]?.desc}</div>
           </div>
 
           {!inviteLink ? (
@@ -381,8 +418,8 @@ export default function MembersPanel({ workspaceId }) {
 
   useEffect(() => { load(); }, [workspaceId]);
 
-  const handleAdd = async (email, role, onInvited) => {
-    const res = await api.post("/members", { workspace_id: workspaceId, email, role });
+  const handleAdd = async (email, role, accessLevel, onInvited) => {
+    const res = await api.post("/members", { workspace_id: workspaceId, email, role, access_level: accessLevel });
     if (res.data?.invited) {
       // Non-Taskora user — email invite sent (or link returned if no email service)
       onInvited?.(res.data);
@@ -401,6 +438,21 @@ export default function MembersPanel({ workspaceId }) {
       showMsg("Role updated");
     } catch (err) {
       showMsg(err.response?.data?.message || "Failed to update role", "error");
+    } finally {
+      setChangingRole(null);
+    }
+  };
+
+  const handleAccessChange = async (member, newLevel) => {
+    setChangingRole(member.member_record_id);
+    try {
+      await api.put(`/members/${member.member_record_id}`, {
+        role: member.role || "member", workspace_id: workspaceId, access_level: newLevel,
+      });
+      setMembers(prev => prev.map(m => m.member_record_id === member.member_record_id ? { ...m, access_level: newLevel } : m));
+      showMsg("Task access updated");
+    } catch (err) {
+      showMsg(err.response?.data?.message || "Failed to update access", "error");
     } finally {
       setChangingRole(null);
     }
@@ -577,19 +629,34 @@ export default function MembersPanel({ workspaceId }) {
                   </div>
                 </div>
 
-                {/* Right: Role selector + remove */}
+                {/* Right: Role selector + access selector + remove */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                   {m.is_owner ? (
-                    <RoleBadge role="manager" />
+                    <>
+                      <RoleBadge role="manager" />
+                      <AccessBadge level="full" />
+                    </>
                   ) : (
-                    <select
-                      className="member-role-select"
-                      value={m.role || "member"}
-                      onChange={e => handleRoleChange(m.member_record_id, e.target.value)}
-                      disabled={changingRole === m.member_record_id}
-                    >
-                      {ROLES.map(r => <option key={r.value} value={r.value}>{r.icon} {r.label}</option>)}
-                    </select>
+                    <>
+                      <select
+                        className="member-role-select"
+                        value={m.role || "member"}
+                        onChange={e => handleRoleChange(m.member_record_id, e.target.value)}
+                        disabled={changingRole === m.member_record_id}
+                        title="Workspace role"
+                      >
+                        {ROLES.map(r => <option key={r.value} value={r.value}>{r.icon} {r.label}</option>)}
+                      </select>
+                      <select
+                        className="member-role-select"
+                        value={m.access_level || "editor"}
+                        onChange={e => handleAccessChange(m, e.target.value)}
+                        disabled={changingRole === m.member_record_id}
+                        title="Task access"
+                      >
+                        {ACCESS_LEVELS.map(a => <option key={a.value} value={a.value}>{a.icon} {a.label}</option>)}
+                      </select>
+                    </>
                   )}
                   {!m.is_owner && (
                     confirmRemove?.user_id === m.user_id ? (

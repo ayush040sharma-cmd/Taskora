@@ -6,7 +6,7 @@ import { LuSearch, LuPlus } from "react-icons/lu";
 const IconSearch = () => <LuSearch size={14} />;
 const IconPlus   = () => <LuPlus size={14} />;
 
-export default function Navbar({ workspaceName, onCreateTask, onMenuToggle, onOpenPalette, user }) {
+export default function Navbar({ workspaceName, onCreateTask, onMenuToggle, onOpenPalette, canEdit = true, user }) {
   const [myStatus, setMyStatus] = useState(null); // null | "on_leave" | "travel"
 
   useEffect(() => {
@@ -53,10 +53,12 @@ export default function Navbar({ workspaceName, onCreateTask, onMenuToggle, onOp
 
         <NotificationBell />
 
-        <button className="btn-create" onClick={onCreateTask} title="Create a new task">
-          <IconPlus />
-          New task
-        </button>
+        {canEdit && (
+          <button className="btn-create" onClick={onCreateTask} title="Create a new task">
+            <IconPlus />
+            New task
+          </button>
+        )}
       </div>
     </header>
   );

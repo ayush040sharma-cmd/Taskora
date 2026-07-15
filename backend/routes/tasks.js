@@ -8,6 +8,7 @@ const { validate, schemas } = require("../utils/validate");
 const { notifyOne } = require("../services/notificationService");
 const { enforceLimit } = require("../middleware/planEnforce");
 const { FEATURES }     = require("../config/licensing");
+const { getAccessLevel, hasAtLeast, requireEditAccess } = require("../middleware/accessLevel");
 
 async function countTasksInWorkspace(req) {
   const { rows } = await pool.query("SELECT COUNT(*)::int AS c FROM tasks WHERE workspace_id = $1", [req.body.workspace_id]);
@@ -151,7 +152,7 @@ router.get("/:id", auth, async (req, res) => {
 });
 
 // POST /api/tasks
-router.post("/", auth, validate(schemas.createTask), enforceLimit(FEATURES.TASK_LIMIT, countTasksInWorkspace), async (req, res) => {
+router.post("/", auth, validate(schemas.createTask), requireEditAccess, enforceLimit(FEATURES.TASK_LIMIT, countTasksInWorkspace), async (req, res) => {
   const {
     title, description, status, priority, due_date, start_date,
     workspace_id, type, estimated_days, progress, assigned_user_id, sprint_id,
@@ -248,7 +249,7 @@ router.post("/", auth, validate(schemas.createTask), enforceLimit(FEATURES.TASK_
 router.put("/:id", auth, validate(schemas.updateTask), async (req, res) => {
   try {
     const taskCheck = await pool.query(
-      `SELECT t.id, t.status, t.assigned_user_id, t.title FROM tasks t
+      `SELECT t.id, t.status, t.assigned_user_id, t.title, t.workspace_id FROM tasks t
        WHERE t.id = $1
          AND (
            EXISTS (SELECT 1 FROM workspaces WHERE id = t.workspace_id AND user_id = $2)
@@ -257,6 +258,11 @@ router.put("/:id", auth, validate(schemas.updateTask), async (req, res) => {
       [req.params.id, req.user.id]
     );
     if (!taskCheck.rows.length) return res.status(404).json({ message: "Task not found" });
+
+    const accessLevel = await getAccessLevel(taskCheck.rows[0].workspace_id, req.user.id);
+    if (!hasAtLeast(accessLevel, "editor")) {
+      return res.status(403).json({ message: "You have view-only access to this workspace" });
+    }
 
     const prevStatus = taskCheck.rows[0].status;
     const newStatus  = req.body.status;
@@ -381,6 +387,11 @@ router.delete("/:id", auth, async (req, res) => {
     if (!taskCheck.rows.length) return res.status(404).json({ message: "Task not found" });
 
     const { workspace_id, assigned_user_id, title: taskTitle } = taskCheck.rows[0];
+
+    const accessLevel = await getAccessLevel(workspace_id, req.user.id);
+    if (!hasAtLeast(accessLevel, "editor")) {
+      return res.status(403).json({ message: "You have view-only access to this workspace" });
+    }
 
     await pool.query("DELETE FROM tasks WHERE id = $1", [req.params.id]);
 

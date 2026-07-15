@@ -123,7 +123,7 @@ function InsightPanel({ task }) {
   );
 }
 
-export default function TaskCard({ task, index, columnId, onDelete, onUpdate, onOpenDetail }) {
+export default function TaskCard({ task, index, columnId, onDelete, onUpdate, onOpenDetail, canEdit = true }) {
   const [hovered, setHovered] = useState(false);
 
   const [deleteConfirm, setDeleteConfirm] = useState(false);
@@ -204,7 +204,7 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
   const priorityPillClass = PRIORITY_PILL[task.priority] || "tk-pill--warn";
 
   return (
-    <Draggable draggableId={String(task.id)} index={index}>
+    <Draggable draggableId={String(task.id)} index={index} isDragDisabled={!canEdit}>
       {(provided, snapshot) => (
         <div
           ref={provided.innerRef}
@@ -277,23 +277,25 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
               </div>
             )}
 
-            <div className="tk-task-actions">
-              <button
-                className="tk-task-action-btn"
-                onClick={e => { e.stopPropagation(); onOpenDetail && onOpenDetail(task); }}
-                title="Edit task"
-              >
-                <IconEdit />
-              </button>
-              <button
-                ref={trashBtnRef}
-                className="tk-task-action-btn tk-task-action-btn--delete"
-                onClick={openDeletePopup}
-                title="Delete task"
-              >
-                <IconTrash />
-              </button>
-            </div>
+            {canEdit && (
+              <div className="tk-task-actions">
+                <button
+                  className="tk-task-action-btn"
+                  onClick={e => { e.stopPropagation(); onOpenDetail && onOpenDetail(task); }}
+                  title="Edit task"
+                >
+                  <IconEdit />
+                </button>
+                <button
+                  ref={trashBtnRef}
+                  className="tk-task-action-btn tk-task-action-btn--delete"
+                  onClick={openDeletePopup}
+                  title="Delete task"
+                >
+                  <IconTrash />
+                </button>
+              </div>
+            )}
 
             {deleteConfirm && (
               <div
@@ -371,7 +373,7 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
 
           {/* Footer: Start button + Assignee + comments + recurrence */}
           <div className="tk-task-footer">
-            {isTodo && (
+            {isTodo && canEdit && (
               <button className="tk-task-start-btn" onClick={startTask} title="Move to In Progress">
                 ▶ Start
               </button>

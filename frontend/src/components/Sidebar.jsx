@@ -66,6 +66,11 @@ const SECTIONS = [
   },
 ];
 
+// Hidden from the sidebar for a workspace whose workspace_type is
+// 'individual' -- there's no team in it to view workload for, manage
+// members of, or measure collaboration across.
+const TEAM_ONLY_VIEWS = new Set(["members", "workload", "collaboration", "manager"]);
+
 function WorkspaceAvatar({ name, size = 28 }) {
   const colors = ["#3B82F6", "#8b5cf6", "#06b6d4", "#10b981", "#f59e0b", "#ef4444"];
   const idx = name ? name.charCodeAt(0) % colors.length : 0;
@@ -134,7 +139,13 @@ export default function Sidebar({
 
       <div className="sidebar-nav-scroll">
         {SECTIONS.map(section => {
-          const visibleViews = section.views.filter(v => canViewSidebar(v.id, user?.role, sidebarViews));
+          // Individual workspaces have no team to view/manage -- hide the
+          // collaboration-only views for this one workspace rather than
+          // gating them by platform role like the rest of canViewSidebar.
+          const isIndividualWorkspace = currentWorkspace?.workspace_type === "individual";
+          const visibleViews = section.views
+            .filter(v => canViewSidebar(v.id, user?.role, sidebarViews))
+            .filter(v => !isIndividualWorkspace || !TEAM_ONLY_VIEWS.has(v.id));
           if (visibleViews.length === 0) return null;
           return (
             <div key={section.label}>

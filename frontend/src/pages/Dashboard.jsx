@@ -586,8 +586,11 @@ export default function Dashboard() {
   };
 
   // ── Create workspace ──────────────────────────────────────────
-  const handleCreateWorkspace = async (name, template) => {
-    const { data } = await api.post("/workspaces", { name, template: template || undefined });
+  const handleCreateWorkspace = async (name, template, options = {}) => {
+    const { workspace_type, invites } = options;
+    const { data } = await api.post("/workspaces", {
+      name, template: template || undefined, workspace_type, invites,
+    });
     setWorkspaces(p => [...p, data]);
     setCurrentWorkspace(data);
     showToast(template ? `Workspace created with ${template} template` : "Workspace created");
@@ -749,6 +752,9 @@ export default function Dashboard() {
   }
 
   const totalTasks = allTasks.length;
+  // Cosmetic only -- hides edit affordances for viewer-access members.
+  // The backend enforces this independently on every write route.
+  const canEdit = currentWorkspace?.my_access_level !== "viewer";
 
   // ── Shared view content (used by both layouts) ────────────────
   const viewContent = (<>
@@ -762,6 +768,7 @@ export default function Dashboard() {
                   <p>{totalTasks} task{totalTasks !== 1 ? "s" : ""}</p>
                 </div>
                 <div className="board-header-actions" ref={boardMenuRef} style={{ position: "relative" }}>
+                  {canEdit && (
                   <button
                     className="tk-btn-secondary"
                     title="More actions"
@@ -770,6 +777,7 @@ export default function Dashboard() {
                   >
                     ⋯
                   </button>
+                  )}
                   {showBoardMenu && (
                     <div
                       style={{
@@ -812,6 +820,7 @@ export default function Dashboard() {
                     onDeleteTask={handleDeleteTask}
                     onUpdateTask={handleTaskUpdated}
                     onOpenDetail={setDetailTask}
+                    canEdit={canEdit}
                   />
                 </div>
               ) : (
@@ -1081,7 +1090,14 @@ export default function Dashboard() {
           {/* ── Settings ── */}
           {view === "settings" && (
             <ErrorBoundary inline viewName="Settings">
-              <SettingsPage currentWorkspaceId={currentWorkspace?.id} />
+              <SettingsPage
+                currentWorkspaceId={currentWorkspace?.id}
+                currentWorkspace={currentWorkspace}
+                onWorkspaceUpdated={(updated) => {
+                  setCurrentWorkspace(prev => prev?.id === updated.id ? { ...prev, ...updated } : prev);
+                  setWorkspaces(prev => prev.map(w => w.id === updated.id ? { ...w, ...updated } : w));
+                }}
+              />
             </ErrorBoundary>
           )}
 
@@ -1238,6 +1254,7 @@ export default function Dashboard() {
         onCreateTask={() => openCreateTask("todo")}
         onOpenSettings={() => setView("settings")}
         onShowShortcuts={() => setShowShortcuts(true)}
+        canEdit={canEdit}
         user={user}
       >
         {viewContent}

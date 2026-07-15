@@ -437,14 +437,68 @@ function SecuritySection() {
   );
 }
 
+// ── Workspace type toggle ────────────────────────────────────────────────────
+// The one row here that IS backend-synced (workspaces.workspace_type) --
+// everything else below is still localStorage-only, see the note on
+// WorkspacePreferencesSection.
+function WorkspaceTypeRow({ workspaceId, currentWorkspace, onWorkspaceUpdated }) {
+  const [saving, setSaving] = useState(false);
+  const type = currentWorkspace?.workspace_type || "team";
+
+  const setType = async (newType) => {
+    if (newType === type || !workspaceId) return;
+    setSaving(true);
+    try {
+      const { data } = await api.put(`/workspaces/${workspaceId}`, { workspace_type: newType });
+      onWorkspaceUpdated?.(data);
+    } catch { /* leave as-is on failure */ }
+    setSaving(false);
+  };
+
+  return (
+    <Row
+      label="Workspace type"
+      desc={type === "individual"
+        ? "Just you -- Members, Team Workload, Collaboration, and Manager View are hidden from the sidebar."
+        : "You and a team -- collaboration views are visible, and you can set each member's task access."}
+    >
+      <div style={{ display: "flex", gap: 6 }}>
+        <button
+          onClick={() => setType("individual")}
+          disabled={saving}
+          style={{
+            padding: "6px 12px", fontSize: 12, fontWeight: 600, borderRadius: 7,
+            border: "1px solid var(--border)", cursor: saving ? "default" : "pointer",
+            background: type === "individual" ? "var(--tk-accent, #3B82F6)" : "var(--card-bg)",
+            color: type === "individual" ? "#fff" : "var(--text-secondary)",
+          }}
+        >
+          🧍 Individual
+        </button>
+        <button
+          onClick={() => setType("team")}
+          disabled={saving}
+          style={{
+            padding: "6px 12px", fontSize: 12, fontWeight: 600, borderRadius: 7,
+            border: "1px solid var(--border)", cursor: saving ? "default" : "pointer",
+            background: type === "team" ? "var(--tk-accent, #3B82F6)" : "var(--card-bg)",
+            color: type === "team" ? "#fff" : "var(--text-secondary)",
+          }}
+        >
+          👥 Team
+        </button>
+      </div>
+    </Row>
+  );
+}
+
 // ── Section: Workspace Preferences ───────────────────────────────────────────
-// NOTE: these persist to localStorage, scoped per workspaceId so switching
-// workspaces doesn't leak one workspace's defaults into another -- but this
-// is still per-browser, not server-side. "Workspace-level" in the old copy
-// here overstated that: these don't sync to teammates or other devices yet.
-// True multi-user-synced workspace settings would need a backend column/
-// table and API route, which is a separate, larger change from this fix.
-function WorkspacePreferencesSection({ workspaceId }) {
+// NOTE: below the workspace-type row, the rest of this section persists to
+// localStorage, scoped per workspaceId so switching workspaces doesn't leak
+// one workspace's defaults into another -- but this is still per-browser,
+// not server-side. True multi-user-synced settings for these would need
+// their own backend column/table, which is a separate, larger change.
+function WorkspacePreferencesSection({ workspaceId, currentWorkspace, onWorkspaceUpdated }) {
   const k = (name) => `taskora-${name}-${workspaceId}`;
   const [taskPrefix,      setTaskPrefix]      = useState(localStorage.getItem(k("task-prefix")) || "TASK");
   const [sprintDuration,  setSprintDuration]  = useState(localStorage.getItem(k("sprint-days")) || "14");
@@ -466,6 +520,8 @@ function WorkspacePreferencesSection({ workspaceId }) {
   return (
     <div>
       <SectionHeading title="Workspace Preferences" desc="Task defaults for this workspace. Saved to this browser only — not yet synced to teammates or other devices." />
+
+      <WorkspaceTypeRow workspaceId={workspaceId} currentWorkspace={currentWorkspace} onWorkspaceUpdated={onWorkspaceUpdated} />
 
       <Row label="Task ID prefix" desc="Short prefix shown before task numbers (e.g. TASK-001, ENG-042).">
         <input
@@ -694,7 +750,7 @@ function SettingsNav({ sections, active, onSelect }) {
 }
 
 // ── Root export ───────────────────────────────────────────────────────────────
-export default function SettingsPage({ currentWorkspaceId }) {
+export default function SettingsPage({ currentWorkspaceId, currentWorkspace, onWorkspaceUpdated }) {
   const { user } = useAuth();
   const role     = user?.role || "team_member";
   const sections = buildSections(role);
@@ -713,7 +769,7 @@ export default function SettingsPage({ currentWorkspaceId }) {
       case "notifications": return <NotificationsSection />;
       case "regional":      return <RegionalSection />;
       case "security":      return <SecuritySection />;
-      case "workspace":     return <WorkspacePreferencesSection key={currentWorkspaceId} workspaceId={currentWorkspaceId} />;
+      case "workspace":     return <WorkspacePreferencesSection key={currentWorkspaceId} workspaceId={currentWorkspaceId} currentWorkspace={currentWorkspace} onWorkspaceUpdated={onWorkspaceUpdated} />;
       case "demo":          return <DemoSection workspaceId={currentWorkspaceId} />;
       case "project":       return <ProjectSection />;
       case "workflow":      return <WorkflowSection />;

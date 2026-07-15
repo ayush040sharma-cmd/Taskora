@@ -21,6 +21,7 @@ export default function DashboardDesktop({
   onCreateTask,
   onOpenSettings,
   onShowShortcuts,
+  canEdit,
   user,
   children,
 }) {
@@ -51,6 +52,7 @@ export default function DashboardDesktop({
           onCreateTask={onCreateTask}
           onMenuToggle={onSidebarToggle}
           onOpenPalette={onOpenPalette}
+          canEdit={canEdit}
           user={user}
         />
         <div className="board-content">

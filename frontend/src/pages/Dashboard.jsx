@@ -219,6 +219,14 @@ export default function Dashboard() {
   // UI overlays
   const [cmdOpen, setCmdOpen]           = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showBoardMenu, setShowBoardMenu] = useState(false);
+  const boardMenuRef = useRef(null);
+
+  useEffect(() => {
+    const h = (e) => { if (boardMenuRef.current && !boardMenuRef.current.contains(e.target)) setShowBoardMenu(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
 
   // Undo state: { msg, undo: async fn }
   const [undoPending, setUndoPending]   = useState(null);
@@ -645,11 +653,39 @@ export default function Dashboard() {
               <div className="board-header">
                 <div className="board-title-area">
                   <h1>{currentWorkspace?.name || "Select a workspace"}</h1>
-                  <p>{totalTasks} task{totalTasks !== 1 ? "s" : ""} · Press <kbd className="inline-kbd">N</kbd> to add</p>
+                  <p>{totalTasks} task{totalTasks !== 1 ? "s" : ""}</p>
                 </div>
-                <div className="board-header-actions">
-                  <button className="tk-btn-secondary" onClick={() => setShowImportModal(true)}>📥 Import</button>
-                  <button className="btn-primary" onClick={() => openCreateTask("todo")}>+ New task</button>
+                <div className="board-header-actions" ref={boardMenuRef} style={{ position: "relative" }}>
+                  <button
+                    className="tk-btn-secondary"
+                    title="More actions"
+                    onClick={() => setShowBoardMenu(v => !v)}
+                    style={{ padding: "7px 12px" }}
+                  >
+                    ⋯
+                  </button>
+                  {showBoardMenu && (
+                    <div
+                      style={{
+                        position: "absolute", top: "calc(100% + 6px)", right: 0,
+                        background: "var(--card-bg)", border: "1px solid var(--border)",
+                        borderRadius: 10, boxShadow: "var(--shadow-lg, 0 8px 24px rgba(0,0,0,0.15))",
+                        zIndex: 200, minWidth: 170, overflow: "hidden", padding: "6px 0",
+                      }}
+                    >
+                      <button
+                        onClick={() => { setShowBoardMenu(false); setShowImportModal(true); }}
+                        style={{
+                          width: "100%", display: "flex", alignItems: "center", gap: 8,
+                          padding: "8px 14px", fontSize: 13, fontWeight: 500,
+                          color: "var(--text-primary)", background: "none", border: "none",
+                          cursor: "pointer", textAlign: "left",
+                        }}
+                      >
+                        📥 Import tasks
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1095,6 +1131,7 @@ export default function Dashboard() {
         onOpenPalette={() => setCmdOpen(true)}
         onCreateTask={() => openCreateTask("todo")}
         onOpenSettings={() => setView("settings")}
+        onShowShortcuts={() => setShowShortcuts(true)}
         user={user}
       >
         {viewContent}

@@ -1978,6 +1978,16 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
   overflow: hidden;
   animation: slideIn 0.15s ease;
 }
+/* Opens upward from the sidebar's bottom-left profile trigger instead of
+   downward from the navbar avatar — same menu, anchored to sit above the
+   trigger and clipped to the sidebar's width. */
+.profile-dropdown--up {
+  top: auto;
+  bottom: calc(100% + 8px);
+  left: 8px;
+  right: 8px;
+  width: auto;
+}
 .profile-dropdown-header {
   display: flex;
   align-items: center;

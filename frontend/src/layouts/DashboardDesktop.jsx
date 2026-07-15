@@ -20,6 +20,7 @@ export default function DashboardDesktop({
   onOpenPalette,
   onCreateTask,
   onOpenSettings,
+  onShowShortcuts,
   user,
   children,
 }) {
@@ -41,15 +42,14 @@ export default function DashboardDesktop({
         onViewChange={onViewChange}
         onOpenPalette={onOpenPalette}
         onOpenSettings={onOpenSettings}
+        onShowShortcuts={onShowShortcuts}
       />
 
       <div className="main-area">
         <Navbar
           workspaceName={currentWorkspace?.name}
-          workspaceId={currentWorkspace?.id}
           onCreateTask={onCreateTask}
           onMenuToggle={onSidebarToggle}
-          onOpenSettings={onOpenSettings}
           onOpenPalette={onOpenPalette}
           user={user}
         />

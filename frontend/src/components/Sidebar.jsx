@@ -1,9 +1,20 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { canViewSidebar } from "../utils/canAccess";
 import { getInitials } from "../utils/avatar";
 import Logo from "./Logo";
+import ProfileModal from "./ProfileModal";
+import AccountSettingsModal from "./AccountSettingsModal";
+import { useTheme } from "../hooks/useTheme";
+import { LuUser, LuUserCog, LuSettings, LuPalette, LuKeyboard, LuLogOut } from "react-icons/lu";
+
+const IconUser     = () => <LuUser size={15} />;
+const IconAccount  = () => <LuUserCog size={15} />;
+const IconWorkspace= () => <LuSettings size={15} />;
+const IconPalette  = () => <LuPalette size={15} />;
+const IconKeyboard = () => <LuKeyboard size={15} />;
+const IconLogout   = () => <LuLogOut size={15} />;
 
 // ── All views organized by section ─────────────────────────────────────────────
 // "YOU" holds the two views that are workspace-agnostic (aggregate across
@@ -20,40 +31,45 @@ const SECTIONS = [
     ],
   },
   {
-    label: "WORKSPACE",
+    label: "WORK",
     views: [
-      { id: "board",          icon: "📋", label: "Board" },
-      { id: "summary",        icon: "📊", label: "Summary" },
-      { id: "calendar",       icon: "📅", label: "Calendar" },
-      { id: "sprints",        icon: "🏃", label: "Sprints" },
-      { id: "gantt",          icon: "🗓", label: "Gantt Chart" },
+      { id: "board",    icon: "📋", label: "Board" },
+      { id: "calendar", icon: "📅", label: "Calendar" },
+      { id: "summary",  icon: "📊", label: "Summary" },
+      { id: "gantt",    icon: "🗓", label: "Gantt Chart" },
+    ],
+  },
+  {
+    label: "PROJECT",
+    views: [
+      { id: "sprints", icon: "🏃", label: "Sprints" },
+      { id: "graph",   icon: "🕸", label: "Dep. Graph" },
     ],
   },
   {
     label: "TEAM",
     views: [
-      { id: "teams",        icon: "🏢", label: "Teams" },
-      { id: "manager",      icon: "📌", label: "Manager View" },
-      { id: "workload",     icon: "👥", label: "Team Workload" },
       { id: "members",      icon: "👤", label: "Members" },
+      { id: "workload",     icon: "👥", label: "Team Workload" },
       { id: "capacity",     icon: "⚡", label: "My Capacity" },
       { id: "collaboration",icon: "🤝", label: "Collaboration" },
-      { id: "approvals",    icon: "✅", label: "Approvals" },
     ],
   },
   {
-    label: "AI & INSIGHTS",
+    label: "ADMIN",
+    views: [
+      { id: "teams",     icon: "🏢", label: "Teams" },
+      { id: "manager",   icon: "📌", label: "Manager View" },
+      { id: "approvals", icon: "✅", label: "Approvals" },
+    ],
+  },
+  {
+    label: "INSIGHTS",
     views: [
       { id: "ai-risk",      icon: "🔥", label: "AI Risk Map" },
       { id: "analytics",    icon: "📈", label: "Analytics" },
       { id: "simulation",   icon: "🔬", label: "What-If Sim" },
-    ],
-  },
-  {
-    label: "MORE",
-    views: [
       { id: "activity",     icon: "📡", label: "Activity Feed" },
-      { id: "graph",        icon: "🕸",  label: "Dep. Graph" },
       { id: "integrations", icon: "🔗", label: "Integrations" },
     ],
   },
@@ -85,11 +101,24 @@ export default function Sidebar({
   onViewChange,
   onOpenPalette,
   onOpenSettings,
+  onShowShortcuts,
 }) {
   const { user, logout, sidebarViews } = useAuth();
   const navigate = useNavigate();
+  const { isDark, toggle: toggleTheme } = useTheme();
   const [deleteModalWs, setDeleteModalWs]       = useState(null); // workspace object being deleted
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [profileMenuOpen, setProfileMenuOpen]   = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showAccountSettings, setShowAccountSettings] = useState(false);
+  const [accountSection, setAccountSection]     = useState("appearance");
+  const profileRef = useRef(null);
+
+  useEffect(() => {
+    const h = (e) => { if (profileRef.current && !profileRef.current.contains(e.target)) setProfileMenuOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
 
   return (
     <aside className={`sidebar${open ? " sidebar--open" : ""}`}>
@@ -168,38 +197,95 @@ export default function Sidebar({
         </button>
       </div>
 
-      {/* User footer */}
-      <div className="sidebar-footer">
-        <div className="sidebar-user">
+      {/* User footer — single profile entry point: click to open the account menu */}
+      <div className="sidebar-footer" ref={profileRef} style={{ position: "relative" }}>
+        <button
+          className="sidebar-user"
+          onClick={() => setProfileMenuOpen(v => !v)}
+          style={{ background: "none", border: "none", textAlign: "left", font: "inherit", color: "inherit", cursor: "pointer" }}
+        >
           <div className="sidebar-user-avatar">{getInitials(user?.name)}</div>
           <div className="sidebar-user-info">
             <div className="sidebar-user-name">{user?.name}</div>
             <div className="sidebar-user-email">{user?.email}</div>
           </div>
-        </div>
-        <div style={{ display: "flex", gap: 4 }}>
-          <button
-            className="sidebar-logout"
-            title="Settings"
-            onClick={() => { onOpenSettings?.(); onClose?.(); }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-            </svg>
-          </button>
-          <button
-            className="sidebar-logout"
-            title="Sign out"
-            onClick={() => { logout(); navigate("/"); }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-              <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
-            </svg>
-          </button>
-        </div>
+        </button>
+
+        {profileMenuOpen && (
+          <div className="profile-dropdown profile-dropdown--up">
+            <div className="profile-dropdown-header">
+              <div className="profile-dropdown-avatar">{getInitials(user?.name)}</div>
+              <div className="profile-dropdown-info">
+                <div className="profile-dropdown-name">{user?.name}</div>
+                <div className="profile-dropdown-email">{user?.email}</div>
+              </div>
+            </div>
+
+            <div className="profile-dropdown-divider" />
+
+            <div className="profile-dropdown-menu">
+              <button className="profile-menu-item" onClick={() => { setProfileMenuOpen(false); setShowProfileModal(true); }}>
+                <IconUser />
+                <span>Profile</span>
+              </button>
+              <button className="profile-menu-item" onClick={() => { setProfileMenuOpen(false); setAccountSection("security"); setShowAccountSettings(true); }}>
+                <IconAccount />
+                <span>Account Settings</span>
+              </button>
+              <button className="profile-menu-item" onClick={() => { setProfileMenuOpen(false); onOpenSettings?.(); onClose?.(); }}>
+                <IconWorkspace />
+                <span>Workspace Settings</span>
+              </button>
+            </div>
+
+            <div className="profile-dropdown-divider" />
+
+            <div className="profile-dropdown-menu">
+              <div className="profile-menu-item" style={{ cursor: "default" }}>
+                <IconPalette />
+                <span>Appearance</span>
+                <div style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); if (isDark) toggleTheme(); }}
+                    style={{ padding: "3px 8px", fontSize: 11, fontWeight: 600, borderRadius: 6, border: "1px solid var(--border)", background: !isDark ? "var(--primary)" : "transparent", color: !isDark ? "#fff" : "var(--text-secondary)", cursor: "pointer" }}
+                  >
+                    Light
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); if (!isDark) toggleTheme(); }}
+                    style={{ padding: "3px 8px", fontSize: 11, fontWeight: 600, borderRadius: 6, border: "1px solid var(--border)", background: isDark ? "var(--primary)" : "transparent", color: isDark ? "#fff" : "var(--text-secondary)", cursor: "pointer" }}
+                  >
+                    Dark
+                  </button>
+                </div>
+              </div>
+              <button className="profile-menu-item" onClick={() => { setProfileMenuOpen(false); onShowShortcuts?.(); }}>
+                <IconKeyboard />
+                <span>Keyboard Shortcuts</span>
+              </button>
+            </div>
+
+            <div className="profile-dropdown-divider" />
+
+            <div className="profile-dropdown-menu">
+              <button className="profile-menu-item profile-menu-item--danger" onClick={() => { logout(); navigate("/"); }}>
+                <IconLogout />
+                <span>Log out</span>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {showProfileModal && <ProfileModal onClose={() => setShowProfileModal(false)} />}
+      {showAccountSettings && (
+        <AccountSettingsModal
+          initialSection={accountSection}
+          currentWorkspaceId={currentWorkspace?.id}
+          onClose={() => setShowAccountSettings(false)}
+        />
+      )}
+
       {/* Workspace delete — typed confirmation modal */}
       {deleteModalWs && (
         <div

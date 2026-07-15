@@ -9,12 +9,12 @@ const TIMEZONES = [
   "Asia/Dubai", "Asia/Singapore", "Asia/Tokyo", "Australia/Sydney",
 ];
 
-export default function AccountSettingsModal({ onClose, currentWorkspaceId }) {
+export default function AccountSettingsModal({ onClose, currentWorkspaceId, initialSection }) {
   const { theme, toggle, isDark } = useTheme();
   const { user } = useAuth();
 
   // Active section tab
-  const [section, setSection] = useState("appearance");
+  const [section, setSection] = useState(initialSection || "appearance");
 
   // ── Password change ──────────────────────────────────────────────────────────
   const [form, setForm]       = useState({ current_password: "", new_password: "", confirm_password: "" });

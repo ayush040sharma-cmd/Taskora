@@ -42,7 +42,7 @@ export default function FilterBar({ filters, onChange, assignees = [], totalTask
         <span className="filter-search-icon"><IconSearch /></span>
         <input
           className="filter-search-input"
-          placeholder="Search tasks…"
+          placeholder="Filter tasks…"
           value={filters.search}
           onChange={e => set("search", e.target.value)}
         />

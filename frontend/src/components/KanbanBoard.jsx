@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { DragDropContext, Droppable } from "@hello-pangea/dnd";
 import TaskCard from "./TaskCard";
 import "../styles/board.css";
@@ -10,12 +11,29 @@ const COLUMNS = [
   { id: "done",       label: "Done",         colColor: "var(--tk-status-ok)" },
 ];
 
+// Columns render every card as a real DOM node with no windowing -- fine at
+// normal task counts, but a column with hundreds of cards would mean
+// hundreds of live drag targets on screen at once. True virtualization
+// (react-window et al) is a well-documented hard problem to combine safely
+// with @hello-pangea/dnd's Droppable/Draggable measurement, and getting
+// that integration wrong risks silently breaking drag-and-drop itself --
+// too risky to ship without being able to verify drag interactions in this
+// environment. This caps initial render per column instead: same bounded-
+// DOM-node goal, zero risk to the existing dnd wiring, since every card
+// still renders through the exact same Draggable path once revealed.
+const INITIAL_CARDS_PER_COLUMN = 60;
+
 export default function KanbanBoard({ columns, onDragEnd, onAddTask, onDeleteTask, onUpdateTask, onOpenDetail }) {
+  const [revealCounts, setRevealCounts] = useState({});
+
   return (
     <DragDropContext onDragEnd={onDragEnd}>
       <div className="tk-board">
         {COLUMNS.map((col) => {
-          const tasks = columns[col.id] || [];
+          const allTasks = columns[col.id] || [];
+          const visibleCount = revealCounts[col.id] || INITIAL_CARDS_PER_COLUMN;
+          const tasks = allTasks.slice(0, visibleCount);
+          const hiddenCount = allTasks.length - tasks.length;
           return (
             <div key={col.id} className="tk-board-col">
               {/* Column header */}
@@ -23,7 +41,7 @@ export default function KanbanBoard({ columns, onDragEnd, onAddTask, onDeleteTas
                 <div className="tk-board-col-header-left">
                   <span className="tk-dot" style={{ background: col.colColor }} />
                   <span className="tk-board-col-name">{col.label}</span>
-                  <span className="tk-board-col-count">{tasks.length}</span>
+                  <span className="tk-board-col-count">{allTasks.length}</span>
                 </div>
                 <button
                   className="tk-board-col-add-btn"
@@ -74,6 +92,15 @@ export default function KanbanBoard({ columns, onDragEnd, onAddTask, onDeleteTas
                       />
                     ))}
                     {provided.placeholder}
+                    {hiddenCount > 0 && (
+                      <button
+                        className="tk-btn-secondary"
+                        style={{ width: "100%", fontSize: 12, padding: "8px", marginTop: 4 }}
+                        onClick={() => setRevealCounts(prev => ({ ...prev, [col.id]: allTasks.length }))}
+                      >
+                        Show {hiddenCount} more
+                      </button>
+                    )}
                   </div>
                 )}
               </Droppable>

@@ -23,14 +23,6 @@ const PRIORITY_OPTIONS = [
   { value: "low",    label: "🟢 Low" },
 ];
 
-const STATUS_OPTIONS = [
-  { value: "",           label: "All statuses" },
-  { value: "todo",       label: "To Do" },
-  { value: "inprogress", label: "In Progress" },
-  { value: "review",     label: "In Review" },
-  { value: "done",       label: "Done" },
-];
-
 const IconSearch = () => <LuSearch size={13} />;
 
 const IconX = () => <LuX size={12} />;
@@ -39,10 +31,9 @@ export default function FilterBar({ filters, onChange, assignees = [], totalTask
   const set = (key, val) => onChange({ ...filters, [key]: val });
 
   const hasAnyFilter =
-    filters.search || filters.type || filters.priority ||
-    filters.status || filters.assignee;
+    filters.search || filters.type || filters.priority || filters.assignee;
 
-  const clearAll = () => onChange({ search: "", type: "", priority: "", status: "", assignee: "" });
+  const clearAll = () => onChange({ search: "", type: "", priority: "", assignee: "" });
 
   return (
     <div className="filter-bar">
@@ -84,16 +75,11 @@ export default function FilterBar({ filters, onChange, assignees = [], totalTask
         ))}
       </select>
 
-      {/* Status */}
-      <select
-        className="filter-select"
-        value={filters.status}
-        onChange={e => set("status", e.target.value)}
-      >
-        {STATUS_OPTIONS.map(o => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
-      </select>
+      {/* No status filter here -- this bar only ever renders above the
+          Kanban board, which already groups tasks into status columns
+          (To Do / In Progress / Review / Done). A "Status" dropdown that
+          just hides every column but one duplicated what the board's own
+          layout already shows for free. */}
 
       {/* Assignee */}
       {assignees.length > 0 && (

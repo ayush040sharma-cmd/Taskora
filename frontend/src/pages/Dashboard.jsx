@@ -211,7 +211,7 @@ export default function Dashboard() {
   const [showSprintModal, setShowSprintModal]     = useState(false);
   const [detailTask, setDetailTask]               = useState(null);
   const [showImportModal, setShowImportModal]     = useState(false);
-  const [filters, setFilters] = useState({ search: "", type: "", priority: "", status: "", assignee: "" });
+  const [filters, setFilters] = useState({ search: "", type: "", priority: "", assignee: "" });
 
   // UI overlays
   const [cmdOpen, setCmdOpen]           = useState(false);
@@ -513,7 +513,6 @@ export default function Dashboard() {
       if (filters.search && !t.title.toLowerCase().includes(filters.search.toLowerCase())) return false;
       if (filters.type && t.type !== filters.type) return false;
       if (filters.priority && t.priority !== filters.priority) return false;
-      if (filters.status && t.status !== filters.status) return false;
       if (filters.assignee) {
         if (filters.assignee === "__unassigned__" && t.assigned_user_id) return false;
         if (filters.assignee !== "__unassigned__" && String(t.assigned_user_id) !== filters.assignee) return false;

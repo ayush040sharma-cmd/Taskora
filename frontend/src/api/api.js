@@ -24,10 +24,20 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Public auth endpoints legitimately return 401 as part of normal flow (e.g.
+// a wrong password on /auth/login) -- that's not "your session expired,"
+// it's the caller's own form validation to handle. Without this exclusion,
+// the global redirect below fired on every one of these too: a wrong
+// password would clear storage and hard-navigate the login page to itself
+// at the same moment Login.jsx's local catch block tried to render an
+// inline error, interrupting it with a reload instead.
+const PUBLIC_AUTH_PATHS = ["/auth/login", "/auth/register", "/auth/demo", "/auth/forgot-password", "/auth/reset-password"];
+
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
+    const isPublicAuthRequest = PUBLIC_AUTH_PATHS.some(p => err.config?.url?.startsWith(p));
+    if (err.response?.status === 401 && !isPublicAuthRequest) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       localStorage.removeItem("demo_session");

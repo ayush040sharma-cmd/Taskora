@@ -194,10 +194,11 @@ function ShortcutsModal({ onClose }) {
 // blocked_reason / blocked_severity / blocked_by_task_id fields the task's
 // own Details tab and Create Task form already save -- just the one gap
 // where dropping a card onto Blocked skipped capturing them entirely.
-function BlockedTaskModal({ task, otherTasks, onCancel, onConfirm }) {
+function BlockedTaskModal({ task, otherTasks, members, onCancel, onConfirm }) {
   const [reason, setReason]     = useState("");
   const [severity, setSeverity] = useState("medium");
   const [blockedByTaskId, setBlockedByTaskId] = useState("");
+  const [taggedUserId, setTaggedUserId]       = useState("");
   const [saving, setSaving]     = useState(false);
 
   const submit = async (e) => {
@@ -208,6 +209,7 @@ function BlockedTaskModal({ task, otherTasks, onCancel, onConfirm }) {
       blocked_reason: reason.trim(),
       blocked_severity: severity,
       blocked_by_task_id: blockedByTaskId ? parseInt(blockedByTaskId) : null,
+      blocked_tagged_user_id: taggedUserId ? parseInt(taggedUserId) : null,
     });
     setSaving(false);
   };
@@ -255,6 +257,17 @@ function BlockedTaskModal({ task, otherTasks, onCancel, onConfirm }) {
                     <option key={t.id} value={t.id}>
                       {t.title}{t.assignee_name ? ` — ${t.assignee_name}` : ""}
                     </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {members.length > 0 && (
+              <div className="modal-form-group">
+                <label className="modal-label">Tag responsible person (optional)</label>
+                <select className="modal-select" value={taggedUserId} onChange={e => setTaggedUserId(e.target.value)}>
+                  <option value="">No one tagged</option>
+                  {members.map(m => (
+                    <option key={m.user_id} value={m.user_id}>{m.name}</option>
                   ))}
                 </select>
               </div>
@@ -386,6 +399,16 @@ export default function Dashboard() {
     }
   }, [showToast]); // eslint-disable-line
 
+  // ── Load members (for the "tag responsible person" picker on blocked tasks) ──
+  const [members, setMembers] = useState([]);
+  const loadMembers = useCallback(async (wsId) => {
+    if (!wsId) { setMembers([]); return; }
+    try {
+      const { data } = await api.get(`/members?workspace_id=${wsId}`);
+      setMembers(data);
+    } catch { /* non-critical — picker just shows empty */ }
+  }, []);
+
   useEffect(() => {
     loadWorkspaces(0).finally(() => setLoading(false));
   }, [loadWorkspaces]);
@@ -394,8 +417,9 @@ export default function Dashboard() {
     if (currentWorkspace) {
       loadTasks(currentWorkspace.id);
       loadSprints(currentWorkspace.id);
+      loadMembers(currentWorkspace.id);
     }
-  }, [currentWorkspace, loadTasks, loadSprints]);
+  }, [currentWorkspace, loadTasks, loadSprints, loadMembers]);
 
   // ── Global keyboard shortcuts ─────────────────────────────────
   useEffect(() => {
@@ -1136,6 +1160,7 @@ export default function Dashboard() {
         <BlockedTaskModal
           task={allTasks.find(t => t.id === blockedPrompt.taskId)}
           otherTasks={allTasks.filter(t => t.id !== blockedPrompt.taskId)}
+          members={members}
           onCancel={() => setBlockedPrompt(null)}
           onConfirm={async (fields) => {
             await commitMove(blockedPrompt.taskId, "blocked", blockedPrompt.position, fields);

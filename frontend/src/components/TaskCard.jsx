@@ -234,6 +234,9 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
               title={`Severity: ${task.blocked_severity || "medium"}`}
             >
               <IconStuck /> {task.blocked_reason}
+              {task.blocked_tagged_user_name && (
+                <span style={{ opacity: 0.85 }}> · {task.blocked_tagged_user_name}</span>
+              )}
             </div>
           )}
 

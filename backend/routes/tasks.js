@@ -37,6 +37,7 @@ router.get("/workspace/:workspaceId", auth, async (req, res) => {
               uc.daily_hours         AS assignee_capacity,
               uc.on_leave            AS assignee_on_leave,
               uc.travel_mode         AS assignee_travel_mode,
+              btu.name AS blocked_tagged_user_name,
               (SELECT COUNT(*) FROM task_dependencies td
                JOIN tasks dep ON td.depends_on_task_id = dep.id
                WHERE td.task_id = t.id AND dep.status != 'done')::int AS blocking_dep_count,
@@ -44,6 +45,7 @@ router.get("/workspace/:workspaceId", auth, async (req, res) => {
        FROM tasks t
        LEFT JOIN users u   ON t.assigned_user_id = u.id
        LEFT JOIN user_capacity uc ON u.id = uc.user_id
+       LEFT JOIN users btu ON t.blocked_tagged_user_id = btu.id
        WHERE t.workspace_id = $1
        ORDER BY t.position ASC, t.created_at ASC`,
       [req.params.workspaceId]
@@ -128,9 +130,11 @@ router.get("/:id", auth, async (req, res) => {
       `SELECT t.*,
               u.name  AS assignee_name,
               u.email AS assignee_email,
+              btu.name AS blocked_tagged_user_name,
               (SELECT COUNT(*) FROM task_comments c WHERE c.task_id = t.id)::int AS comment_count
        FROM tasks t
        LEFT JOIN users u ON t.assigned_user_id = u.id
+       LEFT JOIN users btu ON t.blocked_tagged_user_id = btu.id
        WHERE t.id = $1
          AND (
            EXISTS (SELECT 1 FROM workspaces WHERE id = t.workspace_id AND user_id = $2)
@@ -152,6 +156,7 @@ router.post("/", auth, validate(schemas.createTask), enforceLimit(FEATURES.TASK_
     title, description, status, priority, due_date, start_date,
     workspace_id, type, estimated_days, progress, assigned_user_id, sprint_id,
     estimated_duration, final_duration, recurrence, team_id,
+    blocked_reason, blocked_severity, blocked_expected_resolution, blocked_tagged_user_id,
   } = req.body;
 
   if (!title || !workspace_id) {
@@ -178,8 +183,10 @@ router.post("/", auth, validate(schemas.createTask), enforceLimit(FEATURES.TASK_
         title, description, status, priority, due_date, start_date,
         workspace_id, assigned_user_id, position,
         type, estimated_days, progress, sprint_id,
-        estimated_hours, actual_hours, recurrence, team_id
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING *`,
+        estimated_hours, actual_hours, recurrence, team_id,
+        blocked_reason, blocked_severity, blocked_expected_resolution, blocked_tagged_user_id,
+        date_blocked
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22) RETURNING *`,
       [
         title,
         description || null,
@@ -198,6 +205,11 @@ router.post("/", auth, validate(schemas.createTask), enforceLimit(FEATURES.TASK_
         (final_duration || estimated_days || 1) * 8,
         recurrence || null,
         team_id || null,
+        status === "blocked" ? (blocked_reason || null) : null,
+        status === "blocked" ? (blocked_severity || "medium") : null,
+        status === "blocked" ? (blocked_expected_resolution || null) : null,
+        status === "blocked" ? (blocked_tagged_user_id || null) : null,
+        status === "blocked" ? new Date() : null,
       ]
     );
     const task = result.rows[0];
@@ -258,6 +270,7 @@ router.put("/:id", auth, validate(schemas.updateTask), async (req, res) => {
       "team_id",
       // Blocked workflow fields
       "blocked_by_task_id", "blocked_reason", "blocked_severity", "blocked_expected_resolution",
+      "blocked_tagged_user_id",
     ];
     const setClauses = [];
     const params     = [];
@@ -295,6 +308,9 @@ router.put("/:id", auth, validate(schemas.updateTask), async (req, res) => {
       }
       if (!("blocked_reason" in req.body)) {
         setClauses.push("blocked_reason = NULL");
+      }
+      if (!("blocked_tagged_user_id" in req.body)) {
+        setClauses.push("blocked_tagged_user_id = NULL");
       }
     }
 
@@ -565,11 +581,14 @@ router.get("/workspace/:workspaceId/blocked-analytics", auth, async (req, res) =
                 t.blocked_severity, t.blocked_expected_resolution, t.date_blocked,
                 t.blocked_by_task_id,
                 bt.title AS blocked_by_task_title,
+                t.blocked_tagged_user_id,
+                btu.name AS blocked_tagged_user_name,
                 u.name AS assignee_name, u.email AS assignee_email,
                 EXTRACT(EPOCH FROM (NOW() - t.date_blocked))/3600 AS hours_blocked
          FROM tasks t
          LEFT JOIN tasks bt ON bt.id = t.blocked_by_task_id
          LEFT JOIN users u  ON u.id = t.assigned_user_id
+         LEFT JOIN users btu ON btu.id = t.blocked_tagged_user_id
          WHERE t.workspace_id = $1 AND t.status = 'blocked'
          ORDER BY t.date_blocked ASC`,
         [req.params.workspaceId]

@@ -301,6 +301,7 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
   const [userResults, setUserResults] = useState([]);
   const [toast, setToast]           = useState(null);
   const [teams, setTeams]           = useState([]);
+  const [members, setMembers]       = useState([]);
   const commentBoxRef               = useRef(null);
   const saveAbortRef                = useRef(null);
 
@@ -308,6 +309,7 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
     const wsId = workspaceId || initialTask.workspace_id;
     if (!wsId) return;
     api.get(`/teams?workspace_id=${wsId}`).then(r => setTeams(r.data)).catch(() => {});
+    api.get(`/members?workspace_id=${wsId}`).then(r => setMembers(r.data)).catch(() => {});
   }, [workspaceId, initialTask.workspace_id]);
 
   useEffect(() => {
@@ -712,6 +714,24 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
                         onChange={e => { setTask(p => ({ ...p, blocked_expected_resolution: e.target.value })); saveField("blocked_expected_resolution", e.target.value || null); }}
                       />
                     </div>
+                    {members.length > 0 && (
+                      <div className="td-meta-row">
+                        <span className="td-meta-label">Tagged</span>
+                        <select
+                          className="td-meta-select"
+                          value={task.blocked_tagged_user_id || ""}
+                          onChange={e => {
+                            const v = e.target.value ? parseInt(e.target.value) : null;
+                            const name = members.find(m => m.user_id === v)?.name || null;
+                            setTask(p => ({ ...p, blocked_tagged_user_id: v, blocked_tagged_user_name: name }));
+                            saveField("blocked_tagged_user_id", v);
+                          }}
+                        >
+                          <option value="">— No one tagged —</option>
+                          {members.map(m => <option key={m.user_id} value={m.user_id}>{m.name}</option>)}
+                        </select>
+                      </div>
+                    )}
                     {task.date_blocked && (
                       <div className="td-meta-row">
                         <span className="td-meta-label">Blocked Since</span>

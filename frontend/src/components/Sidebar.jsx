@@ -17,17 +17,20 @@ const IconKeyboard = () => <LuKeyboard size={15} />;
 const IconLogout   = () => <LuLogOut size={15} />;
 
 // ── All views organized by section ─────────────────────────────────────────────
-// "YOU" holds the two views that are workspace-agnostic (aggregate across
-// every workspace the user belongs to) — everything else here is scoped to
-// whichever workspace is currently selected below. Kept as its own section
-// rather than folded into WORKSPACE so that distinction stays visible, not
-// just implicit in what each view happens to query.
+// "YOU" holds the view that's workspace-agnostic (aggregates across every
+// workspace the user belongs to) — everything else here is scoped to
+// whichever workspace is currently selected below.
+//
+// Task Approvals live only inside Manager View (its own tab) — there is no
+// standalone "Approvals" entry here anymore, it was a duplicate surface for
+// the same /approvals data. Sprints and Dependency Graph moved out of their
+// own section: sprint planning is everyday planning work (→ WORK), and the
+// dependency graph is an analysis tool like AI Risk / Analytics (→ INSIGHTS).
 const SECTIONS = [
   {
     label: "YOU",
     views: [
-      { id: "today",    icon: "☀️", label: "Today" },
-      { id: "my-tasks", icon: "✅", label: "My Tasks" },
+      { id: "today", icon: "☀️", label: "Today" },
     ],
   },
   {
@@ -37,13 +40,7 @@ const SECTIONS = [
       { id: "calendar", icon: "📅", label: "Calendar" },
       { id: "summary",  icon: "📊", label: "Summary" },
       { id: "gantt",    icon: "🗓", label: "Gantt Chart" },
-    ],
-  },
-  {
-    label: "PROJECT",
-    views: [
-      { id: "sprints", icon: "🏃", label: "Sprints" },
-      { id: "graph",   icon: "🕸", label: "Dep. Graph" },
+      { id: "sprints",  icon: "🏃", label: "Sprints" },
     ],
   },
   {
@@ -53,14 +50,7 @@ const SECTIONS = [
       { id: "workload",     icon: "👥", label: "Team Workload" },
       { id: "capacity",     icon: "⚡", label: "My Capacity" },
       { id: "collaboration",icon: "🤝", label: "Collaboration" },
-    ],
-  },
-  {
-    label: "ADMIN",
-    views: [
-      { id: "teams",     icon: "🏢", label: "Teams" },
-      { id: "manager",   icon: "📌", label: "Manager View" },
-      { id: "approvals", icon: "✅", label: "Approvals" },
+      { id: "manager",      icon: "📌", label: "Manager View" },
     ],
   },
   {
@@ -71,6 +61,7 @@ const SECTIONS = [
       { id: "simulation",   icon: "🔬", label: "What-If Sim" },
       { id: "activity",     icon: "📡", label: "Activity Feed" },
       { id: "integrations", icon: "🔗", label: "Integrations" },
+      { id: "graph",        icon: "🕸", label: "Dep. Graph" },
     ],
   },
 ];

@@ -31,7 +31,6 @@ import HelpGuide from "../components/HelpGuide";
 import TaskDetailModal from "../components/TaskDetailModal";
 import CommandPalette from "../components/CommandPalette";
 import AIBubble from "../components/AIBubble";
-import ApprovalsView from "../components/ApprovalsView";
 import api from "../api/api";
 import { useSocket } from "../hooks/useSocket";
 import AIInsightsPanel from "../components/AIInsightsPanel";
@@ -44,8 +43,6 @@ import OnboardingChecklist from "../components/onboarding/OnboardingChecklist";
 import NotificationCenter from "../components/NotificationCenter";
 import SettingsPage from "./SettingsPage";
 import CommandCenter from "../components/CommandCenter";
-import TeamsPanel from "../components/TeamsPanel";
-import MyTasksView from "../components/MyTasksView";
 import TodayView from "../components/TodayView";
 
 import ImportWizard from "../components/ImportWizard";
@@ -187,6 +184,89 @@ function ShortcutsModal({ onClose }) {
             </div>
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Blocked-reason capture ──────────────────────────────────────────
+// Shown when a task is dragged into the Blocked column. Uses the same
+// blocked_reason / blocked_severity / blocked_by_task_id fields the task's
+// own Details tab and Create Task form already save -- just the one gap
+// where dropping a card onto Blocked skipped capturing them entirely.
+function BlockedTaskModal({ task, otherTasks, onCancel, onConfirm }) {
+  const [reason, setReason]     = useState("");
+  const [severity, setSeverity] = useState("medium");
+  const [blockedByTaskId, setBlockedByTaskId] = useState("");
+  const [saving, setSaving]     = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!reason.trim()) return;
+    setSaving(true);
+    await onConfirm({
+      blocked_reason: reason.trim(),
+      blocked_severity: severity,
+      blocked_by_task_id: blockedByTaskId ? parseInt(blockedByTaskId) : null,
+    });
+    setSaving(false);
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onCancel}>
+      <div className="modal" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <span className="modal-title">Why is this task blocked?</span>
+          <button className="modal-close" onClick={onCancel}>✕</button>
+        </div>
+        <form onSubmit={submit}>
+          <div className="modal-body">
+            <p style={{ color: "var(--text-secondary)", fontSize: 13, margin: "0 0 14px" }}>
+              Moving <strong style={{ color: "var(--text-primary)" }}>{task?.title}</strong> to Blocked.
+              This shows up on the card and in the Blocked/Manager views so the team knows what's stuck and why.
+            </p>
+            <div className="modal-form-group">
+              <label className="modal-label">Reason</label>
+              <textarea
+                className="modal-input"
+                rows={2}
+                autoFocus
+                required
+                placeholder="What's blocking this?"
+                value={reason}
+                onChange={e => setReason(e.target.value)}
+              />
+            </div>
+            <div className="modal-form-group">
+              <label className="modal-label">Severity</label>
+              <select className="modal-select" value={severity} onChange={e => setSeverity(e.target.value)}>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+              </select>
+            </div>
+            {otherTasks.length > 0 && (
+              <div className="modal-form-group">
+                <label className="modal-label">Blocked by (optional)</label>
+                <select className="modal-select" value={blockedByTaskId} onChange={e => setBlockedByTaskId(e.target.value)}>
+                  <option value="">No linked task</option>
+                  {otherTasks.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.title}{t.assignee_name ? ` — ${t.assignee_name}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+          <div className="modal-footer">
+            <button type="button" className="btn-modal-cancel" onClick={onCancel}>Cancel</button>
+            <button type="submit" className="btn-modal-submit" disabled={saving || !reason.trim()}>
+              {saving ? "Moving…" : "Move to Blocked"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
@@ -362,6 +442,35 @@ export default function Dashboard() {
   }, []); // eslint-disable-line
 
   // ── Drag & Drop ──────────────────────────────────────────────
+  // Moving a task into "Blocked" pauses here instead of committing right
+  // away -- blockedPrompt holds the pending move until the reason/severity
+  // form is submitted (or cancelled, which just leaves allTasks untouched
+  // so the card springs back to its original column).
+  const [blockedPrompt, setBlockedPrompt] = useState(null); // { taskId, position } | null
+
+  const commitMove = async (taskId, newStatus, position, extraFields = {}) => {
+    const moved = allTasks.find(t => t.id === taskId);
+    if (!moved) return;
+
+    setAllTasks(prev => prev.map(t =>
+      t.id === taskId
+        ? { ...t, ...extraFields, status: newStatus, progress: newStatus === "done" ? 100 : t.progress, status_changed_at: new Date().toISOString() }
+        : t
+    ));
+
+    try {
+      await api.put(`/tasks/${taskId}`, {
+        status:   newStatus,
+        position,
+        progress: newStatus === "done" ? 100 : moved.progress,
+        ...extraFields,
+      });
+    } catch {
+      loadTasks(currentWorkspace.id);
+      showToast("Failed to move task", "error");
+    }
+  };
+
   const handleDragEnd = async ({ source, destination, draggableId }) => {
     if (!destination) return;
     if (source.droppableId === destination.droppableId && source.index === destination.index) return;
@@ -371,24 +480,12 @@ export default function Dashboard() {
     const moved     = allTasks.find(t => t.id === taskId);
     if (!moved) return;
 
-    // Optimistic update — filteredColumns derives from allTasks automatically
-    setAllTasks(prev => prev.map(t =>
-      t.id === taskId
-        ? { ...t, status: newStatus, progress: newStatus === "done" ? 100 : t.progress, status_changed_at: new Date().toISOString() }
-        : t
-    ));
-
-    try {
-      await api.put(`/tasks/${draggableId}`, {
-        status:   newStatus,
-        position: destination.index,
-        progress: newStatus === "done" ? 100 : moved.progress,
-      });
-    } catch {
-      // Revert on failure
-      loadTasks(currentWorkspace.id);
-      showToast("Failed to move task", "error");
+    if (newStatus === "blocked" && moved.status !== "blocked") {
+      setBlockedPrompt({ taskId, position: destination.index });
+      return;
     }
+
+    commitMove(taskId, newStatus, destination.index);
   };
 
   // ── Create task ───────────────────────────────────────────────
@@ -632,21 +729,6 @@ export default function Dashboard() {
   // ── Shared view content (used by both layouts) ────────────────
   const viewContent = (<>
 
-          {/* ── Teams ── */}
-          {view === "teams" && (
-            <>
-              <div className="board-header">
-                <div className="board-title-area">
-                  <h1>Teams</h1>
-                  <p>Organize workspace members into functional teams</p>
-                </div>
-              </div>
-              <ErrorBoundary inline viewName="Teams">
-                <TeamsPanel workspaceId={currentWorkspace?.id} />
-              </ErrorBoundary>
-            </>
-          )}
-
           {/* ── Board view ── */}
           {view === "board" && (
             <>
@@ -726,13 +808,6 @@ export default function Dashboard() {
           {view === "today" && (
             <ErrorBoundary inline viewName="Today">
               <TodayView onOpenTask={setDetailTask} />
-            </ErrorBoundary>
-          )}
-
-          {/* ── My Tasks (cross-workspace) ── */}
-          {view === "my-tasks" && (
-            <ErrorBoundary inline viewName="My Tasks">
-              <MyTasksView onOpenTask={setDetailTask} />
             </ErrorBoundary>
           )}
 
@@ -979,13 +1054,6 @@ export default function Dashboard() {
             </>
           )}
 
-          {/* ── Approvals ── */}
-          {view === "approvals" && (
-            <ErrorBoundary inline viewName="Approvals">
-              <ApprovalsView workspaceId={currentWorkspace?.id} />
-            </ErrorBoundary>
-          )}
-
           {/* ── Settings ── */}
           {view === "settings" && (
             <ErrorBoundary inline viewName="Settings">
@@ -1062,6 +1130,19 @@ export default function Dashboard() {
 
       {/* ── Keyboard shortcuts modal ─────────────────────────────── */}
       {showShortcuts && <ShortcutsModal onClose={() => setShowShortcuts(false)} />}
+
+      {/* ── Blocked-reason capture (drag-to-Blocked) ─────────────── */}
+      {blockedPrompt && (
+        <BlockedTaskModal
+          task={allTasks.find(t => t.id === blockedPrompt.taskId)}
+          otherTasks={allTasks.filter(t => t.id !== blockedPrompt.taskId)}
+          onCancel={() => setBlockedPrompt(null)}
+          onConfirm={async (fields) => {
+            await commitMove(blockedPrompt.taskId, "blocked", blockedPrompt.position, fields);
+            setBlockedPrompt(null);
+          }}
+        />
+      )}
 
       {/* ── Floating AI bubble ────────────────────────────────────── */}
       <AIBubble workspaceId={currentWorkspace?.id} />

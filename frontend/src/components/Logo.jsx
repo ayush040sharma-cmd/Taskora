@@ -43,7 +43,7 @@ export default function Logo({
         <path d={MARK_PATH} fill={`url(#${gradientId})`} />
       </svg>
       {showWordmark && (
-        <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: wordmarkSize, letterSpacing }}>
+        <span style={{ fontFamily: "'Sora', sans-serif", fontWeight: 800, fontSize: wordmarkSize, letterSpacing }}>
           <span style={{ color: wordmarkColor }}>Task</span>
           <span
             style={{

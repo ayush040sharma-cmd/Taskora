@@ -227,6 +227,16 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
             </div>
           )}
 
+          {/* Blocked reason — captured when the task was moved to Blocked */}
+          {task.status === "blocked" && task.blocked_reason && (
+            <div
+              className={`tk-task-banner tk-task-banner--danger`}
+              title={`Severity: ${task.blocked_severity || "medium"}`}
+            >
+              <IconStuck /> {task.blocked_reason}
+            </div>
+          )}
+
           {/* Blocked indicator */}
           {isBlocked && (
             <div

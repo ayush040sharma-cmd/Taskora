@@ -1804,7 +1804,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
   display: flex; align-items: center; justify-content: center;
 }
 .sidebar-logo-text {
-  font-family: 'Syne', sans-serif;
+  font-family: var(--tk-font-display);
   font-size: 15px;
   font-weight: 700;
   color: #E2E8F0 !important;

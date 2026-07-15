@@ -264,7 +264,7 @@
 .sd-ring-track { stroke: var(--tk-border); }
 .sd-ring-text-main {
   fill: var(--tk-text-primary);
-  font-family: 'Syne', sans-serif;
+  font-family: var(--tk-font-display);
 }
 .sd-ring-text-sub  { fill: var(--tk-text-secondary); }
 
@@ -746,7 +746,7 @@
 .sd-timer-track { stroke: var(--tk-border); }
 .sd-timer-text-main {
   fill: var(--tk-text-primary);
-  font-family: 'Syne', sans-serif;
+  font-family: var(--tk-font-display);
 }
 .sd-timer-text-sub  { fill: var(--tk-text-secondary); }
 

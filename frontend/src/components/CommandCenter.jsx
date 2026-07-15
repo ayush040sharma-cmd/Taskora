@@ -210,7 +210,7 @@ export default function CommandCenter({ workspaceId, onNavigate, onOpenDetail, t
           color="var(--tk-accent, #3B82F6)" onClick={() => onNavigate("calendar")} />
         <StatCard icon="✔" label="Pending Approvals" value={approvals.length}
           sub="Awaiting your review"
-          color="#8b5cf6" onClick={() => onNavigate("approvals")} badge={approvals.length > 0 ? "Pending" : null} />
+          color="#8b5cf6" onClick={() => onNavigate("manager")} badge={approvals.length > 0 ? "Pending" : null} />
         <StatCard icon="🏃" label="Sprint Health"
           value={activeSprint ? `${sprintPct}%` : "No sprint"}
           sub={activeSprint ? `${sprintDone}/${sprintTasks.length} tasks done` : "Create a sprint to track"}

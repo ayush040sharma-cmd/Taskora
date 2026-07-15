@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { LuX, LuClipboardList, LuBug, LuBookOpen, LuFileStack, LuFilePenLine, LuPresentation, LuArrowUp, LuFlaskConical } from "react-icons/lu";
 import api from "../api/api";
+import { getWorkspacePref } from "../utils/workspacePrefs";
 
 const IconX = () => <LuX size={16} />;
 
@@ -18,7 +19,7 @@ const TYPE_META = {
 export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "todo", sprints = [], workspaceId }) {
   const [form, setForm] = useState({
     title: "", description: "", status: defaultStatus,
-    priority: "medium", due_date: "", start_date: "",
+    priority: getWorkspacePref(workspaceId, "default-priority"), due_date: "", start_date: "",
     type: "task", estimated_days: 1,
     assigned_user_id: "", sprint_id: "", team_id: "",
     estimated_duration: 1,

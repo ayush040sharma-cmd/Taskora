@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { LuX } from "react-icons/lu";
+import { getWorkspacePref } from "../utils/workspacePrefs";
 
 const IconX = () => <LuX size={16} />;
 
-export default function SprintModal({ onClose, onSubmit }) {
+export default function SprintModal({ onClose, onSubmit, workspaceId }) {
   const today = new Date().toISOString().split("T")[0];
-  const twoWeeks = new Date(Date.now() + 14*86400000).toISOString().split("T")[0];
+  const defaultDurationDays = parseInt(getWorkspacePref(workspaceId, "sprint-days"), 10) || 14;
+  const defaultEnd = new Date(Date.now() + defaultDurationDays * 86400000).toISOString().split("T")[0];
 
-  const [form, setForm] = useState({ name: "", goal: "", start_date: today, end_date: twoWeeks });
+  const [form, setForm] = useState({ name: "", goal: "", start_date: today, end_date: defaultEnd });
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState("");
 

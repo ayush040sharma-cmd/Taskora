@@ -7,6 +7,7 @@ import DashboardMobile from "../layouts/DashboardMobile";
 import DashboardDesktop from "../layouts/DashboardDesktop";
 import { useIsMobile } from "../hooks/useIsMobile";
 import KanbanBoard from "../components/KanbanBoard";
+import { getWorkspacePref } from "../utils/workspacePrefs";
 import CreateTaskModal from "../components/CreateTaskModal";
 import WorkspaceModal from "../components/WorkspaceModal";
 import WorkloadDashboard from "../components/WorkloadDashboard";
@@ -522,12 +523,28 @@ export default function Dashboard() {
   };
 
   const filteredTasks   = applyFilters(allTasks);
+  // "Show completed tasks on board" / "Auto-archive done tasks after N days"
+  // -- Settings → Workspace Preferences. Auto-archive only hides tasks from
+  // the active board view (status_changed_at, falling back to updated_at
+  // for tasks moved to done before that column existed); it never deletes
+  // anything.
+  const showCompletedPref = getWorkspacePref(currentWorkspace?.id, "show-completed") !== "false";
+  const autoArchiveDays   = parseInt(getWorkspacePref(currentWorkspace?.id, "auto-archive-days"), 10) || 0;
+  const nowMs = Date.now(); // eslint-disable-line -- a per-render "how old is this" snapshot for filtering, not stateful
+  const doneTasks = filteredTasks.filter(t => {
+    if (t.status !== "done") return false;
+    if (!autoArchiveDays) return true;
+    const changedAt = t.status_changed_at || t.updated_at;
+    if (!changedAt) return true;
+    const ageDays = (nowMs - new Date(changedAt).getTime()) / 86400000;
+    return ageDays < autoArchiveDays;
+  });
   const filteredColumns = {
     todo:       filteredTasks.filter(t => t.status === "todo" || t.status === "pending_approval"),
     inprogress: filteredTasks.filter(t => t.status === "inprogress" || t.status === "in_progress"),
     review:     filteredTasks.filter(t => t.status === "review"),
     blocked:    filteredTasks.filter(t => t.status === "blocked"),
-    done:       filteredTasks.filter(t => t.status === "done"),
+    done:       showCompletedPref ? doneTasks : [],
   };
 
   const assignees = Array.from(
@@ -949,7 +966,7 @@ export default function Dashboard() {
         <WorkspaceModal onClose={() => setShowWorkspaceModal(false)} onSubmit={handleCreateWorkspace} />
       )}
       {showSprintModal && (
-        <SprintModal onClose={() => setShowSprintModal(false)} onSubmit={handleCreateSprint} />
+        <SprintModal onClose={() => setShowSprintModal(false)} onSubmit={handleCreateSprint} workspaceId={currentWorkspace?.id} />
       )}
       {detailTask && (
         <TaskDetailModal

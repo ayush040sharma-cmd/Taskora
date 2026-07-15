@@ -6,6 +6,7 @@
 import { useState, useEffect, useRef } from "react";
 import { LuX, LuClipboardList, LuBug, LuBookOpen, LuFileStack, LuFilePenLine, LuPresentation, LuArrowUp, LuFlaskConical } from "react-icons/lu";
 import api from "../api/api";
+import { getWorkspacePref } from "../utils/workspacePrefs";
 
 const TYPE_META = {
   task:         { label: "Task",         icon: LuClipboardList },
@@ -427,6 +428,12 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
           <div className="td-header-left">
             <span className="td-type-icon">
               {(() => { const TypeIcon = TYPE_META[task.type]?.icon || LuClipboardList; return <TypeIcon size={14} />; })()}
+            </span>
+            <span
+              style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", letterSpacing: "0.03em", marginRight: 6, flexShrink: 0 }}
+              title="Task ID prefix is configurable in Settings → Workspace Preferences"
+            >
+              {getWorkspacePref(workspaceId || task.workspace_id, "task-prefix")}-{task.id}
             </span>
             {editTitle ? (
               <input

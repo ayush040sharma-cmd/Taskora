@@ -110,7 +110,10 @@ class JarvisFirewallMiddleware(BaseHTTPMiddleware):
         # ── 2. URL length check ───────────────────────────────────────────────
         if len(str(request.url)) > MAX_URL_LENGTH:
             _log_blocked(request, ip, "url_too_long", "Medium")
-            return self._block(413, "Request URI too long")
+            # 414 (URI Too Long) is the RFC 7231 status for this specifically;
+            # 413 is for an oversized request body (see MAX_REQUEST_BODY_BYTES
+            # below), a different check.
+            return self._block(414, "Request URI too long")
 
         # ── 3. IP rate limiting ───────────────────────────────────────────────
         allowed, retry_after = await limiter.check_ip(ip, path)

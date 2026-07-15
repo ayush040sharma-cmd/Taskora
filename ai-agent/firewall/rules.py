@@ -9,7 +9,10 @@ from typing import Tuple
 # ── SQL Injection patterns ────────────────────────────────────────────────────
 SQL_PATTERNS = [
     r"(\b(select|insert|update|delete|drop|create|alter|truncate|exec|execute|union|having|where)\b.{0,20}\b(from|into|table|database|schema)\b)",
-    r"('|\"|`)\s*(or|and)\s*('|\"|`)?\s*[\w\d]+\s*=\s*[\w\d]+",
+    # Optional quotes around BOTH sides of the comparison -- without the
+    # closing-quote alternation this missed the canonical admin' OR '1'='1
+    # bypass, since [\w\d]+ can't match into a quote character.
+    r"('|\"|`)\s*(or|and)\s*('|\"|`)?\s*[\w\d]+\s*('|\"|`)?\s*=\s*('|\"|`)?\s*[\w\d]+",
     r"--\s*$",                        # SQL comment at end
     r";\s*(drop|delete|truncate)\b",  # Stacked queries
     r"\bunion\s+(all\s+)?select\b",
@@ -76,12 +79,19 @@ PATH_TRAVERSAL = [
 ]
 
 # ── Compiled rule sets ────────────────────────────────────────────────────────
+# check_payload returns the FIRST matching category, so order matters:
+# path_traversal is checked before command_injection because CMD_PATTERNS
+# still contains its own "../../ " pattern (kept there since it's also a
+# real command-injection signal in some contexts) -- without this ordering,
+# every plain "../../etc/passwd"-style payload was mislabeled as
+# command_injection before path_traversal's own patterns ever ran. Blocking
+# behavior is unaffected either way; only the reported attack_type changes.
 _COMPILED: dict[str, list] = {
     "sql_injection":     [re.compile(p, re.IGNORECASE) for p in SQL_PATTERNS],
     "xss":               [re.compile(p, re.IGNORECASE) for p in XSS_PATTERNS],
+    "path_traversal":    [re.compile(p, re.IGNORECASE) for p in PATH_TRAVERSAL],
     "command_injection": [re.compile(p, re.IGNORECASE) for p in CMD_PATTERNS],
     "ssrf":              [re.compile(p, re.IGNORECASE) for p in SSRF_PATTERNS],
-    "path_traversal":    [re.compile(p, re.IGNORECASE) for p in PATH_TRAVERSAL],
 }
 
 SEVERITY_MAP = {

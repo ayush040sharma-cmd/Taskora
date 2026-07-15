@@ -131,8 +131,12 @@ router.get("/:id", auth, async (req, res) => {
               (SELECT COUNT(*) FROM task_comments c WHERE c.task_id = t.id)::int AS comment_count
        FROM tasks t
        LEFT JOIN users u ON t.assigned_user_id = u.id
-       WHERE t.id = $1`,
-      [req.params.id]
+       WHERE t.id = $1
+         AND (
+           EXISTS (SELECT 1 FROM workspaces WHERE id = t.workspace_id AND user_id = $2)
+           OR EXISTS (SELECT 1 FROM workspace_members WHERE workspace_id = t.workspace_id AND user_id = $2)
+         )`,
+      [req.params.id, req.user.id]
     );
     if (!result.rows.length) return res.status(404).json({ message: "Task not found" });
     res.json(result.rows[0]);

@@ -4,21 +4,41 @@
  */
 const express = require("express");
 const router  = express.Router();
+const { Webhook } = require("svix");
 const pool    = require("../db");
 const logger  = require("../utils/logger");
+
+const RESEND_WEBHOOK_SECRET = process.env.RESEND_WEBHOOK_SECRET;
 
 // ── POST /api/webhooks/resend ─────────────────────────────────────────────────
 // Delivery-event webhook (delivered/opened/clicked/bounced/complained) for
 // briefing emails — docs/briefing-engine-plan.md §6.3.
 //
-// KNOWN GAP: Resend signs these with svix, and that signature is not
-// verified here — the `svix` package isn't installed, and adding it is a
-// separate dependency decision, not made as part of this pass. Until it's
-// added, this endpoint trusts payload *shape* but not *authenticity* —
-// don't treat email_events as tamper-proof (e.g. for anything
-// billing/security-sensitive) until signature verification is added.
-router.post("/resend", express.json(), async (req, res) => {
+// Resend signs these with svix. When RESEND_WEBHOOK_SECRET is configured,
+// every request is verified against it and rejected on failure (fail
+// closed). If the secret isn't set — e.g. local dev, before the endpoint
+// is registered in the Resend dashboard — the payload's shape is still
+// trusted but not its authenticity; that gap is logged loudly so it's
+// never silently the case in an environment where it matters.
+router.post("/resend", express.json({
+  verify: (req, res, buf) => { req.rawBody = buf; },
+}), async (req, res) => {
   try {
+    if (RESEND_WEBHOOK_SECRET) {
+      try {
+        new Webhook(RESEND_WEBHOOK_SECRET).verify(req.rawBody, {
+          "svix-id": req.header("svix-id"),
+          "svix-timestamp": req.header("svix-timestamp"),
+          "svix-signature": req.header("svix-signature"),
+        });
+      } catch (verifyErr) {
+        logger.warn("Resend webhook signature verification failed", { error: verifyErr.message });
+        return res.status(401).json({ message: "Invalid signature" });
+      }
+    } else {
+      logger.warn("RESEND_WEBHOOK_SECRET not set — accepting Resend webhook without signature verification");
+    }
+
     const { type, data } = req.body || {};
     if (!type) return res.status(400).json({ message: "Missing event type" });
 

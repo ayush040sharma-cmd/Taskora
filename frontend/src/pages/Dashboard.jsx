@@ -45,6 +45,8 @@ import NotificationCenter from "../components/NotificationCenter";
 import SettingsPage from "./SettingsPage";
 import CommandCenter from "../components/CommandCenter";
 import TeamsPanel from "../components/TeamsPanel";
+import MyTasksView from "../components/MyTasksView";
+import TodayView from "../components/TodayView";
 
 import ImportWizard from "../components/ImportWizard";
 
@@ -684,6 +686,20 @@ export default function Dashboard() {
             </>
           )}
 
+          {/* ── Today ── */}
+          {view === "today" && (
+            <ErrorBoundary inline viewName="Today">
+              <TodayView onOpenTask={setDetailTask} />
+            </ErrorBoundary>
+          )}
+
+          {/* ── My Tasks (cross-workspace) ── */}
+          {view === "my-tasks" && (
+            <ErrorBoundary inline viewName="My Tasks">
+              <MyTasksView onOpenTask={setDetailTask} />
+            </ErrorBoundary>
+          )}
+
           {/* ── Summary ── */}
           {view === "summary" && (
             <>
@@ -972,7 +988,7 @@ export default function Dashboard() {
         <TaskDetailModal
           task={detailTask}
           currentUser={user}
-          workspaceId={currentWorkspace?.id}
+          workspaceId={detailTask.workspace_id || currentWorkspace?.id}
           onClose={() => setDetailTask(null)}
           onUpdate={(updated) => { handleTaskUpdated(updated); setDetailTask(updated); }}
         />

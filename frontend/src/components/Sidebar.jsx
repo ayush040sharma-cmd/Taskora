@@ -6,7 +6,19 @@ import { getInitials } from "../utils/avatar";
 import Logo from "./Logo";
 
 // ── All views organized by section ─────────────────────────────────────────────
+// "YOU" holds the two views that are workspace-agnostic (aggregate across
+// every workspace the user belongs to) — everything else here is scoped to
+// whichever workspace is currently selected below. Kept as its own section
+// rather than folded into WORKSPACE so that distinction stays visible, not
+// just implicit in what each view happens to query.
 const SECTIONS = [
+  {
+    label: "YOU",
+    views: [
+      { id: "today",    icon: "☀️", label: "Today" },
+      { id: "my-tasks", icon: "✅", label: "My Tasks" },
+    ],
+  },
   {
     label: "WORKSPACE",
     views: [

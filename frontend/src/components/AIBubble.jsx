@@ -112,13 +112,13 @@ export default function AIBubble({ workspaceId }) {
               <span className="ai-bubble-header-badge">Beta</span>
             </div>
             <div className="ai-bubble-header-actions">
-              <button className="ai-bubble-icon-btn" title="Minimize" onClick={() => setMin(true)}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <button className="ai-bubble-icon-btn" title="Minimize" aria-label="Minimize" onClick={() => setMin(true)}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
                   <line x1="5" y1="12" x2="19" y2="12"/>
                 </svg>
               </button>
-              <button className="ai-bubble-icon-btn" title="Close" onClick={() => setOpen(false)}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <button className="ai-bubble-icon-btn" title="Close" aria-label="Close AI Assistant" onClick={() => setOpen(false)}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
                   <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                 </svg>
               </button>
@@ -174,8 +174,9 @@ export default function AIBubble({ workspaceId }) {
               className="ai-bubble-send"
               onClick={() => send()}
               disabled={!input.trim() || loading}
+              aria-label="Send message"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
                 <line x1="22" y1="2" x2="11" y2="13"/>
                 <polygon points="22 2 15 22 11 13 2 9 22 2"/>
               </svg>
@@ -188,7 +189,7 @@ export default function AIBubble({ workspaceId }) {
       {open && minimized && (
         <div className="ai-bubble-minimized" onClick={() => setMin(false)}>
           <span>✨ AI Assistant</span>
-          <button className="ai-bubble-icon-btn" onClick={e => { e.stopPropagation(); setOpen(false); setMin(false); }}>✕</button>
+          <button className="ai-bubble-icon-btn" aria-label="Close AI Assistant" onClick={e => { e.stopPropagation(); setOpen(false); setMin(false); }}>✕</button>
         </div>
       )}
 
@@ -198,8 +199,9 @@ export default function AIBubble({ workspaceId }) {
           className="ai-bubble-fab"
           onClick={() => { setOpen(true); setMin(false); }}
           title="AI Assistant (⌘/)"
+          aria-label="Open AI Assistant"
         >
-          <span style={{ fontSize: 22, lineHeight: 1 }}>✨</span>
+          <span style={{ fontSize: 22, lineHeight: 1 }} aria-hidden="true">✨</span>
         </button>
       )}
 

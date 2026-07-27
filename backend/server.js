@@ -145,6 +145,7 @@ io.on("connection", (socket) => {
 app.use("/api/auth",          require("./routes/auth"));
 app.use("/api/auth",          require("./routes/oauth"));
 app.use("/api/workspaces",    require("./routes/workspaces"));
+app.use("/api/tasks/import",  require("./routes/import"));
 app.use("/api/tasks",         require("./routes/tasks"));
 app.use("/api/sprints",       require("./routes/sprints"));
 app.use("/api/workload",      require("./routes/workload"));

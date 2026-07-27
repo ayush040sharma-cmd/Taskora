@@ -5,6 +5,7 @@ const auth = require("../middleware/auth");
 const { refreshUserWorkloadLog } = require("../services/workloadLogger");
 const { audit } = require("../services/auditService");
 const { validate, schemas } = require("../utils/validate");
+const { resolveDueDate } = require("../utils/resolveDueDate");
 
 // GET /api/tasks/workspace/:workspaceId
 router.get("/workspace/:workspaceId", auth, async (req, res) => {
@@ -61,7 +62,17 @@ router.get("/:id", auth, async (req, res) => {
       [req.params.id]
     );
     if (!result.rows.length) return res.status(404).json({ message: "Task not found" });
-    res.json(result.rows[0]);
+
+    const task = result.rows[0];
+    const access = await pool.query(
+      `SELECT 1 FROM workspaces WHERE id = $1 AND user_id = $2
+       UNION
+       SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2`,
+      [task.workspace_id, req.user.id]
+    );
+    if (!access.rows.length) return res.status(403).json({ message: "Access denied" });
+
+    res.json(task);
   } catch (err) {
     console.error("Get single task error:", err);
     res.status(500).json({ message: "Server error" });
@@ -105,7 +116,7 @@ router.post("/", auth, validate(schemas.createTask), async (req, res) => {
         description || null,
         status || "todo",
         priority || "medium",
-        due_date || null,
+        resolveDueDate({ due_date, start_date }),
         start_date || null,
         workspace_id,
         assigned_user_id || null,

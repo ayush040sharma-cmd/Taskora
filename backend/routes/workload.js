@@ -148,11 +148,25 @@ router.get("/", auth, requireMinRole("manager"), async (req, res) => {
 });
 
 // ── GET /api/workload/users?q=X&workspace_id=Y ───────────────────────────────
-// Scoped to workspace members when workspace_id is provided
+// Always scoped to a workspace — either the one given, or (if omitted) every
+// workspace the requesting user belongs to. Never falls back to platform-wide.
 router.get("/users", auth, async (req, res) => {
   const { q, workspace_id } = req.query;
-  const wsId = workspace_id ? parseInt(workspace_id) : null;
   try {
+    let wsIds;
+    if (workspace_id) {
+      wsIds = [parseInt(workspace_id)];
+    } else {
+      const own = await pool.query(
+        `SELECT id AS wsid FROM workspaces WHERE user_id = $1
+         UNION
+         SELECT workspace_id AS wsid FROM workspace_members WHERE user_id = $1`,
+        [req.user.id]
+      );
+      wsIds = own.rows.map(r => r.wsid);
+    }
+    if (wsIds.length === 0) return res.json([]);
+
     const result = await pool.query(
       `SELECT u.id, u.name, u.email, u.role,
               COALESCE(uc.on_leave, false)    AS on_leave,
@@ -162,13 +176,13 @@ router.get("/users", auth, async (req, res) => {
        FROM users u
        LEFT JOIN user_capacity uc ON uc.user_id = u.id
        WHERE ($1::text IS NULL OR u.name ILIKE $1 OR u.email ILIKE $1)
-         AND ($2::int IS NULL OR u.id IN (
-           SELECT user_id FROM workspaces WHERE id = $2
+         AND u.id IN (
+           SELECT user_id FROM workspaces WHERE id = ANY($2::int[])
            UNION
-           SELECT user_id FROM workspace_members WHERE workspace_id = $2
-         ))
+           SELECT user_id FROM workspace_members WHERE workspace_id = ANY($2::int[])
+         )
        ORDER BY u.name LIMIT 20`,
-      [q ? `%${q}%` : null, wsId]
+      [q ? `%${q}%` : null, wsIds]
     );
     res.json(result.rows);
   } catch (err) {

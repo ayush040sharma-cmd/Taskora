@@ -63,11 +63,11 @@ function AddPeopleModal({ workspaceId, onClose }) {
   useEffect(() => {
     if (!query) { setUsers([]); return; }
     const t = setTimeout(async () => {
-      try { const r = await api.get(`/workload/users?q=${encodeURIComponent(query)}`); setUsers(r.data); }
+      try { const r = await api.get(`/workload/users?q=${encodeURIComponent(query)}&workspace_id=${workspaceId}`); setUsers(r.data); }
       catch {}
     }, 300);
     return () => clearTimeout(t);
-  }, [query]);
+  }, [query, workspaceId]);
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -276,7 +276,7 @@ function SidebarPanel({ activeId, messages, onClose, workspaceId }) {
 
   useEffect(() => {
     if ((activeId === "followers" || activeId === "assigned") && workspaceId) {
-      api.get(`/workload/users?q=`).then(r => setPanelMembers(r.data)).catch(() => {});
+      api.get(`/workload/users?q=&workspace_id=${workspaceId}`).then(r => setPanelMembers(r.data)).catch(() => {});
     }
   }, [activeId, workspaceId]);
 
@@ -459,11 +459,11 @@ export default function ChannelView({ workspaceId, workspaceName, onNavigate }) 
   useEffect(() => {
     if (mentionQuery === null) { setMentionUsers([]); return; }
     const t = setTimeout(async () => {
-      try { const r = await api.get(`/workload/users?q=${encodeURIComponent(mentionQuery)}`); setMentionUsers(r.data); }
+      try { const r = await api.get(`/workload/users?q=${encodeURIComponent(mentionQuery)}&workspace_id=${workspaceId}`); setMentionUsers(r.data); }
       catch {}
     }, 200);
     return () => clearTimeout(t);
-  }, [mentionQuery]);
+  }, [mentionQuery, workspaceId]);
 
   // ── Send message ──────────────────────────────────────────────────
   const send = async () => {

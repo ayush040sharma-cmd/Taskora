@@ -68,7 +68,7 @@ We use Render.com (or your configured hosting provider) for infrastructure. Thei
             },
             {
               title: "5. Cookies & local storage",
-              body: `Taskora stores your authentication token and user profile in your browser's localStorage for session persistence. We do not use third-party tracking cookies, advertising pixels, or analytics SDKs (such as Google Analytics).`,
+              body: `Taskora stores your authentication token in a secure, httpOnly cookie that JavaScript cannot read — it is never accessible to browser scripts. Your basic profile info (name, email, role) is kept in your browser's localStorage for session persistence. We do not use third-party tracking cookies, advertising pixels, or analytics SDKs (such as Google Analytics).`,
             },
             {
               title: "6. Third-party integrations",

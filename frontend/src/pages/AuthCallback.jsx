@@ -10,7 +10,6 @@ export default function AuthCallback() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const token = searchParams.get("token");
     const userStr = searchParams.get("user");
     const err = searchParams.get("error");
 
@@ -19,10 +18,12 @@ export default function AuthCallback() {
       return;
     }
 
-    if (token && userStr) {
+    if (userStr) {
       try {
         const user = JSON.parse(decodeURIComponent(userStr));
-        loginWithToken(token, user);
+        // The httpOnly cookie was already set by the backend before this
+        // redirect — no token is or needs to be present in this URL.
+        loginWithToken(null, user);
 
         const intendedPlan = consumeIntendedPlan();
         if (intendedPlan) {

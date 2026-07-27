@@ -1,8 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import axios from "axios";
-import { useAuth } from "../context/AuthContext";
-
-const API = import.meta.env.VITE_API_URL || "http://localhost:3001";
+import api from "../api/api";
 
 const TYPE_ICONS = {
   leave: "🏖️", wfh: "🏠", expense: "💳", overtime: "⏱️",
@@ -224,14 +221,12 @@ function SubmitModal({ onClose, onSubmit }) {
 }
 
 export default function EnterpriseApprovalCenter() {
-  const { token, user } = useAuth();
   const [tab, setTab]           = useState("pending");
   const [requests, setRequests] = useState([]);
   const [stats, setStats]       = useState({});
   const [loading, setLoading]   = useState(true);
   const [typeFilter, setTypeFilter] = useState("all");
   const [showSubmit, setShowSubmit] = useState(false);
-  const headers = { Authorization: `Bearer ${token}` };
 
   const TABS = [
     { id: "pending",  label: "Pending My Action" },
@@ -246,11 +241,10 @@ export default function EnterpriseApprovalCenter() {
     setLoading(true);
     try {
       const [statsRes, reqRes] = await Promise.all([
-        axios.get(`${API}/api/approvals-engine/stats`, { headers }),
+        api.get("/approvals-engine/stats"),
         tab === "pending"
-          ? axios.get(`${API}/api/approvals-engine/pending`, { headers })
-          : axios.get(`${API}/api/approvals-engine`, {
-              headers,
+          ? api.get("/approvals-engine/pending")
+          : api.get("/approvals-engine", {
               params: {
                 view: tab === "mine" ? "mine" : "approver",
                 type: typeFilter !== "all" ? typeFilter : undefined,
@@ -262,16 +256,15 @@ export default function EnterpriseApprovalCenter() {
     } finally {
       setLoading(false);
     }
-  }, [token, tab, typeFilter]);
+  }, [tab, typeFilter]);
 
   useEffect(() => { load(); }, [load]);
 
   async function handleAction(id, actionType, note) {
     try {
-      await axios.put(
-        `${API}/api/approvals-engine/${id}/${actionType}`,
-        { decision_note: note || undefined },
-        { headers }
+      await api.put(
+        `/approvals-engine/${id}/${actionType}`,
+        { decision_note: note || undefined }
       );
       load();
     } catch (err) {
@@ -281,7 +274,7 @@ export default function EnterpriseApprovalCenter() {
 
   async function submitRequest(form) {
     try {
-      await axios.post(`${API}/api/approvals-engine`, form, { headers });
+      await api.post("/approvals-engine", form);
       setShowSubmit(false);
       load();
     } catch (err) {

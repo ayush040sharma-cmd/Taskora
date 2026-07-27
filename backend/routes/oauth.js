@@ -135,9 +135,11 @@ router.get("/google/callback", async (req, res) => {
       { expiresIn: "7d" }
     );
 
-    // 5. Set httpOnly cookie and redirect to frontend
+    // 5. Set httpOnly cookie and redirect to frontend. The JWT itself never
+    // goes in the URL — browser history, server access logs, and Referer
+    // headers would all see it; the cookie above is the only credential.
     setAuthCookie(res, token);
-    return res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify({
+    return res.redirect(`${FRONTEND_URL}/auth/callback?user=${encodeURIComponent(JSON.stringify({
       id:                  user.id,
       name:                user.name,
       email:               user.email,

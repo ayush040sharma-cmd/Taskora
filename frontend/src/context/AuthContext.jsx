@@ -92,10 +92,10 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const { data } = await api.post("/auth/login", { email, password });
-    // Token is now stored as an httpOnly cookie by the server — no localStorage
+    // Auth is the httpOnly cookie the server just set — the JWT in `data.token`
+    // is a Bearer fallback for non-browser API clients and is never persisted
+    // or read here; the browser has no JS-accessible copy of it.
     localStorage.setItem("user", JSON.stringify(data.user));
-    // Keep token in sessionStorage ONLY for socket.io auth (not readable by XSS)
-    sessionStorage.setItem("_sk", data.token);
     resetSocket();
     setUser(data.user);
     fetchSidebarViews();
@@ -105,16 +105,16 @@ export function AuthProvider({ children }) {
   const register = async (name, email, password, role = "manager") => {
     const { data } = await api.post("/auth/register", { name, email, password, role });
     localStorage.setItem("user", JSON.stringify(data.user));
-    sessionStorage.setItem("_sk", data.token);
     setUser(data.user);
     fetchSidebarViews();
     return data.user;
   };
 
-  // Used by OAuth callback — token + user already determined by backend
-  const loginWithToken = (token, userData, isDemo = false) => {
+  // Used by OAuth callback (and the demo flow) — the httpOnly cookie is
+  // already set server-side by this point, so only the display user data
+  // needs to reach client state.
+  const loginWithToken = (_token, userData, isDemo = false) => {
     localStorage.setItem("user", JSON.stringify(userData));
-    sessionStorage.setItem("_sk", token);
     resetSocket();
     if (isDemo) {
       const startTimestamp = Date.now();

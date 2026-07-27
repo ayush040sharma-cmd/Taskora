@@ -7,25 +7,24 @@ let socketInstance = null;
 function getSocket() {
   if (!socketInstance) {
     const url = import.meta.env.VITE_API_URL || "http://localhost:3001";
-    // Prefer httpOnly cookie (sent automatically via withCredentials).
-    // Fall back to sessionStorage token for environments where cross-origin
-    // cookies aren't available (e.g. first connection before cookie is set).
-    const token = sessionStorage.getItem("_sk") || localStorage.getItem("token");
 
+    // Auth is the httpOnly cookie, sent automatically via withCredentials —
+    // the server's `io.use` handshake middleware reads it straight off
+    // socket.handshake.headers.cookie. No token ever touches client JS.
     socketInstance = io(url, {
       autoConnect: false,
       withCredentials: true,
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 2000,
-      auth: token ? { token } : {},
     });
   }
   return socketInstance;
 }
 
 /**
- * Reset the singleton when the token changes (login / logout).
+ * Reset the singleton on login / logout so the next connection re-sends
+ * the current cookie (a fresh session, or none after logout).
  * Call this from AuthContext after login/logout.
  */
 export function resetSocket() {
@@ -52,12 +51,6 @@ export function useSocket(workspaceId, handlers = {}) {
     if (!workspaceId) return;
 
     const socket = getSocket();
-
-    // Refresh auth token in case it changed since singleton was created
-    const freshToken = sessionStorage.getItem("_sk") || localStorage.getItem("token") || "";
-    if (socket.auth && socket.auth.token !== freshToken) {
-      socket.auth = { token: freshToken };
-    }
 
     if (!socket.connected) socket.connect();
 

@@ -9,19 +9,8 @@ const baseURL = import.meta.env.VITE_API_URL
 const api = axios.create({
   baseURL,
   headers: { "Content-Type": "application/json" },
-  withCredentials: true, // send httpOnly cookie on every request
+  withCredentials: true, // sole auth mechanism: the httpOnly cookie set by the server
   timeout: 40000, // Render free tier can take 30-60s to cold-start
-});
-
-// Attach Bearer token as a fallback for environments where cross-origin cookies
-// aren't forwarded (e.g. some mobile browsers, SSR). Reads from sessionStorage
-// (_sk) which is cleared on tab close, not the persistent localStorage JWT.
-api.interceptors.request.use((config) => {
-  const token = sessionStorage.getItem("_sk") || localStorage.getItem("token");
-  if (token && !config.headers.Authorization) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
 });
 
 // Public auth endpoints legitimately return 401 as part of normal flow (e.g.

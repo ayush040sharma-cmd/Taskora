@@ -69,7 +69,7 @@ export default function Login() {
     setError(""); setInfo("");
     try {
       const { data } = await api.post("/auth/demo");
-      loginWithToken(data.token, data.user, true); // isDemo=true → 5-min timer
+      loginWithToken(null, data.user, true); // isDemo=true → 5-min timer; cookie already set server-side
       navigate("/dashboard");
     } catch (err) {
       setError("Could not start demo. Please try again.");

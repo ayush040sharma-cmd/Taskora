@@ -1,8 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import axios from "axios";
-import { useAuth } from "../context/AuthContext";
-
-const API = import.meta.env.VITE_API_URL || "http://localhost:3001";
+import api from "../api/api";
 
 const TYPE_CONFIG = {
   approval_request:    { icon: "📋", color: "text-blue-600",   bg: "bg-blue-50" },
@@ -32,24 +29,21 @@ function timeAgo(dateStr) {
 
 // Bell button shown in the topbar
 export function NotificationBell() {
-  const { token } = useAuth();
   const [open, setOpen]     = useState(false);
   const [notifs, setNotifs] = useState([]);
   const [filter, setFilter] = useState("all");
   const [unread, setUnread] = useState(0);
   const panelRef = useRef(null);
-  const headers  = { Authorization: `Bearer ${token}` };
 
   const load = useCallback(async () => {
     try {
-      const { data } = await axios.get(`${API}/api/notifications`, {
-        headers,
+      const { data } = await api.get("/notifications", {
         params: { limit: 30 },
       });
       setNotifs(data);
       setUnread(data.filter(n => !n.read).length);
     } catch {}
-  }, [token]);
+  }, []);
 
   useEffect(() => { load(); }, [load]);
 
@@ -75,7 +69,7 @@ export function NotificationBell() {
 
   async function markRead(id) {
     try {
-      await axios.put(`${API}/api/notifications/${id}/read`, {}, { headers });
+      await api.put(`/notifications/${id}/read`);
       setNotifs(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
       setUnread(c => Math.max(0, c - 1));
     } catch {}
@@ -83,7 +77,7 @@ export function NotificationBell() {
 
   async function markAllRead() {
     try {
-      await axios.put(`${API}/api/notifications/read-all`, {}, { headers });
+      await api.put("/notifications/read-all");
       setNotifs(prev => prev.map(n => ({ ...n, read: true })));
       setUnread(0);
     } catch {}
@@ -201,34 +195,31 @@ export function NotificationBell() {
 
 // Full-page notification center (routed view)
 export default function NotificationCenter() {
-  const { token } = useAuth();
   const [notifs, setNotifs]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter]   = useState("all");
-  const headers = { Authorization: `Bearer ${token}` };
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await axios.get(`${API}/api/notifications`, {
-        headers,
+      const { data } = await api.get("/notifications", {
         params: { limit: 100 },
       });
       setNotifs(data);
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => { load(); }, [load]);
 
   async function markRead(id) {
-    await axios.put(`${API}/api/notifications/${id}/read`, {}, { headers }).catch(() => {});
+    await api.put(`/notifications/${id}/read`).catch(() => {});
     setNotifs(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
   }
 
   async function markAllRead() {
-    await axios.put(`${API}/api/notifications/read-all`, {}, { headers }).catch(() => {});
+    await api.put("/notifications/read-all").catch(() => {});
     setNotifs(prev => prev.map(n => ({ ...n, read: true })));
   }
 

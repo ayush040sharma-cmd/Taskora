@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   id SERIAL PRIMARY KEY,
   title VARCHAR(500) NOT NULL,
   description TEXT,
-  status VARCHAR(50) DEFAULT 'todo' CHECK (status IN ('todo', 'inprogress', 'done')),
+  status VARCHAR(50) DEFAULT 'todo' CHECK (status IN ('todo', 'inprogress', 'done', 'pending_approval')),
   priority VARCHAR(50) DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
   due_date DATE,
   workspace_id INTEGER REFERENCES workspaces(id) ON DELETE CASCADE,
@@ -34,8 +34,8 @@ CREATE TABLE IF NOT EXISTS tasks (
 -- Add progress, type, estimated_days, start_date, completed_at to tasks
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS progress       INTEGER DEFAULT 0
   CHECK (progress >= 0 AND progress <= 100);
-ALTER TABLE tasks ADD COLUMN IF NOT EXISTS type           VARCHAR(50) DEFAULT 'normal'
-  CHECK (type IN ('normal', 'upgrade', 'rfp'));
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS type           VARCHAR(50) DEFAULT 'task'
+  CHECK (type IN ('task','bug','story','rfp','proposal','presentation','upgrade','poc','normal'));
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS estimated_days INTEGER DEFAULT 3;
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS assigned_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS start_date     DATE;
@@ -214,10 +214,12 @@ CREATE INDEX IF NOT EXISTS idx_cal_ws   ON calendar_events(workspace_id, start_d
 CREATE INDEX IF NOT EXISTS idx_cal_user ON calendar_events(user_id, start_date);
 
 -- ── 3. Extra task columns (safe additions) ───────────────────
-ALTER TABLE tasks ADD COLUMN IF NOT EXISTS estimated_hours NUMERIC(6,1);
-ALTER TABLE tasks ADD COLUMN IF NOT EXISTS actual_hours    NUMERIC(6,1);
-ALTER TABLE tasks ADD COLUMN IF NOT EXISTS recurrence      VARCHAR(20);
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS estimated_hours    NUMERIC(6,1);
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS actual_hours       NUMERIC(6,1);
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS recurrence         VARCHAR(20);
 -- recurrence: null | daily | weekly | monthly
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS estimated_duration NUMERIC(6,2);
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS final_duration     NUMERIC(6,2);
 
 -- ── 4. Effort logs already created in v3, add index if missing
 CREATE INDEX IF NOT EXISTS idx_effort_task ON effort_logs(task_id, log_date DESC);

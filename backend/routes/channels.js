@@ -4,10 +4,11 @@
  * POST /api/channels/:workspaceId/messages
  */
 
-const express = require("express");
-const router  = express.Router();
-const pool    = require("../db");
-const auth    = require("../middleware/auth");
+const express      = require("express");
+const router       = express.Router();
+const pool         = require("../db");
+const auth         = require("../middleware/auth");
+const writeLimiter = require("../utils/writeLimiter");
 
 // Ensure table exists on first load
 pool.query(`
@@ -25,6 +26,15 @@ router.get("/:workspaceId/messages", auth, async (req, res) => {
   const { workspaceId } = req.params;
   const limit  = Math.min(parseInt(req.query.limit)  || 50,  200);
   const offset = parseInt(req.query.offset) || 0;
+
+  const access = await pool.query(
+    `SELECT 1 FROM workspaces WHERE id = $1 AND user_id = $2
+     UNION
+     SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2`,
+    [workspaceId, req.user.id]
+  );
+  if (!access.rows.length) return res.status(403).json({ message: "Access denied" });
+
   try {
     const r = await pool.query(
       `SELECT cm.id, cm.workspace_id, cm.sender_id, cm.content, cm.created_at,
@@ -44,10 +54,18 @@ router.get("/:workspaceId/messages", auth, async (req, res) => {
 });
 
 // POST a new message
-router.post("/:workspaceId/messages", auth, async (req, res) => {
+router.post("/:workspaceId/messages", auth, writeLimiter, async (req, res) => {
   const { workspaceId } = req.params;
   const { content } = req.body;
   if (!content?.trim()) return res.status(400).json({ message: "content is required" });
+
+  const accessPost = await pool.query(
+    `SELECT 1 FROM workspaces WHERE id = $1 AND user_id = $2
+     UNION
+     SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2`,
+    [workspaceId, req.user.id]
+  );
+  if (!accessPost.rows.length) return res.status(403).json({ message: "Access denied" });
 
   try {
     const r = await pool.query(

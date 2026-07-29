@@ -7,10 +7,11 @@
  * DELETE /api/calendar/:id                       — delete event
  */
 
-const express = require("express");
-const router  = express.Router();
-const pool    = require("../db");
-const auth    = require("../middleware/auth");
+const express      = require("express");
+const router       = express.Router();
+const pool         = require("../db");
+const auth         = require("../middleware/auth");
+const writeLimiter = require("../utils/writeLimiter");
 
 // ── Helper: visible by member ─────────────────────────────────
 // Events visible if: workspace match OR personal (user_id match)
@@ -26,6 +27,14 @@ const EVENT_COLS = `
 router.get("/", auth, async (req, res) => {
   const { workspace_id, year, month } = req.query;
   if (!workspace_id) return res.status(400).json({ message: "workspace_id required" });
+
+  const access = await pool.query(
+    `SELECT 1 FROM workspaces WHERE id = $1 AND user_id = $2
+     UNION
+     SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2`,
+    [workspace_id, req.user.id]
+  );
+  if (!access.rows.length) return res.status(403).json({ message: "Access denied" });
 
   // month is 0-indexed on the client (JS Date.getMonth())
   const y = parseInt(year  || new Date().getFullYear());
@@ -76,6 +85,13 @@ router.get("/range", auth, async (req, res) => {
   if (!workspace_id || !start || !end) {
     return res.status(400).json({ message: "workspace_id, start, end required" });
   }
+  const accessR = await pool.query(
+    `SELECT 1 FROM workspaces WHERE id = $1 AND user_id = $2
+     UNION
+     SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2`,
+    [workspace_id, req.user.id]
+  );
+  if (!accessR.rows.length) return res.status(403).json({ message: "Access denied" });
   try {
     const { rows } = await pool.query(
       `SELECT ${EVENT_COLS}
@@ -96,7 +112,7 @@ router.get("/range", auth, async (req, res) => {
 });
 
 // ── POST /api/calendar ───────────────────────────────────────
-router.post("/", auth, async (req, res) => {
+router.post("/", auth, writeLimiter, async (req, res) => {
   const {
     workspace_id, title, description,
     start_date, end_date, start_time, end_time,
@@ -106,6 +122,14 @@ router.post("/", auth, async (req, res) => {
   if (!workspace_id || !title?.trim() || !start_date) {
     return res.status(400).json({ message: "workspace_id, title, start_date required" });
   }
+
+  const accessP = await pool.query(
+    `SELECT 1 FROM workspaces WHERE id = $1 AND user_id = $2
+     UNION
+     SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2`,
+    [workspace_id, req.user.id]
+  );
+  if (!accessP.rows.length) return res.status(403).json({ message: "Access denied" });
 
   const TYPE_COLORS = {
     event:     "#6366f1",

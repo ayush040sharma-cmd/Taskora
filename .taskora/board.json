@@ -1,0 +1,18 @@
+{
+  "project": "Taskora",
+  "manager": "Manager Agent",
+  "last_updated": "2026-05-01",
+  "agents": {
+    "engineer": { "role": "UI/UX and feature development", "status": "busy" },
+    "devops":   { "role": "Deployment, env, CI/CD",        "status": "busy" },
+    "qa":       { "role": "Testing, bugs, audits",         "status": "busy" }
+  },
+  "tasks": [
+    { "id": "ENG-004", "title": "Build firewall middleware + brute force protection", "assigned_to": "engineer", "priority": "critical", "status": "in_progress" },
+    { "id": "ENG-005", "title": "Build SecurityDashboard frontend + real-time alerts", "assigned_to": "engineer", "priority": "critical", "status": "in_progress" },
+    { "id": "DEVOPS-002", "title": "Wire firewall into server.js + schema migration", "assigned_to": "devops", "priority": "critical", "status": "in_progress" },
+    { "id": "QA-004", "title": "Verify firewall blocks known attack patterns", "assigned_to": "qa", "priority": "high", "status": "pending" }
+  ],
+  "completed": [],
+  "blocked": []
+}

@@ -7,14 +7,34 @@
  * GET    /api/effort/summary/:userId — total hours per task (workspace summary)
  */
 
-const express = require("express");
-const router  = express.Router();
-const pool    = require("../db");
-const auth    = require("../middleware/auth");
+const express      = require("express");
+const router       = express.Router();
+const pool         = require("../db");
+const auth         = require("../middleware/auth");
+const writeLimiter = require("../utils/writeLimiter");
+
+// A task has no direct workspace check on effort routes -- access is
+// governed by whether the caller can access the parent task's workspace.
+async function canAccessTask(taskId, userId) {
+  const { rows } = await pool.query(
+    `SELECT t.id FROM tasks t
+     JOIN (
+       SELECT id FROM workspaces WHERE user_id = $2
+       UNION
+       SELECT workspace_id FROM workspace_members WHERE user_id = $2
+     ) AS ws ON ws.id = t.workspace_id
+     WHERE t.id = $1`,
+    [taskId, userId]
+  );
+  return rows.length > 0;
+}
 
 // ── GET /api/effort/:taskId ───────────────────────────────────
 router.get("/:taskId", auth, async (req, res) => {
   try {
+    if (!(await canAccessTask(req.params.taskId, req.user.id))) {
+      return res.status(403).json({ message: "Access denied" });
+    }
     const { rows } = await pool.query(
       `SELECT el.*, u.name AS user_name
        FROM effort_logs el
@@ -40,10 +60,13 @@ router.get("/:taskId", auth, async (req, res) => {
 });
 
 // ── POST /api/effort ─────────────────────────────────────────
-router.post("/", auth, async (req, res) => {
+router.post("/", auth, writeLimiter, async (req, res) => {
   const { task_id, logged_hours, log_date, notes } = req.body;
   if (!task_id || !logged_hours) return res.status(400).json({ message: "task_id and logged_hours required" });
   if (Number(logged_hours) <= 0) return res.status(400).json({ message: "Hours must be > 0" });
+  if (!(await canAccessTask(task_id, req.user.id))) {
+    return res.status(403).json({ message: "Access denied" });
+  }
 
   try {
     const { rows } = await pool.query(

@@ -9,21 +9,28 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-FRONTEND_ROOT = Path(__file__).parent.parent.parent / "frontend" / "src"
-BACKEND_ROOT  = Path(__file__).parent.parent.parent / "backend"
+PROJECT_ROOT  = (Path(__file__).parent.parent.parent).resolve()
+FRONTEND_ROOT = PROJECT_ROOT / "frontend" / "src"
+BACKEND_ROOT  = PROJECT_ROOT / "backend"
 
 MAX_FILE_CHARS = 12_000  # Stay within Claude context window
 
 
 def _resolve_path(file_path: str) -> Optional[Path]:
-    """Resolve a file path relative to the project root or absolute."""
+    """Resolve a file path relative to the project root, rejecting any path
+    (absolute or via ../ traversal) that escapes PROJECT_ROOT."""
     p = Path(file_path)
-    if p.is_absolute() and p.exists():
-        return p
-    for root in [FRONTEND_ROOT, BACKEND_ROOT, Path(file_path).parent]:
-        candidate = root / p
-        if candidate.exists():
-            return candidate
+    candidates = [p] if p.is_absolute() else [FRONTEND_ROOT / p, BACKEND_ROOT / p, PROJECT_ROOT / p]
+    for candidate in candidates:
+        try:
+            resolved = candidate.resolve()
+        except (OSError, RuntimeError):
+            continue
+        if not resolved.exists():
+            continue
+        if not resolved.is_relative_to(PROJECT_ROOT):
+            continue
+        return resolved
     return None
 
 

@@ -10,6 +10,12 @@ router = APIRouter(prefix="/analyze-code", tags=["code"])
 logger = logging.getLogger(__name__)
 
 
+def _validate_file_path(file_path: str) -> None:
+    """Reject obviously malicious paths before they reach the prompt or any tool call."""
+    if not file_path or ".." in file_path or "\x00" in file_path:
+        raise HTTPException(status_code=400, detail="Invalid file_path")
+
+
 ANALYZE_PROMPT = """Analyze the source file at path: {file_path}
 Focus: {focus}
 
@@ -41,6 +47,7 @@ Return JSON:
 
 @router.post("", response_model=AnalyzeCodeResponse)
 async def analyze_code(req: AnalyzeCodeRequest):
+    _validate_file_path(req.file_path)
     prompt = ANALYZE_PROMPT.format(
         file_path=req.file_path,
         focus=req.focus or "all",

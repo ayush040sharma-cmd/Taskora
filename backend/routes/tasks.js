@@ -9,6 +9,7 @@ const { notifyOne } = require("../services/notificationService");
 const { enforceLimit } = require("../middleware/planEnforce");
 const { FEATURES }     = require("../config/licensing");
 const { getAccessLevel, hasAtLeast, requireEditAccess } = require("../middleware/accessLevel");
+const { resolveDueDate } = require("../utils/resolveDueDate");
 
 async function countTasksInWorkspace(req) {
   const { rows } = await pool.query("SELECT COUNT(*)::int AS c FROM tasks WHERE workspace_id = $1", [req.body.workspace_id]);
@@ -193,7 +194,7 @@ router.post("/", auth, validate(schemas.createTask), requireEditAccess, enforceL
         description || null,
         status || "todo",
         priority || "medium",
-        due_date || null,
+        resolveDueDate({ due_date, start_date }),
         start_date || null,
         workspace_id,
         assigned_user_id || null,

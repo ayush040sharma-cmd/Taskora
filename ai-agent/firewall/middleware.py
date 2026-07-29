@@ -52,7 +52,7 @@ SECURITY_HEADERS = {
 }
 
 # Routes that require valid JWT
-PROTECTED_PREFIXES = ["/api/jarvis", "/api/chat", "/api/audit", "/api/tasks"]
+PROTECTED_PREFIXES = ["/api/jarvis", "/api/chat", "/api/audit", "/api/tasks", "/api/tools"]
 
 # Routes that skip attack scanning (e.g. file uploads with binary data)
 SCAN_SKIP_PREFIXES = ["/api/health", "/docs", "/openapi.json", "/redoc"]

@@ -13,6 +13,14 @@ import logging
 router = APIRouter(prefix="/audit", tags=["audit"])
 logger = logging.getLogger(__name__)
 
+ALLOWED_SCOPES = {"full", "ux", "security", "performance"}
+
+
+def _safe_scope(scope: str | None) -> str:
+    if not scope or scope.strip().lower() not in ALLOWED_SCOPES:
+        return "full"
+    return scope.strip().lower()
+
 
 AUDIT_PROMPT = """Perform a comprehensive product audit of the Taskora workspace.
 
@@ -55,7 +63,7 @@ async def run_audit(req: AuditRequest, db: AsyncSession = Depends(get_db)):
     audit_id = str(uuid.uuid4())
     timestamp = datetime.utcnow().isoformat()
 
-    prompt = AUDIT_PROMPT.format(workspace_id=req.workspace_id, scope=req.scope)
+    prompt = AUDIT_PROMPT.format(workspace_id=req.workspace_id, scope=_safe_scope(req.scope))
     messages = [{"role": "user", "content": prompt}]
 
     try:
@@ -66,7 +74,7 @@ async def run_audit(req: AuditRequest, db: AsyncSession = Depends(get_db)):
         )
     except Exception as e:
         logger.error(f"Audit agent error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
     # Parse JSON from Claude's response
     issues_data = []

@@ -10,6 +10,26 @@ const ROLES = [
 
 const roleInfo = Object.fromEntries(ROLES.map(r => [r.value, r]));
 
+// ── Task access tier config ──────────────────────────────────────────────────
+// Separate from the workspace Role above (which governs workspace-level things
+// like managing members) -- this is specifically what a member can do with
+// tasks: view only, create/edit, or full (also manage members/invites).
+const ACCESS_LEVELS = [
+  { value: "viewer", label: "Viewer", icon: "👁", desc: "Can view tasks, not create or edit them" },
+  { value: "editor", label: "Editor", icon: "✏️", desc: "Can create, edit, and move tasks" },
+  { value: "full",   label: "Full",   icon: "🔑", desc: "Can also invite and manage members" },
+];
+const accessInfo = Object.fromEntries(ACCESS_LEVELS.map(a => [a.value, a]));
+
+function AccessBadge({ level }) {
+  const info = accessInfo[level] || accessInfo.editor;
+  return (
+    <span className="member-role-badge" style={{ background: "#f4f5f7", color: "#5e6c84" }}>
+      {info.icon} {info.label}
+    </span>
+  );
+}
+
 function RoleBadge({ role }) {
   const info = roleInfo[role] || { label: role, color: "#5e6c84", bg: "#f4f5f7", icon: "👤" };
   return (
@@ -31,7 +51,7 @@ function StatusBadge({ member }) {
       // Planned leave (future)
       return (
         <span style={{
-          background: "#fff7ed", color: "#c2410c", border: "1px solid #fed7aa",
+          background: "rgba(249,115,22,0.15)", color: "#fb923c", border: "1px solid rgba(249,115,22,0.3)",
           borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 600,
           display: "flex", alignItems: "center", gap: 4,
         }}>
@@ -47,7 +67,7 @@ function StatusBadge({ member }) {
     }
     return (
       <span style={{
-        background: "#fef2f2", color: "#b91c1c", border: "1px solid #fecaca",
+        background: "rgba(239,68,68,0.15)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)",
         borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 600,
       }}>
         🏖️ On leave
@@ -71,6 +91,27 @@ function StatusBadge({ member }) {
     );
   }
 
+  const load = member.load_percent ?? 0;
+  if (load >= 100) {
+    return (
+      <span style={{
+        background: "rgba(239,68,68,0.15)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)",
+        borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 600,
+      }}>
+        🔴 Overloaded ({load}%)
+      </span>
+    );
+  }
+  if (load >= 80) {
+    return (
+      <span style={{
+        background: "rgba(245,158,11,0.15)", color: "#d97706", border: "1px solid rgba(245,158,11,0.3)",
+        borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 600,
+      }}>
+        🟡 High load ({load}%)
+      </span>
+    );
+  }
   return (
     <span style={{
       background: "#f0fdf4", color: "#15803d", border: "1px solid #bbf7d0",
@@ -82,19 +123,24 @@ function StatusBadge({ member }) {
 }
 
 // ── Add Member form ───────────────────────────────────────────────────────────
-function AddMemberForm({ onAdd, onCancel }) {
+function AddMemberForm({ onAdd, onCancel, workspaceId }) {
+  const [tab, setTab]         = useState("email"); // "email" | "link"
   const [email, setEmail]     = useState("");
   const [role, setRole]       = useState("member");
+  const [accessLevel, setAccessLevel] = useState("editor");
   const [error, setError]     = useState("");
   const [loading, setLoading] = useState(false);
+  const [inviteLink, setInviteLink] = useState(null);
+  const [copied, setCopied]   = useState(false);
+  const [invited, setInvited] = useState(null); // { email, email_sent, invite_url, message }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email.trim()) return setError("Email is required");
     setError(""); setLoading(true);
     try {
-      await onAdd(email.trim(), role);
-      setEmail(""); setRole("member");
+      await onAdd(email.trim(), role, accessLevel, (data) => setInvited(data));
+      setEmail(""); setRole("member"); setAccessLevel("editor");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to add member");
     } finally {
@@ -102,32 +148,222 @@ function AddMemberForm({ onAdd, onCancel }) {
     }
   };
 
+  const generateLink = async () => {
+    setLoading(true); setError("");
+    try {
+      const { data } = await api.post("/members/invite", { workspace_id: workspaceId, role, access_level: accessLevel });
+      const url = `${window.location.origin}/join/${data.token}`;
+      setInviteLink({ url, expires_at: data.expires_at, role: data.role });
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to generate invite link");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(inviteLink.url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    });
+  };
+
+  const tabStyle = (active) => ({
+    flex: 1, padding: "7px 0", background: "none", border: "none",
+    cursor: "pointer", fontSize: 13, fontWeight: active ? 600 : 400,
+    color: active ? "var(--tk-accent, #3B82F6)" : "var(--tk-text-muted, #94A3B8)",
+    borderBottom: active ? "2px solid var(--tk-accent, #3B82F6)" : "2px solid transparent",
+    transition: "color 0.15s",
+  });
+
   return (
-    <form className="member-add-form" onSubmit={handleSubmit}>
+    <div className="member-add-form">
       <div className="member-add-title">Add member to workspace</div>
-      {error && <div className="auth-error-banner" style={{ marginBottom: 10 }}>{error}</div>}
-      <div className="member-add-row">
-        <input
-          className="modal-input"
-          type="email"
-          placeholder="teammate@company.com"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          autoFocus
-          style={{ flex: 1 }}
-        />
-        <select className="modal-select" value={role} onChange={e => setRole(e.target.value)} style={{ width: 130 }}>
-          {ROLES.map(r => <option key={r.value} value={r.value}>{r.icon} {r.label}</option>)}
-        </select>
-      </div>
-      <div className="member-role-desc">{roleInfo[role]?.desc}</div>
-      <div className="member-add-actions">
-        <button type="button" className="btn-modal-cancel" onClick={onCancel}>Cancel</button>
-        <button type="submit" className="btn-modal-submit" disabled={loading}>
-          {loading ? "Adding…" : "Add member"}
+
+      {/* Tab switcher */}
+      <div style={{ display: "flex", borderBottom: "1px solid var(--tk-border, #e2e8f0)", marginBottom: 14 }}>
+        <button type="button" style={tabStyle(tab === "email")} onClick={() => { setTab("email"); setInviteLink(null); setError(""); }}>
+          ✉️ By email
+        </button>
+        <button type="button" style={tabStyle(tab === "link")} onClick={() => { setTab("link"); setInviteLink(null); setError(""); }}>
+          🔗 Invite link
         </button>
       </div>
-    </form>
+
+      {error && <div className="auth-error-banner" style={{ marginBottom: 10 }}>{error}</div>}
+
+      {tab === "email" ? (
+        invited ? (
+          /* ── Invite sent / link fallback ── */
+          <div>
+            <div style={{
+              padding: "16px", borderRadius: 10, marginBottom: 14,
+              background: invited.email_sent ? "rgba(34,197,94,0.08)" : "rgba(59,130,246,0.08)",
+              border: `1px solid ${invited.email_sent ? "rgba(34,197,94,0.3)" : "rgba(59,130,246,0.3)"}`,
+            }}>
+              <div style={{ fontSize: 20, marginBottom: 6 }}>{invited.email_sent ? "✉️" : "🔗"}</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--tk-text-primary)", marginBottom: 4 }}>
+                {invited.email_sent ? "Invite email sent!" : "Share this invite link"}
+              </div>
+              <div style={{ fontSize: 12, color: "var(--tk-text-muted)", marginBottom: invited.email_sent ? 0 : 10 }}>
+                {invited.message}
+              </div>
+              {!invited.email_sent && invited.invite_url && (
+                <div>
+                  <div style={{
+                    padding: "8px 12px", borderRadius: 6, marginBottom: 8,
+                    background: "var(--tk-bg-elevated)", border: "1px solid var(--tk-border)",
+                    fontSize: 11, color: "var(--tk-text-secondary)", wordBreak: "break-all",
+                  }}>
+                    {invited.invite_url}
+                  </div>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(invited.invite_url); setCopied(true); setTimeout(() => setCopied(false), 2500); }}
+                    style={{
+                      width: "100%", padding: "8px 0", borderRadius: 8,
+                      background: copied ? "var(--tk-status-ok)" : "var(--tk-gradient)",
+                      color: "#fff", border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                    }}
+                  >
+                    {copied ? "✓ Copied!" : "Copy Invite Link"}
+                  </button>
+                </div>
+              )}
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => { setInvited(null); setEmail(""); }}
+                style={{
+                  flex: 1, padding: "8px 0", borderRadius: 8,
+                  background: "var(--tk-gradient)", color: "#fff",
+                  border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                }}
+              >
+                Invite Another
+              </button>
+              <button type="button" className="btn-modal-cancel" onClick={onCancel}>Done</button>
+            </div>
+          </div>
+        ) : (
+        <form onSubmit={handleSubmit}>
+          <div className="member-add-row">
+            <input
+              className="modal-input"
+              type="email"
+              placeholder="teammate@company.com"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              autoFocus
+              style={{ flex: 1 }}
+            />
+            <select className="modal-select" value={role} onChange={e => setRole(e.target.value)} style={{ width: 130 }}>
+              {ROLES.map(r => <option key={r.value} value={r.value}>{r.icon} {r.label}</option>)}
+            </select>
+          </div>
+          <div className="member-role-desc">{roleInfo[role]?.desc}</div>
+          <div className="member-add-row" style={{ marginTop: 8 }}>
+            <select className="modal-select" value={accessLevel} onChange={e => setAccessLevel(e.target.value)} style={{ width: "100%" }}>
+              {ACCESS_LEVELS.map(a => <option key={a.value} value={a.value}>{a.icon} Task access: {a.label}</option>)}
+            </select>
+          </div>
+          <div className="member-role-desc">{accessInfo[accessLevel]?.desc}</div>
+          <div style={{ fontSize: 11, color: "var(--tk-text-muted, #94A3B8)", marginBottom: 8 }}>
+            💡 Works for both existing Taskora users and new invites — we'll send them an email if they don't have an account yet.
+          </div>
+          <div className="member-add-actions">
+            <button type="button" className="btn-modal-cancel" onClick={onCancel}>Cancel</button>
+            <button type="submit" className="btn-modal-submit" disabled={loading}>
+              {loading ? "Sending…" : "Add / Invite"}
+            </button>
+          </div>
+        </form>
+        )
+      ) : (
+        <div>
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 11, fontWeight: 700, color: "var(--tk-text-muted, #94A3B8)", textTransform: "uppercase", letterSpacing: "0.08em", display: "block", marginBottom: 6 }}>
+              Role for invited user
+            </label>
+            <select className="modal-select" value={role} onChange={e => { setRole(e.target.value); setInviteLink(null); }} style={{ width: "100%" }}>
+              {ROLES.map(r => <option key={r.value} value={r.value}>{r.icon} {r.label}</option>)}
+            </select>
+            <div className="member-role-desc">{roleInfo[role]?.desc}</div>
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 11, fontWeight: 700, color: "var(--tk-text-muted, #94A3B8)", textTransform: "uppercase", letterSpacing: "0.08em", display: "block", marginBottom: 6 }}>
+              Task access for invited user
+            </label>
+            <select className="modal-select" value={accessLevel} onChange={e => { setAccessLevel(e.target.value); setInviteLink(null); }} style={{ width: "100%" }}>
+              {ACCESS_LEVELS.map(a => <option key={a.value} value={a.value}>{a.icon} {a.label}</option>)}
+            </select>
+            <div className="member-role-desc">{accessInfo[accessLevel]?.desc}</div>
+          </div>
+
+          {!inviteLink ? (
+            <div className="member-add-actions">
+              <button type="button" className="btn-modal-cancel" onClick={onCancel}>Cancel</button>
+              <button
+                type="button"
+                className="btn-modal-submit"
+                onClick={generateLink}
+                disabled={loading}
+              >
+                {loading ? "Generating…" : "Generate Invite Link"}
+              </button>
+            </div>
+          ) : (
+            <div>
+              <div style={{
+                padding: "10px 14px", borderRadius: 8,
+                background: "var(--tk-bg-elevated, #0F172A)",
+                border: "1px solid var(--tk-border, #1E293B)",
+                marginBottom: 10,
+              }}>
+                <div style={{ fontSize: 11, color: "var(--tk-text-muted, #94A3B8)", marginBottom: 4 }}>
+                  🔗 Invite link · valid 7 days · {inviteLink.role} access
+                </div>
+                <div style={{
+                  fontSize: 12, color: "var(--tk-text-primary, #E2E8F0)",
+                  wordBreak: "break-all", lineHeight: 1.5,
+                }}>
+                  {inviteLink.url}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={copyLink}
+                  style={{
+                    flex: 1, padding: "8px 0",
+                    background: copied ? "var(--tk-status-ok, #22C55E)" : "var(--tk-gradient, linear-gradient(90deg,#3B82F6,#06B6D4))",
+                    color: "#fff", border: "none", borderRadius: 8,
+                    fontSize: 13, fontWeight: 600, cursor: "pointer",
+                    transition: "background 0.2s",
+                  }}
+                >
+                  {copied ? "✓ Copied!" : "Copy Link"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setInviteLink(null); generateLink(); }}
+                  title="Generate a new link"
+                  style={{
+                    padding: "8px 14px", background: "transparent",
+                    border: "1px solid var(--tk-border, #1E293B)",
+                    borderRadius: 8, fontSize: 12, cursor: "pointer",
+                    color: "var(--tk-text-muted, #94A3B8)",
+                  }}
+                >
+                  ↻ New
+                </button>
+                <button type="button" className="btn-modal-cancel" onClick={onCancel}>Done</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -136,11 +372,13 @@ export default function MembersPanel({ workspaceId }) {
   const [members, setMembers]         = useState([]);
   const [capacities, setCapacities]   = useState({});
   const [loading, setLoading]         = useState(true);
+  const [loadError, setLoadError]     = useState("");
   const [showAdd, setShowAdd]         = useState(false);
   const [toast, setToast]             = useState(null);
   const [changingRole, setChangingRole] = useState(null);
   const [searchText, setSearchText]   = useState("");
   const [filterStatus, setFilterStatus] = useState("all"); // all | available | on_leave | travel
+  const [confirmRemove, setConfirmRemove] = useState(null); // member object
 
   const showMsg = (msg, type = "success") => {
     setToast({ msg, type });
@@ -150,6 +388,7 @@ export default function MembersPanel({ workspaceId }) {
   const load = async () => {
     if (!workspaceId) return;
     setLoading(true);
+    setLoadError("");
     try {
       const [membersRes, teamCapRes] = await Promise.allSettled([
         api.get(`/members?workspace_id=${workspaceId}`),
@@ -159,6 +398,10 @@ export default function MembersPanel({ workspaceId }) {
       const memberList = membersRes.status === "fulfilled" ? membersRes.value.data : [];
       setMembers(memberList);
 
+      if (membersRes.status === "rejected") {
+        setLoadError("Failed to load members. Please try again.");
+      }
+
       // Build capacity map by user_id for quick lookup
       if (teamCapRes.status === "fulfilled") {
         const capMap = {};
@@ -167,6 +410,7 @@ export default function MembersPanel({ workspaceId }) {
       }
     } catch (e) {
       console.error(e);
+      setLoadError("Failed to load members. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -174,11 +418,16 @@ export default function MembersPanel({ workspaceId }) {
 
   useEffect(() => { load(); }, [workspaceId]);
 
-  const handleAdd = async (email, role) => {
-    await api.post("/members", { workspace_id: workspaceId, email, role });
-    showMsg("Member added successfully");
-    setShowAdd(false);
-    await load();
+  const handleAdd = async (email, role, accessLevel, onInvited) => {
+    const res = await api.post("/members", { workspace_id: workspaceId, email, role, access_level: accessLevel });
+    if (res.data?.invited) {
+      // Non-Taskora user — email invite sent (or link returned if no email service)
+      onInvited?.(res.data);
+    } else {
+      showMsg("Member added successfully");
+      setShowAdd(false);
+      await load();
+    }
   };
 
   const handleRoleChange = async (memberId, newRole) => {
@@ -194,11 +443,26 @@ export default function MembersPanel({ workspaceId }) {
     }
   };
 
+  const handleAccessChange = async (member, newLevel) => {
+    setChangingRole(member.member_record_id);
+    try {
+      await api.put(`/members/${member.member_record_id}`, {
+        role: member.role || "member", workspace_id: workspaceId, access_level: newLevel,
+      });
+      setMembers(prev => prev.map(m => m.member_record_id === member.member_record_id ? { ...m, access_level: newLevel } : m));
+      showMsg("Task access updated");
+    } catch (err) {
+      showMsg(err.response?.data?.message || "Failed to update access", "error");
+    } finally {
+      setChangingRole(null);
+    }
+  };
+
   const handleRemove = async (member) => {
-    if (!window.confirm(`Remove ${member.name} from this workspace?`)) return;
     try {
       await api.delete(`/members/${member.member_record_id}?workspace_id=${workspaceId}`);
       showMsg(`${member.name} removed`);
+      setConfirmRemove(null);
       load();
     } catch (err) {
       showMsg(err.response?.data?.message || "Failed to remove member", "error");
@@ -261,14 +525,15 @@ export default function MembersPanel({ workspaceId }) {
       </div>
 
       {/* ── Add member form ── */}
-      {showAdd && <AddMemberForm onAdd={handleAdd} onCancel={() => setShowAdd(false)} />}
+      {showAdd && <AddMemberForm onAdd={handleAdd} onCancel={() => setShowAdd(false)} workspaceId={workspaceId} />}
 
       {/* ── Search + filter bar ── */}
       <div style={{ display: "flex", gap: 10, marginBottom: 16, alignItems: "center" }}>
         <input
           style={{
-            flex: 1, padding: "8px 12px", border: "1.5px solid #e2e8f0",
+            flex: 1, padding: "8px 12px", border: "1.5px solid var(--border)",
             borderRadius: 8, fontSize: 13, outline: "none",
+            background: "var(--card-bg)", color: "var(--text-primary)",
           }}
           placeholder="Search by name or email…"
           value={searchText}
@@ -276,8 +541,8 @@ export default function MembersPanel({ workspaceId }) {
         />
         <select
           style={{
-            padding: "8px 12px", border: "1.5px solid #e2e8f0",
-            borderRadius: 8, fontSize: 13, background: "#fff",
+            padding: "8px 12px", border: "1px solid var(--border)",
+            borderRadius: 8, fontSize: 13, background: "var(--card-bg)", color: "var(--text-primary)",
           }}
           value={filterStatus}
           onChange={e => setFilterStatus(e.target.value)}
@@ -288,6 +553,13 @@ export default function MembersPanel({ workspaceId }) {
           <option value="travel">✈️ Travelling</option>
         </select>
       </div>
+
+      {/* ── Load error ── */}
+      {loadError && (
+        <div style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 12 }}>
+          {loadError}
+        </div>
+      )}
 
       {/* ── Member list ── */}
       {filtered.length === 0 ? (
@@ -346,9 +618,9 @@ export default function MembersPanel({ workspaceId }) {
                     )}
                     {cap?.load_percent !== undefined && (
                       <span style={{
-                        background: cap.load_percent >= 90 ? "#fef2f2" : cap.load_percent >= 70 ? "#fffbeb" : "#f0fdf4",
-                        color: cap.load_percent >= 90 ? "#b91c1c" : cap.load_percent >= 70 ? "#92400e" : "#15803d",
-                        border: `1px solid ${cap.load_percent >= 90 ? "#fecaca" : cap.load_percent >= 70 ? "#fde68a" : "#bbf7d0"}`,
+                        background: cap.load_percent >= 90 ? "rgba(239,68,68,0.15)" : cap.load_percent >= 70 ? "rgba(234,179,8,0.15)" : "rgba(34,197,94,0.15)",
+                        color: cap.load_percent >= 90 ? "#ef4444" : cap.load_percent >= 70 ? "#eab308" : "#22c55e",
+                        border: `1px solid ${cap.load_percent >= 90 ? "rgba(239,68,68,0.3)" : cap.load_percent >= 70 ? "rgba(234,179,8,0.3)" : "rgba(34,197,94,0.3)"}`,
                         borderRadius: 20, padding: "2px 8px", fontSize: 11,
                       }}>
                         📊 {Math.round(cap.load_percent)}% load
@@ -357,28 +629,60 @@ export default function MembersPanel({ workspaceId }) {
                   </div>
                 </div>
 
-                {/* Right: Role selector + remove */}
+                {/* Right: Role selector + access selector + remove */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                   {m.is_owner ? (
-                    <RoleBadge role="manager" />
+                    <>
+                      <RoleBadge role="manager" />
+                      <AccessBadge level="full" />
+                    </>
                   ) : (
-                    <select
-                      className="member-role-select"
-                      value={m.role || "member"}
-                      onChange={e => handleRoleChange(m.member_record_id, e.target.value)}
-                      disabled={changingRole === m.member_record_id}
-                    >
-                      {ROLES.map(r => <option key={r.value} value={r.value}>{r.icon} {r.label}</option>)}
-                    </select>
+                    <>
+                      <select
+                        className="member-role-select"
+                        value={m.role || "member"}
+                        onChange={e => handleRoleChange(m.member_record_id, e.target.value)}
+                        disabled={changingRole === m.member_record_id}
+                        title="Workspace role"
+                      >
+                        {ROLES.map(r => <option key={r.value} value={r.value}>{r.icon} {r.label}</option>)}
+                      </select>
+                      <select
+                        className="member-role-select"
+                        value={m.access_level || "editor"}
+                        onChange={e => handleAccessChange(m, e.target.value)}
+                        disabled={changingRole === m.member_record_id}
+                        title="Task access"
+                      >
+                        {ACCESS_LEVELS.map(a => <option key={a.value} value={a.value}>{a.icon} {a.label}</option>)}
+                      </select>
+                    </>
                   )}
                   {!m.is_owner && (
-                    <button
-                      className="member-remove-btn"
-                      onClick={() => handleRemove(m)}
-                      title="Remove from workspace"
-                    >
-                      ✕
-                    </button>
+                    confirmRemove?.user_id === m.user_id ? (
+                      <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                        <button
+                          className="member-remove-btn"
+                          onClick={() => handleRemove(m)}
+                          style={{ color: "#ef4444", fontSize: 11, fontWeight: 700, padding: "3px 7px" }}
+                          title="Confirm remove"
+                        >Remove</button>
+                        <button
+                          className="member-remove-btn"
+                          onClick={() => setConfirmRemove(null)}
+                          style={{ color: "#94a3b8", fontSize: 11, padding: "3px 7px" }}
+                          title="Cancel"
+                        >Cancel</button>
+                      </div>
+                    ) : (
+                      <button
+                        className="member-remove-btn"
+                        onClick={() => setConfirmRemove(m)}
+                        title="Remove from workspace"
+                      >
+                        ✕
+                      </button>
+                    )
                   )}
                 </div>
               </div>

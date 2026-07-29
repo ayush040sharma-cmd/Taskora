@@ -9,6 +9,7 @@
  */
 import { useState, useMemo, useEffect, useCallback } from "react";
 import api from "../api/api";
+import "../styles/calendar.css";
 
 const DAYS   = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = [
@@ -16,17 +17,19 @@ const MONTHS = [
   "July","August","September","October","November","December",
 ];
 
+// Event type identity colors — semantic, not decorative; stay as hex for SVG/inline use
+// Mapped to closest tk-* token equivalents where exact match exists
 const EVENT_TYPES = [
-  { value: "event",     label: "Event",     color: "#6366f1" },
-  { value: "meeting",   label: "Meeting",   color: "#0ea5e9" },
-  { value: "deadline",  label: "Deadline",  color: "#ef4444" },
-  { value: "milestone", label: "Milestone", color: "#f59e0b" },
-  { value: "leave",     label: "Leave",     color: "#10b981" },
-  { value: "travel",    label: "Travel",    color: "#8b5cf6" },
+  { value: "event",     label: "Event",     color: "#3B82F6" }, // tk-accent
+  { value: "meeting",   label: "Meeting",   color: "#06B6D4" }, // tk-accent-2
+  { value: "deadline",  label: "Deadline",  color: "#EF4444" }, // tk-status-danger
+  { value: "milestone", label: "Milestone", color: "#F59E0B" }, // tk-status-warn
+  { value: "leave",     label: "Leave",     color: "#22C55E" }, // tk-status-ok
+  { value: "travel",    label: "Travel",    color: "#8B5CF6" }, // no token — kept as-is
 ];
 
 const TYPE_COLOR = Object.fromEntries(EVENT_TYPES.map(t => [t.value, t.color]));
-const PRIORITY_COLOR = { high: "#ef4444", medium: "#f59e0b", low: "#10b981" };
+const PRIORITY_COLOR = { high: "#EF4444", medium: "#F59E0B", low: "#22C55E" };
 
 function isSameDay(a, b) {
   return (
@@ -60,7 +63,7 @@ function EventForm({ date, workspaceId, onSave, onClose }) {
         end_date:   form.end_date   || null,
         start_time: form.start_time || undefined,
         end_time:   form.end_time   || undefined,
-        color: TYPE_COLOR[form.type] || "#6366f1",
+        color: TYPE_COLOR[form.type] || "#3B82F6",
       });
       onSave(r.data);
     } catch (err) {
@@ -163,7 +166,7 @@ function EventForm({ date, workspaceId, onSave, onClose }) {
 }
 
 // ── Day Popover ───────────────────────────────────────────────
-function DayPopover({ date, events, deadlines, onEventClick, onClose, onAddEvent }) {
+function DayPopover({ date, events, deadlines, onEventClick, onTaskClick, onClose, onAddEvent }) {
   const label = date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
   return (
     <div className="cal-popover-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -187,21 +190,27 @@ function DayPopover({ date, events, deadlines, onEventClick, onClose, onAddEvent
           <div
             key={ev.id}
             className="cal-popover-item"
-            style={{ borderLeft: `3px solid ${ev.color || TYPE_COLOR[ev.type] || "#6366f1"}` }}
-            onClick={() => onEventClick(ev)}
+            style={{ borderLeft: `3px solid ${ev.color || TYPE_COLOR[ev.type] || "#3B82F6"}`, cursor: "pointer" }}
+            onClick={() => { onEventClick(ev); onClose(); }}
           >
             <div className="cal-popover-title">{ev.title}</div>
-            <div className="cal-popover-meta">{ev.type} · {ev.created_by_name}</div>
+            <div className="cal-popover-meta">{ev.type}{ev.created_by_name ? ` · ${ev.created_by_name}` : ""}</div>
           </div>
         ))}
         {deadlines.map(t => (
           <div
             key={`dl-${t.id}`}
             className="cal-popover-item cal-popover-item--deadline"
-            style={{ borderLeft: `3px solid ${PRIORITY_COLOR[t.priority] || "#999"}` }}
+            style={{ borderLeft: `3px solid ${PRIORITY_COLOR[t.priority] || "#999"}`, cursor: onTaskClick ? "pointer" : "default" }}
+            onClick={() => { if (onTaskClick) { onTaskClick(t); onClose(); } }}
+            title={onTaskClick ? "Click to open task details" : ""}
           >
             <div className="cal-popover-title">🚩 {t.title}</div>
-            <div className="cal-popover-meta">{t.type} · deadline</div>
+            <div className="cal-popover-meta">
+              {t.type || "task"} · deadline
+              {t.priority && <span style={{ marginLeft: 6 }}>· {t.priority}</span>}
+              {onTaskClick && <span style={{ marginLeft: 6, fontSize: 11, opacity: 0.6 }}>↗ open</span>}
+            </div>
           </div>
         ))}
       </div>
@@ -264,23 +273,21 @@ export default function CalendarView({ workspaceId, tasks = [], onTaskClick }) {
     };
     events.forEach(ev => {
       const dateStr = (ev.start_date || "").split("T")[0];
-      const d = new Date(dateStr + "T12:00:00");
-      addToDate(dateStr, ev, `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`);
+      if (!dateStr) return;
+      addToDate(dateStr, ev, dateStr);
     });
     deadlines.forEach(t => {
       if (!t.due_date) return;
       const dateStr = (t.due_date || "").split("T")[0];
-      const d = new Date(dateStr + "T12:00:00");
-      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-      if (!map[key]) map[key] = { events: [], deadlines: [] };
-      map[key].deadlines.push(t);
+      if (!map[dateStr]) map[dateStr] = { events: [], deadlines: [] };
+      map[dateStr].deadlines.push(t);
     });
     return map;
   }, [events, deadlines]);
 
   const getDay = (date) => {
     if (!date) return { events: [], deadlines: [] };
-    const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
     return evsByDate[key] || { events: [], deadlines: [] };
   };
 
@@ -392,9 +399,9 @@ export default function CalendarView({ workspaceId, tasks = [], onTaskClick }) {
                         <div
                           key={ev.id}
                           className="cal-ev-chip"
-                          style={{ background: (ev.color || TYPE_COLOR[ev.type] || "#6366f1") + "22",
-                                   borderLeft: `2px solid ${ev.color || TYPE_COLOR[ev.type] || "#6366f1"}`,
-                                   color: ev.color || TYPE_COLOR[ev.type] || "#6366f1" }}
+                          style={{ background: (ev.color || TYPE_COLOR[ev.type] || "#3B82F6") + "22",
+                                   borderLeft: `2px solid ${ev.color || TYPE_COLOR[ev.type] || "#3B82F6"}`,
+                                   color: ev.color || TYPE_COLOR[ev.type] || "#3B82F6" }}
                           title={ev.title}
                         >
                           {ev.title}
@@ -405,7 +412,7 @@ export default function CalendarView({ workspaceId, tasks = [], onTaskClick }) {
                           key={`dl-${t.id}`}
                           className="cal-ev-chip cal-ev-chip--deadline"
                           style={{ borderLeft: `2px solid ${PRIORITY_COLOR[t.priority] || "#999"}` }}
-                          title={t.title}
+                          title={t.priority ? `${t.title} (${t.priority} priority)` : t.title}
                         >
                           🚩 {t.title}
                         </div>
@@ -430,7 +437,7 @@ export default function CalendarView({ workspaceId, tasks = [], onTaskClick }) {
           <div
             key={ev.id}
             className="cal-sidebar-item"
-            style={{ borderLeft: `3px solid ${ev.color || TYPE_COLOR[ev.type] || "#6366f1"}` }}
+            style={{ borderLeft: `3px solid ${ev.color || TYPE_COLOR[ev.type] || "#3B82F6"}` }}
           >
             <div className="cal-sidebar-date">
               {new Date((ev.start_date || "").split("T")[0] + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
@@ -463,6 +470,7 @@ export default function CalendarView({ workspaceId, tasks = [], onTaskClick }) {
           events={getDay(popoverDate).events}
           deadlines={getDay(popoverDate).deadlines}
           onEventClick={ev => { setSelectedEv(ev); setPopoverDate(null); }}
+          onTaskClick={onTaskClick || null}
           onClose={() => setPopoverDate(null)}
           onAddEvent={handleAddEventFromPopover}
         />

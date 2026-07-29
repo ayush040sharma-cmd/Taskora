@@ -1,9 +1,9 @@
 const express  = require("express");
 const router   = express.Router();
-const bcrypt   = require("bcryptjs");
 const crypto   = require("crypto");
 const pool     = require("../db");
 const adminAuth = require("../middleware/adminAuth");
+const { sendPasswordReset } = require("../services/emailService");
 
 // All routes require manager role
 router.use(adminAuth);
@@ -81,13 +81,28 @@ router.put("/users/:id", async (req, res) => {
 });
 
 // POST /api/admin/users/:id/reset-password
+// Sends the user a password-reset email via the same token flow as
+// self-service forgot-password (routes/auth.js), rather than generating a
+// password and returning it in the response -- the admin triggers the
+// reset but never actually sees the user's new credential in plaintext.
 router.post("/users/:id/reset-password", async (req, res) => {
   try {
-    const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$";
-    const newPassword = Array.from({ length: 12 }, () => chars[crypto.randomInt(chars.length)]).join("");
-    const hash = await bcrypt.hash(newPassword, 10);
-    await pool.query("UPDATE users SET password_hash = $1 WHERE id = $2", [hash, req.params.id]);
-    res.json({ newPassword });
+    const userR = await pool.query("SELECT id, email, name FROM users WHERE id = $1", [req.params.id]);
+    const user = userR.rows[0];
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const token  = crypto.randomBytes(32).toString("hex");
+    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await pool.query(
+      "UPDATE users SET reset_token=$1, reset_token_expiry=$2 WHERE id=$3",
+      [token, expiry, user.id]
+    );
+
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const resetLink    = `${frontendUrl}/reset-password?token=${token}`;
+    await sendPasswordReset({ toEmail: user.email, userName: user.name, resetLink });
+
+    res.json({ message: `Password reset link sent to ${user.email}` });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }

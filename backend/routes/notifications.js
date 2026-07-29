@@ -55,11 +55,11 @@ router.patch("/:id/read", auth, async (req, res) => {
 // PATCH /api/notifications/read-all
 router.patch("/read-all", auth, async (req, res) => {
   try {
-    await pool.query(
+    const result = await pool.query(
       "UPDATE notifications SET read=TRUE WHERE user_id=$1 AND read=FALSE",
       [req.user.id]
     );
-    res.json({ ok: true });
+    res.json({ ok: true, updated: result.rowCount });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }

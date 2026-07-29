@@ -12,9 +12,13 @@ const express = require("express");
 const router  = express.Router();
 const pool    = require("../db");
 const auth    = require("../middleware/auth");
+const { requireMinRole } = require("../middleware/rbac");
+const { requireFeature }  = require("../middleware/planEnforce");
+const { FEATURES }        = require("../config/licensing");
 const ai      = require("../services/aiEngine");
 
 // ── POST /api/ai/predict/:taskId ──────────────────────────────────────────────
+// Single-task risk prediction — open to all roles (any user can check their own task)
 router.post("/predict/:taskId", auth, async (req, res) => {
   const start = Date.now();
   try {
@@ -107,12 +111,15 @@ router.post("/predict/:taskId", auth, async (req, res) => {
 });
 
 // ── POST /api/ai/analyze/:workspaceId ─────────────────────────────────────────
-router.post("/analyze/:workspaceId", auth, async (req, res) => {
+// Batch workspace analysis — manager+ only (mirrors ai-risk MANAGER_ONLY_VIEW)
+router.post("/analyze/:workspaceId", auth, requireMinRole("manager"), requireFeature(FEATURES.AI_REASONING), async (req, res) => {
   const start = Date.now();
   try {
-    // Verify access
+    // Verify access (owner or workspace member)
     const ws = await pool.query(
-      "SELECT id FROM workspaces WHERE id = $1 AND user_id = $2",
+      `SELECT w.id FROM workspaces w
+       LEFT JOIN workspace_members wm ON wm.workspace_id = w.id AND wm.user_id = $2
+       WHERE w.id = $1 AND (w.user_id = $2 OR wm.user_id IS NOT NULL)`,
       [req.params.workspaceId, req.user.id]
     );
     if (!ws.rows.length) return res.status(403).json({ message: "Access denied" });
@@ -188,10 +195,13 @@ router.post("/analyze/:workspaceId", auth, async (req, res) => {
 });
 
 // ── GET /api/ai/health/:workspaceId ──────────────────────────────────────────
-router.get("/health/:workspaceId", auth, async (req, res) => {
+// Workspace health score — manager+ only
+router.get("/health/:workspaceId", auth, requireMinRole("manager"), requireFeature(FEATURES.AI_REASONING), async (req, res) => {
   try {
     const ws = await pool.query(
-      "SELECT id FROM workspaces WHERE id = $1 AND user_id = $2",
+      `SELECT w.id FROM workspaces w
+       LEFT JOIN workspace_members wm ON wm.workspace_id = w.id AND wm.user_id = $2
+       WHERE w.id = $1 AND (w.user_id = $2 OR wm.user_id IS NOT NULL)`,
       [req.params.workspaceId, req.user.id]
     );
     if (!ws.rows.length) return res.status(403).json({ message: "Access denied" });
@@ -213,10 +223,13 @@ router.get("/health/:workspaceId", auth, async (req, res) => {
 });
 
 // ── GET /api/ai/alerts/:workspaceId ──────────────────────────────────────────
-router.get("/alerts/:workspaceId", auth, async (req, res) => {
+// Prescriptive alerts — manager+ only
+router.get("/alerts/:workspaceId", auth, requireMinRole("manager"), requireFeature(FEATURES.AI_REASONING), async (req, res) => {
   try {
     const ws = await pool.query(
-      "SELECT id FROM workspaces WHERE id = $1 AND user_id = $2",
+      `SELECT w.id FROM workspaces w
+       LEFT JOIN workspace_members wm ON wm.workspace_id = w.id AND wm.user_id = $2
+       WHERE w.id = $1 AND (w.user_id = $2 OR wm.user_id IS NOT NULL)`,
       [req.params.workspaceId, req.user.id]
     );
     if (!ws.rows.length) return res.status(403).json({ message: "Access denied" });
@@ -258,7 +271,7 @@ router.get("/alerts/:workspaceId", auth, async (req, res) => {
     const health      = ai.calculateProjectHealth(tasksRow.rows, workloadData);
     const teamStress  = ai.calculateTeamStress(workloadData);
 
-    res.json({ alerts, health, team_stress: teamStress, at_risk_count: health.at_risk_count });
+    res.json({ alerts, health, team_stress: teamStress, at_risk_count: health.at_risk_count, predictions });
   } catch (err) {
     res.status(500).json({ message: "Alerts failed" });
   }

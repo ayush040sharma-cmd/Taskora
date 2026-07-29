@@ -73,8 +73,8 @@ async def run_audit(req: AuditRequest, db: AsyncSession = Depends(get_db)):
             workspace_id=req.workspace_id,
         )
     except Exception as e:
-        logger.error(f"Audit agent error: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        logger.error(f"Audit agent error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Audit failed. Please try again.")
 
     # Parse JSON from Claude's response
     issues_data = []

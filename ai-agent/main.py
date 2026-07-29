@@ -68,7 +68,9 @@ except Exception as e:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3001", "*"],
+    # No wildcard: "*" combined with allow_credentials=True let any origin
+    # make credentialed requests to this service. List explicit origins only.
+    allow_origins=["http://localhost:5173", "http://localhost:3001"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -102,8 +104,12 @@ async def list_tools():
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
-    logger.error(f"Unhandled exception: {exc}")
-    return JSONResponse(status_code=500, content={"detail": "Internal server error", "error": str(exc)})
+    # Full detail goes to the server log only — it used to also go in the
+    # response body (`"error": str(exc)`), leaking internal exception text
+    # (stack-adjacent detail, DB errors, file paths) to every API client on
+    # every unhandled exception.
+    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 
 if __name__ == "__main__":

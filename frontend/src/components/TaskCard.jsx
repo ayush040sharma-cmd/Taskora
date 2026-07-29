@@ -1,33 +1,41 @@
 import { useState, useRef, useEffect } from "react";
 import { Draggable } from "@hello-pangea/dnd";
-import ProgressBar from "./ProgressBar";
+import { LuTrash2, LuSquarePen, LuCalendar, LuMessageSquare, LuLink, LuBrain, LuClock, LuCircleAlert, LuClipboardList, LuBug, LuBookOpen, LuFileStack, LuFilePenLine, LuPresentation, LuArrowUp, LuFlaskConical } from "react-icons/lu";
 import api from "../api/api";
+import { getInitials } from "../utils/avatar";
 
-const IconTrash  = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>;
-const IconEdit   = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
-const IconCal    = () => <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
-const IconMsg    = () => <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>;
-const IconLink   = () => <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>;
-const IconBrain  = () => <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-5 0V7a2.5 2.5 0 0 1 2.5-2.5Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5"/><path d="M20 7a2 2 0 0 0-2-2h-2"/><path d="M4 7a2 2 0 0 1 2-2h2"/><path d="M20 14a2 2 0 0 1-2 2h-2"/><path d="M4 14a2 2 0 0 0 2 2h2"/></svg>;
-const IconClock  = () => <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
-const IconStuck  = () => <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>;
+const IconTrash  = () => <LuTrash2 size={13} />;
+const IconEdit   = () => <LuSquarePen size={13} />;
+const IconCal    = () => <LuCalendar size={11} />;
+const IconMsg    = () => <LuMessageSquare size={11} />;
+const IconLink   = () => <LuLink size={11} />;
+const IconBrain  = () => <LuBrain size={11} />;
+const IconClock  = () => <LuClock size={11} />;
+const IconStuck  = () => <LuCircleAlert size={11} />;
 
 const TYPE_META = {
-  task:         { label: "Task",         icon: "📋" },
-  bug:          { label: "Bug",          icon: "🐛" },
-  story:        { label: "Story",        icon: "📖" },
-  rfp:          { label: "RFP",          icon: "📑" },
-  proposal:     { label: "Proposal",     icon: "📝" },
-  presentation: { label: "Presentation", icon: "🎤" },
-  upgrade:      { label: "Upgrade",      icon: "⬆️"  },
-  poc:          { label: "POC",          icon: "🔬" },
+  task:         { label: "Task",         icon: LuClipboardList },
+  bug:          { label: "Bug",          icon: LuBug },
+  story:        { label: "Story",        icon: LuBookOpen },
+  rfp:          { label: "RFP",          icon: LuFileStack },
+  proposal:     { label: "Proposal",     icon: LuFilePenLine },
+  presentation: { label: "Presentation", icon: LuPresentation },
+  upgrade:      { label: "Upgrade",      icon: LuArrowUp },
+  poc:          { label: "POC",          icon: LuFlaskConical },
 };
 
 const RISK_LEVELS = {
-  low:      { label: "Low risk",      color: "#10b981", bg: "#f0fdf4" },
-  medium:   { label: "Medium risk",   color: "#f59e0b", bg: "#fffbeb" },
-  high:     { label: "High risk",     color: "#ef4444", bg: "#fef2f2" },
-  critical: { label: "Critical risk", color: "#dc2626", bg: "#fef2f2" },
+  low:      { label: "Low risk",      pillClass: "tk-pill--ok" },
+  medium:   { label: "Medium risk",   pillClass: "tk-pill--warn" },
+  high:     { label: "High risk",     pillClass: "tk-pill--danger" },
+  critical: { label: "Critical risk", pillClass: "tk-pill--danger" },
+};
+
+const PRIORITY_PILL = {
+  low:      "tk-pill--ok",
+  medium:   "tk-pill--warn",
+  high:     "tk-pill--danger",
+  critical: "tk-pill--danger",
 };
 
 function getRiskLevel(score) {
@@ -58,7 +66,7 @@ function isDueSoon(d) {
 
 function isStuck(task) {
   if (task.status !== "inprogress" && task.status !== "in_progress") return false;
-  const ref = task.created_at;
+  const ref = task.status_changed_at || task.updated_at || task.created_at;
   if (!ref) return false;
   const days = (Date.now() - new Date(ref)) / (1000 * 60 * 60 * 24);
   return days >= 5;
@@ -66,8 +74,8 @@ function isStuck(task) {
 
 function WorkloadBadge({ task }) {
   if (!task.assigned_user_id) return null;
-  if (task.assignee_on_leave)    return <span className="wl-badge wl-badge--leave" title="On leave">🏖 Leave</span>;
-  if (task.assignee_travel_mode) return <span className="wl-badge wl-badge--travel" title="Travel mode">✈️ Travel</span>;
+  if (task.assignee_on_leave)    return <span className="tk-pill tk-pill--ok"     style={{ fontSize: 11 }}>🏖 Leave</span>;
+  if (task.assignee_travel_mode) return <span className="tk-pill tk-pill--accent" style={{ fontSize: 11 }}>✈️ Travel</span>;
   return null;
 }
 
@@ -78,53 +86,79 @@ function InsightPanel({ task }) {
   if (!hasData) return null;
 
   return (
-    <div className="task-insight-panel">
-      <div className="task-insight-header">
+    <div className="tk-card-ai" style={{ marginTop: "var(--tk-space-2)", padding: "var(--tk-space-3)" }}>
+      <div className="tk-card-ai__glow" />
+      <div className="tk-insight-header">
         <IconBrain /> AI Insight
       </div>
       {riskMeta && (
-        <div className="task-insight-row" style={{ color: riskMeta.color, background: riskMeta.bg }}>
-          <span>⚠ {riskMeta.label}</span>
-          <span style={{ fontWeight: 700 }}>{Math.round(task.risk_score)}/100</span>
+        <div className="tk-insight-row">
+          <span className={`tk-pill ${riskMeta.pillClass}`} style={{ fontSize: 10, padding: "2px 8px" }}>
+            ⚠ {riskMeta.label}
+          </span>
+          <span className="tk-insight-row-value">{Math.round(task.risk_score)}/100</span>
         </div>
       )}
       {task.delay_probability != null && (
-        <div className="task-insight-row">
+        <div className="tk-insight-row">
           <span>Delay probability</span>
-          <span style={{ fontWeight: 700, color: task.delay_probability > 0.6 ? "#ef4444" : "#64748b" }}>
+          <span className={`tk-insight-row-value${task.delay_probability > 0.6 ? " tk-text-danger" : ""}`}>
             {Math.round(task.delay_probability * 100)}%
           </span>
         </div>
       )}
       {task.estimated_hours && (
-        <div className="task-insight-row">
+        <div className="tk-insight-row">
           <span>Estimated hours</span>
-          <span style={{ fontWeight: 700 }}>{task.estimated_hours}h</span>
+          <span className="tk-insight-row-value">{task.estimated_hours}h</span>
         </div>
       )}
       {task.ai_suggestion && (
-        <div className="task-insight-suggestion">💡 {task.ai_suggestion}</div>
+        <div className="tk-insight-suggestion">💡 {task.ai_suggestion}</div>
       )}
       {task.ai_fallback && (
-        <div className="task-insight-fallback">Rule-based analysis</div>
+        <div className="tk-insight-fallback">Rule-based analysis</div>
       )}
     </div>
   );
 }
 
-export default function TaskCard({ task, index, columnId, onDelete, onUpdate, onOpenDetail }) {
-  const [progress, setProgress]     = useState(task.progress || 0);
-  const [editingPct, setEditingPct] = useState(false);
-  const [tempPct, setTempPct]       = useState(task.progress || 0);
-  const [hovered, setHovered]       = useState(false);
+export default function TaskCard({ task, index, columnId, onDelete, onUpdate, onOpenDetail, canEdit = true }) {
+  const [hovered, setHovered] = useState(false);
 
-  // Inline title editing
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [popupPos, setPopupPos] = useState({ top: 0, left: 0 });
+  const deleteTimerRef = useRef(null);
+  const trashBtnRef = useRef(null);
+
+  const openDeletePopup = (e) => {
+    e.stopPropagation();
+    const rect = trashBtnRef.current?.getBoundingClientRect();
+    if (rect) {
+      setPopupPos({ top: rect.top - 8, left: rect.right });
+    }
+    setDeleteConfirm(true);
+    deleteTimerRef.current = setTimeout(() => setDeleteConfirm(false), 5000);
+  };
+
+  const confirmDelete = (e) => {
+    e.stopPropagation();
+    clearTimeout(deleteTimerRef.current);
+    setDeleteConfirm(false);
+    onDelete(task.id);
+  };
+
+  const cancelDelete = (e) => {
+    e?.stopPropagation();
+    clearTimeout(deleteTimerRef.current);
+    setDeleteConfirm(false);
+  };
+
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft]     = useState(task.title);
   const titleInputRef = useRef(null);
 
-  // Track if any inline editing is active (disables drag)
-  const isEditing = editingTitle || editingPct;
+  const isEditing = editingTitle;
 
   useEffect(() => {
     if (editingTitle) {
@@ -132,12 +166,6 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
       titleInputRef.current?.select();
     }
   }, [editingTitle]);
-
-  // Sync progress when task prop changes (e.g. after drag to inprogress)
-  useEffect(() => {
-    setProgress(task.progress || 0);
-    setTempPct(task.progress || 0);
-  }, [task.progress]);
 
   const saveTitle = async () => {
     const trimmed = titleDraft.trim();
@@ -151,66 +179,84 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
     }
   };
 
-  const saveProgress = async (val) => {
-    const pct = Math.max(0, Math.min(100, Number(val)));
-    setProgress(pct);
-    setEditingPct(false);
+  const [startError, setStartError] = useState("");
+
+  const startTask = async (e) => {
+    e.stopPropagation();
+    setStartError("");
     try {
-      const res = await api.put(`/tasks/${task.id}`, { progress: pct });
+      const res = await api.put(`/tasks/${task.id}`, { status: "inprogress" });
       onUpdate && onUpdate(res.data);
-    } catch {}
+    } catch {
+      setStartError("Failed to start task");
+      setTimeout(() => setStartError(""), 3000);
+    }
   };
 
-  const typeMeta  = TYPE_META[task.type] || { label: task.type, icon: "📋" };
+  const typeMeta  = TYPE_META[task.type] || { label: task.type, icon: LuClipboardList };
   const riskLevel = getRiskLevel(task.risk_score);
   const riskMeta  = riskLevel ? RISK_LEVELS[riskLevel] : null;
   const isBlocked = (task.blocking_dep_count || 0) > 0;
   const stuck     = isStuck(task);
   const overdue   = isOverdue(task.due_date);
   const dueSoon   = !overdue && isDueSoon(task.due_date);
-  const stateClass = overdue ? "task-card--overdue" : stuck ? "task-card--stuck" : "";
-
-  // Only show progress bar in inprogress column
-  const showProgress = columnId === "inprogress" || task.status === "inprogress";
+  const isTodo    = columnId === "todo" || task.status === "todo";
+  const priorityPillClass = PRIORITY_PILL[task.priority] || "tk-pill--warn";
 
   return (
-    <Draggable draggableId={String(task.id)} index={index}>
+    <Draggable draggableId={String(task.id)} index={index} isDragDisabled={!canEdit}>
       {(provided, snapshot) => (
         <div
           ref={provided.innerRef}
           {...provided.draggableProps}
           {...(isEditing ? {} : provided.dragHandleProps)}
-          className={`task-card ${snapshot.isDragging ? "dragging" : ""} ${isBlocked ? "task-card--blocked" : ""} ${stateClass}`}
+          className={`tk-task-card${snapshot.isDragging ? " dragging" : ""}${isBlocked ? " tk-task-card--blocked" : ""}`}
           style={provided.draggableProps.style}
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
         >
-          {/* Status strip — overdue / stuck */}
+          {/* Status banner — overdue / stuck */}
           {overdue && (
-            <div className="task-status-strip task-status-strip--overdue">
+            <div className="tk-task-banner tk-task-banner--danger">
               <IconCal /> Overdue
             </div>
           )}
           {!overdue && stuck && (
-            <div className="task-status-strip task-status-strip--stuck">
+            <div className="tk-task-banner tk-task-banner--warn">
               <IconStuck /> Stuck 5+ days
             </div>
           )}
 
-          {/* Blocked indicator strip */}
+          {/* Blocked reason — captured when the task was moved to Blocked */}
+          {task.status === "blocked" && task.blocked_reason && (
+            <div
+              className={`tk-task-banner tk-task-banner--danger`}
+              title={`Severity: ${task.blocked_severity || "medium"}`}
+            >
+              <IconStuck /> {task.blocked_reason}
+              {task.blocked_tagged_user_name && (
+                <span style={{ opacity: 0.85 }}> · {task.blocked_tagged_user_name}</span>
+              )}
+            </div>
+          )}
+
+          {/* Blocked indicator */}
           {isBlocked && (
-            <div className="task-blocked-bar" title={`Blocked by ${task.blocking_dep_count} unresolved dependenc${task.blocking_dep_count === 1 ? "y" : "ies"}`}>
+            <div
+              className="tk-task-blocked-bar"
+              title={`Blocked by ${task.blocking_dep_count} unresolved dependenc${task.blocking_dep_count === 1 ? "y" : "ies"}`}
+            >
               <IconLink />
               <span>Blocked · {task.blocking_dep_count} dep{task.blocking_dep_count !== 1 ? "s" : ""}</span>
             </div>
           )}
 
           {/* Title row */}
-          <div className="task-card-top">
+          <div className="tk-task-top">
             {editingTitle ? (
               <input
                 ref={titleInputRef}
-                className="task-title-input"
+                className="tk-task-title-input"
                 value={titleDraft}
                 onChange={e => setTitleDraft(e.target.value)}
                 onBlur={saveTitle}
@@ -223,7 +269,7 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
               />
             ) : (
               <div
-                className="task-card-title"
+                className="tk-task-title"
                 onClick={e => { e.stopPropagation(); onOpenDetail && onOpenDetail(task); }}
                 title="Click to open"
               >
@@ -231,48 +277,89 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
               </div>
             )}
 
-            {/* Action buttons */}
-            <div className="task-card-actions">
-              <button
-                className="task-card-edit"
-                onClick={e => { e.stopPropagation(); onOpenDetail && onOpenDetail(task); }}
-                title="Edit task"
+            {canEdit && (
+              <div className="tk-task-actions">
+                <button
+                  className="tk-task-action-btn"
+                  onClick={e => { e.stopPropagation(); onOpenDetail && onOpenDetail(task); }}
+                  title="Edit task"
+                >
+                  <IconEdit />
+                </button>
+                <button
+                  ref={trashBtnRef}
+                  className="tk-task-action-btn tk-task-action-btn--delete"
+                  onClick={openDeletePopup}
+                  title="Delete task"
+                >
+                  <IconTrash />
+                </button>
+              </div>
+            )}
+
+            {deleteConfirm && (
+              <div
+                onClick={e => e.stopPropagation()}
+                style={{
+                  position: "fixed",
+                  top: popupPos.top,
+                  left: popupPos.left,
+                  transform: "translate(-100%, -100%)",
+                  background: "#fff",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 10,
+                  padding: "12px 14px",
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.13), 0 1px 4px rgba(0,0,0,0.06)",
+                  zIndex: 9999,
+                  minWidth: 190,
+                  textAlign: "left",
+                }}
               >
-                <IconEdit />
-              </button>
-              <button
-                className="task-card-delete"
-                onClick={e => { e.stopPropagation(); onDelete(task.id); }}
-                title="Delete task"
-              >
-                <IconTrash />
-              </button>
-            </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 3 }}>Delete task?</div>
+                <div style={{ fontSize: 11, color: "#64748b", marginBottom: 10, lineHeight: 1.4 }}>
+                  This action cannot be undone.
+                </div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button
+                    onClick={cancelDelete}
+                    style={{ flex: 1, padding: "6px 0", border: "1px solid #e2e8f0", borderRadius: 6, fontSize: 12, fontWeight: 600, background: "#f8fafc", color: "#64748b", cursor: "pointer" }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDelete}
+                    style={{ flex: 1, padding: "6px 0", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, background: "#ef4444", color: "#fff", cursor: "pointer" }}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Type + Priority + Risk badge + Due date */}
-          <div className="task-card-meta">
+          {/* Type + Priority + Risk + Due date */}
+          <div className="tk-task-meta">
             {task.type && (
-              <span className={`wl-type-badge wl-type--${task.type}`}>
-                {typeMeta.icon} {typeMeta.label}
+              <span className="tk-task-type" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <typeMeta.icon size={11} /> {typeMeta.label}
               </span>
             )}
-            <span className={`priority-badge ${task.priority}`}>
-              <span className="priority-dot" />
-              {task.priority?.charAt(0).toUpperCase() + task.priority?.slice(1)}
-            </span>
+            {task.priority && (
+              <span className={`tk-pill ${priorityPillClass}`} style={{ fontSize: 11, padding: "2px 10px" }}>
+                {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+              </span>
+            )}
             {riskMeta && riskLevel !== "low" && (
               <span
-                className="task-risk-badge"
-                style={{ color: riskMeta.color, background: riskMeta.bg, border: `1px solid ${riskMeta.color}33` }}
+                className={`tk-pill ${riskMeta.pillClass}`}
+                style={{ fontSize: 11, padding: "2px 10px" }}
                 title={`Risk score: ${Math.round(task.risk_score)}/100`}
               >
                 ⚠ {Math.round(task.risk_score)}
               </span>
             )}
             {task.due_date && (
-              <span
-                className={`task-due-date ${overdue ? "overdue" : ""} ${dueSoon ? "due-soon" : ""}`}
+              <span className={`tk-task-due${overdue ? " tk-task-due--overdue" : ""}${dueSoon ? " tk-task-due--soon" : ""}`}
                 title={overdue ? "Overdue!" : dueSoon ? "Due within 48 hours" : ""}
               >
                 {dueSoon ? <IconClock /> : <IconCal />}
@@ -284,53 +371,37 @@ export default function TaskCard({ task, index, columnId, onDelete, onUpdate, on
           {/* Workload badge */}
           <WorkloadBadge task={task} />
 
-          {/* Progress bar — only shown in "In Progress" column */}
-          {showProgress && (
-            <div className="task-card-progress" onClick={e => { e.stopPropagation(); setEditingPct(true); setTempPct(progress); }}>
-              <ProgressBar progress={progress} height={5} showLabel={false} />
-              {editingPct ? (
-                <div className="task-progress-edit" onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()}>
-                  <input
-                    type="range" min="0" max="100" step="5"
-                    value={tempPct}
-                    onChange={e => setTempPct(e.target.value)}
-                    className="task-progress-slider"
-                    autoFocus
-                  />
-                  <span className="task-progress-pct">{tempPct}%</span>
-                  <button className="task-progress-save" onClick={() => saveProgress(tempPct)}>✓</button>
-                  <button className="task-progress-cancel" onClick={() => setEditingPct(false)}>✕</button>
-                </div>
-              ) : (
-                <span className="task-progress-pct-label">{progress}%</span>
-              )}
-            </div>
-          )}
-
-          {/* Footer: Assignee + comment count + recurrence */}
-          <div className="task-card-footer">
+          {/* Footer: Start button + Assignee + comments + recurrence */}
+          <div className="tk-task-footer">
+            {isTodo && canEdit && (
+              <button className="tk-task-start-btn" onClick={startTask} title="Move to In Progress">
+                ▶ Start
+              </button>
+            )}
             {task.assignee_name && (
-              <div className="task-assignee">
-                <div className="task-assignee-avatar">
+              <div className="tk-task-assignee">
+                <div className="tk-avatar">
                   {task.assignee_name.slice(0, 2).toUpperCase()}
                 </div>
-                <span className="task-assignee-name">{task.assignee_name}</span>
+                <span className="tk-task-assignee-name">{task.assignee_name}</span>
               </div>
             )}
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: "auto" }}>
+            <div className="tk-task-footer-end">
               {task.comment_count > 0 && (
-                <div className="task-comment-count" title={`${task.comment_count} comment${task.comment_count !== 1 ? "s" : ""}`}>
+                <div className="tk-task-comments" title={`${task.comment_count} comment${task.comment_count !== 1 ? "s" : ""}`}>
                   <IconMsg />
                   <span>{task.comment_count}</span>
                 </div>
               )}
               {task.recurrence && (
-                <span className="task-recurrence-badge" title={`Recurring: ${task.recurrence}`}>
+                <span className="tk-task-recurrence" title={`Recurring: ${task.recurrence}`}>
                   🔁 {task.recurrence}
                 </span>
               )}
             </div>
           </div>
+
+          {startError && <div className="tk-task-error">{startError}</div>}
 
           {/* AI hover insight panel */}
           {hovered && !snapshot.isDragging && !isEditing && <InsightPanel task={task} />}

@@ -30,7 +30,7 @@ function timeAgo(dateStr) {
 }
 
 function Avatar({ name, size = 32 }) {
-  const COLORS = ["#6366f1","#8b5cf6","#06b6d4","#10b981","#f59e0b","#ef4444"];
+  const COLORS = ["#3B82F6","#8b5cf6","#06b6d4","#10b981","#f59e0b","#ef4444"];
   const bg = COLORS[(name?.charCodeAt(0) || 0) % COLORS.length];
   return (
     <div style={{
@@ -220,7 +220,7 @@ function StartCallModal({ channelName, onClose }) {
             <div style={{ fontSize: 13, color: "#64748b", marginBottom: 16 }}>
               Opens a free video call via Jit.si. Share the link with your team.
             </div>
-            <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 12px", fontSize: 12, color: "#64748b", wordBreak: "break-all", textAlign: "left", marginBottom: 12 }}>
+            <div style={{ background: "var(--column-bg)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 12px", fontSize: 12, color: "var(--text-secondary)", wordBreak: "break-all", textAlign: "left", marginBottom: 12 }}>
               {jitsiUrl}
             </div>
             <button className="btn-secondary" onClick={copy} style={{ width: "100%", marginBottom: 8 }}>
@@ -369,7 +369,7 @@ function SidebarPanel({ activeId, messages, onClose, workspaceId }) {
         {activeId === "settings" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {saved && (
-              <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "#15803d", fontWeight: 500 }}>
+              <div style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "#22c55e", fontWeight: 500 }}>
                 ✓ Settings saved
               </div>
             )}

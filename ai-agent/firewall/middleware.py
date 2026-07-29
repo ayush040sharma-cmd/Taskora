@@ -110,7 +110,10 @@ class JarvisFirewallMiddleware(BaseHTTPMiddleware):
         # ── 2. URL length check ───────────────────────────────────────────────
         if len(str(request.url)) > MAX_URL_LENGTH:
             _log_blocked(request, ip, "url_too_long", "Medium")
-            return self._block(413, "Request URI too long")
+            # 414 (URI Too Long) is the RFC 7231 status for this specifically;
+            # 413 is for an oversized request body (see MAX_REQUEST_BODY_BYTES
+            # below), a different check.
+            return self._block(414, "Request URI too long")
 
         # ── 3. IP rate limiting ───────────────────────────────────────────────
         allowed, retry_after = await limiter.check_ip(ip, path)
@@ -170,7 +173,16 @@ class JarvisFirewallMiddleware(BaseHTTPMiddleware):
                         return self._block(400, f"Blocked: {attack} in request header")
 
         # ── 6. JWT validation for protected routes ────────────────────────────
-        if self._jwt_secret and any(path.startswith(p) for p in PROTECTED_PREFIXES):
+        # Fail CLOSED, not open: an empty/missing secret used to make this
+        # condition falsy and skip JWT verification entirely, silently
+        # leaving PROTECTED_PREFIXES unauthenticated whenever JWT_SECRET
+        # wasn't set. Now a missing secret on a protected path is treated as
+        # a server misconfiguration (503), never as "no auth required".
+        if any(path.startswith(p) for p in PROTECTED_PREFIXES):
+            if not self._jwt_secret:
+                logger.error("JWT_SECRET not configured — refusing protected route %s", path)
+                return self._block(503, "Service misconfigured")
+
             auth_header = request.headers.get("authorization", "")
             token = auth_header.replace("Bearer ", "").strip() if auth_header.startswith("Bearer ") else ""
 

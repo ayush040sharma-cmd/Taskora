@@ -5,16 +5,39 @@
  * POST /api/payments/verify        → verify + update plan
  * GET  /api/payments/plans         → return plan pricing info
  */
-const express  = require("express");
-const router   = express.Router();
-const crypto   = require("crypto");
-const pool     = require("../db");
-const auth     = require("../middleware/auth");
-const logger   = require("../utils/logger");
+const express   = require("express");
+const router    = express.Router();
+const crypto    = require("crypto");
+const rateLimit = require("express-rate-limit");
+const pool      = require("../db");
+const auth      = require("../middleware/auth");
+const logger    = require("../utils/logger");
+
+// Order creation and verification are money-adjacent and worth protecting
+// from scripted abuse (e.g. hammering Razorpay order creation), independent
+// of the per-user auth already required on these routes.
+const paymentsLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many payment requests. Please try again in a few minutes." },
+});
+
+// Currency + whole-unit prices are env-configurable; PLAN_PRICES (Razorpay's
+// smallest-unit amount) and the /plans display endpoint below both derive
+// from these same three values, so they can no longer drift apart.
+// NOTE: the *100 conversion assumes a 2-decimal currency (USD, INR, EUR, GBP,
+// etc.) — Razorpay's own convention for "amount in the smallest unit". If
+// this is ever set to a zero-decimal currency (e.g. JPY), this multiplier
+// would need to change too.
+const CURRENCY           = process.env.PAYMENT_CURRENCY || "USD";
+const PRO_PRICE          = Number(process.env.PRO_PLAN_PRICE)        || 7;
+const ENTERPRISE_PRICE   = Number(process.env.ENTERPRISE_PLAN_PRICE) || 25;
 
 const PLAN_PRICES = {
-  pro:        { amount: 69900,  currency: "INR", label: "Pro",        period: "month" },
-  enterprise: { amount: 249900, currency: "INR", label: "Enterprise", period: "month" },
+  pro:        { amount: PRO_PRICE * 100,        currency: CURRENCY, label: "Pro",        period: "month" },
+  enterprise: { amount: ENTERPRISE_PRICE * 100, currency: CURRENCY, label: "Enterprise", period: "month" },
 };
 
 // Lazy-load Razorpay so the server starts even without keys
@@ -32,14 +55,15 @@ function getRazorpay() {
 // GET /api/payments/plans — public
 router.get("/plans", (req, res) => {
   res.json({
-    free:       { amount: 0,      currency: "INR", label: "Free",       period: "forever" },
-    pro:        { amount: 699,    currency: "INR", label: "Pro",        period: "month" },
-    enterprise: { amount: 2499,   currency: "INR", label: "Enterprise", period: "month" },
+    free:       { amount: 0,               currency: CURRENCY, label: "Free",       period: "forever" },
+    pro:        { amount: PRO_PRICE,        currency: CURRENCY, label: "Pro",        period: "month" },
+    enterprise: { amount: ENTERPRISE_PRICE, currency: CURRENCY, label: "Enterprise", period: "month" },
   });
 });
 
 // POST /api/payments/create-order
-router.post("/create-order", auth, async (req, res) => {
+router.post("/create-order", auth, paymentsLimiter, async (req, res) => {
+  if (req.user.is_admin) return res.status(403).json({ message: "Admin accounts do not require a plan purchase." });
   const { plan } = req.body;
   if (!PLAN_PRICES[plan]) {
     return res.status(400).json({ message: "Invalid plan" });
@@ -48,6 +72,12 @@ router.post("/create-order", auth, async (req, res) => {
   try {
     const rzp = getRazorpay();
     const { amount, currency } = PLAN_PRICES[plan];
+
+    // Defensive — amount always comes from PLAN_PRICES above, never from the
+    // request body, but Razorpay itself rejects orders below its minimum too.
+    if (amount < 100) {
+      return res.status(400).json({ message: "Order amount below Razorpay's minimum (100 in the smallest currency unit)" });
+    }
 
     const order = await rzp.orders.create({
       amount,
@@ -76,17 +106,27 @@ router.post("/create-order", auth, async (req, res) => {
         mock:     true,
       });
     }
+    // Razorpay rejects the request itself due to bad/revoked key credentials —
+    // surface as 401 rather than a generic 500, per Razorpay's error shape
+    // (statusCode 401, error.code "BAD_REQUEST_ERROR" with an auth-related description).
+    if (err.statusCode === 401 || /authentication|key_id/i.test(err.error?.description || "")) {
+      logger.error(`Razorpay authentication failed: ${err.error?.description || err.message}`);
+      return res.status(401).json({ message: "Payment gateway authentication failed" });
+    }
     logger.error(`Razorpay order creation failed: ${err.message}`);
     res.status(500).json({ message: "Payment initiation failed" });
   }
 });
 
 // POST /api/payments/verify
-router.post("/verify", auth, async (req, res) => {
+router.post("/verify", auth, paymentsLimiter, async (req, res) => {
   const { razorpay_payment_id, razorpay_order_id, razorpay_signature, plan, mock } = req.body;
 
   if (!PLAN_PRICES[plan]) {
     return res.status(400).json({ message: "Invalid plan" });
+  }
+  if (!mock && (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature)) {
+    return res.status(400).json({ message: "razorpay_payment_id, razorpay_order_id, and razorpay_signature are required" });
   }
 
   try {
@@ -123,7 +163,7 @@ router.post("/verify", auth, async (req, res) => {
 });
 
 // POST /api/payments/mock-upgrade (dev only — instant plan change without payment)
-router.post("/mock-upgrade", auth, async (req, res) => {
+router.post("/mock-upgrade", auth, paymentsLimiter, async (req, res) => {
   if (process.env.NODE_ENV === "production") {
     return res.status(404).json({ message: "Not found" });
   }
@@ -131,11 +171,16 @@ router.post("/mock-upgrade", auth, async (req, res) => {
   if (!["free","pro","enterprise"].includes(plan)) {
     return res.status(400).json({ message: "Invalid plan" });
   }
-  const { rows } = await pool.query(
-    "UPDATE users SET plan = $1 WHERE id = $2 RETURNING id, name, email, role, onboarding_role, team_size, onboarding_complete, plan",
-    [plan, req.user.id]
-  );
-  res.json({ success: true, user: rows[0] });
+  try {
+    const { rows } = await pool.query(
+      "UPDATE users SET plan = $1 WHERE id = $2 RETURNING id, name, email, role, onboarding_role, team_size, onboarding_complete, plan",
+      [plan, req.user.id]
+    );
+    res.json({ success: true, user: rows[0] });
+  } catch (err) {
+    logger.error(`Mock upgrade failed: ${err.message}`);
+    res.status(500).json({ message: "Mock upgrade failed" });
+  }
 });
 
 module.exports = router;

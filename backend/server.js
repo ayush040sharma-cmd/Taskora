@@ -10,18 +10,27 @@ const cookieParser = require("cookie-parser");
 const logger       = require("./utils/logger");
 const firewall     = require("./middleware/firewall");
 const alertService = require("./services/alertService");
-const planEnforce  = require("./middleware/planEnforce");
 
 const app        = express();
 const httpServer = createServer(app);
 const PORT       = process.env.PORT || 3001;
 
+// Trust the first proxy hop (Render's load balancer) so req.ip is the real
+// client IP and rate-limiters per IP work correctly.
+app.set("trust proxy", 1);
+
 // ── Allowed origins ───────────────────────────────────────────────────────────
+// FRONTEND_URL  — primary production frontend (Vercel deployment URL)
+// ADDITIONAL_ORIGINS — comma-separated extra origins (preview deploys, staging)
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
   "http://localhost:5174",
+  "http://localhost:5175",
   "http://localhost:3000",
   ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
+  ...(process.env.ADDITIONAL_ORIGINS
+    ? process.env.ADDITIONAL_ORIGINS.split(",").map(o => o.trim()).filter(Boolean)
+    : []),
 ];
 
 // ── Security headers (helmet) ─────────────────────────────────────────────────
@@ -45,7 +54,7 @@ app.use(helmet({
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true); // Same-origin / server-to-server
-    if (ALLOWED_ORIGINS.includes(origin) || /\.vercel\.app$/.test(origin)) {
+    if (ALLOWED_ORIGINS.includes(origin)) {
       return callback(null, true);
     }
     logger.warn(`CORS blocked origin: ${origin}`);
@@ -93,9 +102,6 @@ app.use("/api", globalLimiter);
 // ── Firewall — threat detection on every API request ─────────────────────────
 app.use("/api", firewall);
 
-// ── Plan enforcement — gate pro/enterprise routes ─────────────────────────────
-app.use("/api", planEnforce);
-
 // ── Socket.io setup ───────────────────────────────────────────────────────────
 const io = new Server(httpServer, {
   cors: {
@@ -105,12 +111,24 @@ const io = new Server(httpServer, {
   },
 });
 
-// JWT authentication on every socket connection
+// JWT authentication on every socket connection.
+// Prefers the httpOnly cookie (immune to XSS), falls back to explicit auth token
+// (needed for OAuth callbacks and environments where cookies aren't forwarded).
 io.use((socket, next) => {
   try {
+    // Parse httpOnly cookie from the handshake request headers
+    const rawCookie = socket.handshake.headers?.cookie || "";
+    const cookieToken = rawCookie
+      .split(";")
+      .map(c => c.trim())
+      .find(c => c.startsWith("taskora_token="))
+      ?.slice("taskora_token=".length);
+
     const token =
+      cookieToken ||
       socket.handshake.auth?.token ||
       socket.handshake.headers?.authorization?.replace("Bearer ", "");
+
     if (!token) return next(new Error("Socket: authentication required"));
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     socket.user = decoded;
@@ -121,14 +139,21 @@ io.use((socket, next) => {
 });
 
 app.set("io", io);
-alertService.setIO(io); // give alert service access to push real-time events
+alertService.setIO(io);
+require("./services/notificationService").setIO(io);
+
+const approvalEngine = require("./routes/approval-engine");
+approvalEngine.setIO(io);
 
 io.on("connection", (socket) => {
   logger.info(`Socket connected: user=${socket.user?.id}`);
 
+  // Auto-join personal room so targeted notifications arrive instantly
+  if (socket.user?.id) {
+    socket.join(`user:${socket.user.id}`);
+  }
+
   socket.on("join_workspace", (workspaceId) => {
-    // Only allow joining workspaces the token user has access to
-    // (Full workspace membership check can be added here if needed)
     socket.join(`workspace:${workspaceId}`);
   });
 
@@ -145,7 +170,6 @@ io.on("connection", (socket) => {
 app.use("/api/auth",          require("./routes/auth"));
 app.use("/api/auth",          require("./routes/oauth"));
 app.use("/api/workspaces",    require("./routes/workspaces"));
-app.use("/api/tasks/import",  require("./routes/import"));
 app.use("/api/tasks",         require("./routes/tasks"));
 app.use("/api/sprints",       require("./routes/sprints"));
 app.use("/api/workload",      require("./routes/workload"));
@@ -168,6 +192,68 @@ app.use("/api/jarvis",        require("./routes/jarvis"));
 app.use("/api/firewall",      require("./routes/firewall"));
 app.use("/api/admin",         require("./routes/admin"));
 app.use("/api/payments",      require("./routes/payments"));
+if (process.env.NODE_ENV !== "production") {
+  app.use("/api/seed", require("./routes/seed"));
+}
+app.use("/api/roles",         require("./routes/roles"));
+app.use("/api/user-mgmt",     require("./routes/user-management"));
+app.use("/api/approvals-engine", approvalEngine.router);
+app.use("/api/teams",         require("./routes/teams"));
+app.use("/api/import",        require("./routes/import"));
+app.use("/api/analytics",     require("./routes/analytics"));
+app.use("/api/internal",      require("./routes/internal"));
+app.use("/api/webhooks",      require("./routes/webhooks"));
+app.use("/api/briefing-preferences", require("./routes/briefingPreferences"));
+app.use("/api/briefing-actions",     require("./routes/briefingActions"));
+
+// ── System info (admin only) ──────────────────────────────────────────────────
+const authMiddleware = require("./middleware/auth");
+app.get("/sysinfo", authMiddleware, (req, res) => {
+  const os = require("os");
+  const cpus = os.cpus();
+  const totalMem = os.totalmem();
+  const freeMem  = os.freemem();
+  const usedMem  = totalMem - freeMem;
+  const mem = process.memoryUsage();
+
+  res.json({
+    platform:    os.platform(),
+    arch:        os.arch(),
+    node_version: process.version,
+    cpu: {
+      model:       cpus[0]?.model || "unknown",
+      speed_mhz:   cpus[0]?.speed || 0,
+      logical_cores: cpus.length,
+      times:       cpus.reduce((acc, c) => ({
+        user:   acc.user   + c.times.user,
+        sys:    acc.sys    + c.times.sys,
+        idle:   acc.idle   + c.times.idle,
+        irq:    acc.irq    + c.times.irq,
+      }), { user: 0, sys: 0, idle: 0, irq: 0 }),
+    },
+    memory: {
+      total_mb:    +(totalMem  / 1024 / 1024).toFixed(1),
+      used_mb:     +(usedMem   / 1024 / 1024).toFixed(1),
+      free_mb:     +(freeMem   / 1024 / 1024).toFixed(1),
+      used_pct:    +((usedMem / totalMem) * 100).toFixed(1),
+      process: {
+        rss_mb:          +(mem.rss          / 1024 / 1024).toFixed(1),
+        heap_used_mb:    +(mem.heapUsed     / 1024 / 1024).toFixed(1),
+        heap_total_mb:   +(mem.heapTotal    / 1024 / 1024).toFixed(1),
+        external_mb:     +(mem.external     / 1024 / 1024).toFixed(1),
+      },
+    },
+    load_avg_1m:  os.loadavg()[0].toFixed(3),
+    load_avg_5m:  os.loadavg()[1].toFixed(3),
+    load_avg_15m: os.loadavg()[2].toFixed(3),
+    uptime: {
+      system_sec:  Math.round(os.uptime()),
+      process_sec: Math.round(process.uptime()),
+    },
+    env: process.env.NODE_ENV || "development",
+    pid: process.pid,
+  });
+});
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get("/health", async (req, res) => {
@@ -223,9 +309,49 @@ process.on("SIGTERM", () => {
   });
 });
 
+// ── Seed sidebar permissions into permissions_catalog (idempotent) ────────────
+async function seedSidebarPermissions() {
+  const pool = require("./db");
+  try {
+    await pool.query(`
+      INSERT INTO permissions_catalog (key, module, action, label) VALUES
+        ('sidebar:manager',    'sidebar_access', 'view', 'Manager Dashboard'),
+        ('sidebar:workload',   'sidebar_access', 'view', 'Team Workload'),
+        ('sidebar:members',    'sidebar_access', 'view', 'Members'),
+        ('sidebar:approvals',  'sidebar_access', 'view', 'Approvals'),
+        ('sidebar:ai-risk',    'sidebar_access', 'view', 'AI Risk Heatmap'),
+        ('sidebar:analytics',  'sidebar_access', 'view', 'Analytics'),
+        ('sidebar:simulation', 'sidebar_access', 'view', 'What-If Simulation')
+      ON CONFLICT (key) DO NOTHING
+    `);
+  } catch (e) {
+    logger.warn(`Sidebar permission seed skipped: ${e.message}`);
+  }
+}
+
+// ── Self-ping to prevent Render free-tier sleep (every 10 min) ───────────────
+// Only runs in production. Hits /health so no DB or auth overhead.
+if (process.env.NODE_ENV === "production") {
+  const https = require("https");
+  setInterval(() => {
+    const externalUrl = process.env.RENDER_EXTERNAL_URL || process.env.BACKEND_URL;
+    if (!externalUrl) {
+      logger.warn("[keepalive] RENDER_EXTERNAL_URL/BACKEND_URL not set — skipping self-ping");
+      return;
+    }
+    const host = new URL(externalUrl).hostname;
+    https.get(`https://${host}/health`, (res) => {
+      logger.info(`[keepalive] ping ${res.statusCode}`);
+    }).on("error", (e) => {
+      logger.warn(`[keepalive] ping failed: ${e.message}`);
+    });
+  }, 10 * 60 * 1000); // 10 minutes
+}
+
 // ── Start ─────────────────────────────────────────────────────────────────────
 httpServer.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`, { port: PORT, env: process.env.NODE_ENV || "development" });
+  seedSidebarPermissions();
   try {
     const { startAgents } = require("./services/agentRunner");
     startAgents();

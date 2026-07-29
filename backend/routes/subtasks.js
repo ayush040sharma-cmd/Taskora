@@ -12,10 +12,34 @@ const express = require("express");
 const router  = express.Router();
 const pool    = require("../db");
 const auth    = require("../middleware/auth");
+const { notifyOne } = require("../services/notificationService");
+
+// A subtask has no workspace of its own -- access is governed entirely by
+// whether the caller can access the parent task's workspace (owner or member).
+async function canAccessTask(taskId, userId) {
+  const { rows } = await pool.query(
+    `SELECT 1 FROM tasks t
+     WHERE t.id = $1
+       AND (
+         EXISTS (SELECT 1 FROM workspaces WHERE id = t.workspace_id AND user_id = $2)
+         OR EXISTS (SELECT 1 FROM workspace_members WHERE workspace_id = t.workspace_id AND user_id = $2)
+       )`,
+    [taskId, userId]
+  );
+  return rows.length > 0;
+}
+
+async function getSubtaskTaskId(subtaskId) {
+  const { rows } = await pool.query("SELECT task_id FROM subtasks WHERE id = $1", [subtaskId]);
+  return rows[0]?.task_id ?? null;
+}
 
 // ── GET /api/subtasks/:taskId ─────────────────────────────────
 router.get("/:taskId", auth, async (req, res) => {
   try {
+    if (!(await canAccessTask(req.params.taskId, req.user.id))) {
+      return res.status(404).json({ message: "Task not found" });
+    }
     const { rows } = await pool.query(
       `SELECT s.*, u.name AS created_by_name
        FROM subtasks s
@@ -33,11 +57,13 @@ router.get("/:taskId", auth, async (req, res) => {
 
 // ── POST /api/subtasks/:taskId ────────────────────────────────
 router.post("/:taskId", auth, async (req, res) => {
-  const { title } = req.body;
+  const { title, assigned_to, due_date, priority } = req.body;
   if (!title?.trim()) return res.status(400).json({ message: "Title required" });
 
   try {
-    // Next position = max + 1
+    if (!(await canAccessTask(req.params.taskId, req.user.id))) {
+      return res.status(404).json({ message: "Task not found" });
+    }
     const posRes = await pool.query(
       "SELECT COALESCE(MAX(position), -1) + 1 AS next_pos FROM subtasks WHERE task_id = $1",
       [req.params.taskId]
@@ -49,7 +75,51 @@ router.post("/:taskId", auth, async (req, res) => {
        VALUES ($1, $2, FALSE, $3, $4) RETURNING *`,
       [req.params.taskId, title.trim(), position, req.user.id]
     );
-    res.status(201).json(rows[0]);
+    const subtask = rows[0];
+
+    // Determine who to notify: explicit assigned_to, else parent task's assignee
+    const parentRes = await pool.query(
+      `SELECT t.title AS parent_title, t.assigned_user_id, w.id AS workspace_id,
+              u.name AS creator_name
+       FROM tasks t
+       LEFT JOIN workspaces w ON w.id = t.workspace_id
+       LEFT JOIN users u ON u.id = $2
+       WHERE t.id = $1`,
+      [req.params.taskId, req.user.id]
+    );
+    const parent = parentRes.rows[0];
+    const notifyUserId = assigned_to || parent?.assigned_user_id;
+
+    if (notifyUserId && String(notifyUserId) !== String(req.user.id)) {
+      const dueStr = due_date ? new Date(due_date).toLocaleDateString("en-US", { month:"short", day:"numeric" }) : null;
+      await notifyOne(
+        notifyUserId,
+        "subtask_assigned",
+        `${parent?.creator_name || "Manager"} added a new subtask`,
+        [
+          `Task: ${parent?.parent_title || "Unknown"}`,
+          `Subtask: ${title.trim()}`,
+          dueStr ? `Due: ${dueStr}` : null,
+          priority ? `Priority: ${priority}` : null,
+        ].filter(Boolean).join("\n"),
+        {
+          task_id: parseInt(req.params.taskId),
+          subtask_id: subtask.id,
+          subtask_title: title.trim(),
+          parent_title: parent?.parent_title,
+          assigned_to: notifyUserId,
+          workspace_id: parent?.workspace_id,
+        }
+      );
+    }
+
+    // Broadcast task update so all dashboards refresh in real-time
+    if (parent?.workspace_id) {
+      const io = req.app.get("io");
+      if (io) io.to(`workspace:${parent.workspace_id}`).emit("task:updated", { id: parseInt(req.params.taskId) });
+    }
+
+    res.status(201).json({ ...subtask, assigned_to: notifyUserId });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
@@ -60,6 +130,10 @@ router.post("/:taskId", auth, async (req, res) => {
 router.put("/:id", auth, async (req, res) => {
   const { title, done } = req.body;
   try {
+    const taskId = await getSubtaskTaskId(req.params.id);
+    if (taskId === null || !(await canAccessTask(taskId, req.user.id))) {
+      return res.status(404).json({ message: "Not found" });
+    }
     const sets = [];
     const vals = [];
     if (title !== undefined) { vals.push(title.trim()); sets.push(`title = $${vals.length}`); }
@@ -81,6 +155,10 @@ router.put("/:id", auth, async (req, res) => {
 // ── PATCH /api/subtasks/:id/toggle ───────────────────────────
 router.patch("/:id/toggle", auth, async (req, res) => {
   try {
+    const taskId = await getSubtaskTaskId(req.params.id);
+    if (taskId === null || !(await canAccessTask(taskId, req.user.id))) {
+      return res.status(404).json({ message: "Not found" });
+    }
     const { rows } = await pool.query(
       "UPDATE subtasks SET done = NOT done WHERE id = $1 RETURNING *",
       [req.params.id]
@@ -96,6 +174,10 @@ router.patch("/:id/toggle", auth, async (req, res) => {
 // ── DELETE /api/subtasks/:id ─────────────────────────────────
 router.delete("/:id", auth, async (req, res) => {
   try {
+    const taskId = await getSubtaskTaskId(req.params.id);
+    if (taskId === null || !(await canAccessTask(taskId, req.user.id))) {
+      return res.status(404).json({ message: "Not found" });
+    }
     await pool.query("DELETE FROM subtasks WHERE id = $1", [req.params.id]);
     res.json({ message: "Deleted" });
   } catch (err) {
@@ -110,6 +192,9 @@ router.put("/:taskId/reorder", auth, async (req, res) => {
   const { order } = req.body;
   if (!Array.isArray(order)) return res.status(400).json({ message: "order array required" });
   try {
+    if (!(await canAccessTask(req.params.taskId, req.user.id))) {
+      return res.status(404).json({ message: "Task not found" });
+    }
     await Promise.all(
       order.map((id, idx) =>
         pool.query("UPDATE subtasks SET position = $1 WHERE id = $2 AND task_id = $3", [idx, id, req.params.taskId])

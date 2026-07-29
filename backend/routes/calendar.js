@@ -154,11 +154,16 @@ router.put("/:id", auth, async (req, res) => {
     });
     if (!sets.length) return res.status(400).json({ message: "Nothing to update" });
     vals.push(req.params.id);
+    vals.push(req.user.id);
+    // Same ownership rule as DELETE below: creator, or owner of the event's workspace.
     const { rows } = await pool.query(
-      `UPDATE calendar_events SET ${sets.join(", ")} WHERE id = $${vals.length} RETURNING *`,
+      `UPDATE calendar_events SET ${sets.join(", ")}
+       WHERE id = $${vals.length - 1}
+         AND (user_id = $${vals.length} OR workspace_id IN (SELECT id FROM workspaces WHERE user_id = $${vals.length}))
+       RETURNING *`,
       vals
     );
-    if (!rows.length) return res.status(404).json({ message: "Not found" });
+    if (!rows.length) return res.status(404).json({ message: "Not found or not authorized" });
     res.json(rows[0]);
   } catch (err) {
     console.error(err);

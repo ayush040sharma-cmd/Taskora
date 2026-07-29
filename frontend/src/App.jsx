@@ -12,9 +12,13 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import AuthCallback from "./pages/AuthCallback";
 import ResetPassword from "./pages/ResetPassword";
+import JoinWorkspace from "./pages/JoinWorkspace";
+import BriefAction from "./pages/BriefAction";
 import RoleSelection from "./pages/onboarding/RoleSelection";
 import Pricing from "./pages/Pricing";
 import Payment from "./pages/Payment";
+import Unauthorized from "./pages/Unauthorized";
+import RoleRoute from "./components/RoleRoute";
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth();
@@ -76,8 +80,19 @@ function AppRoutes() {
         <RequireAuth><Payment /></RequireAuth>
       } />
 
+      {/* Invite accept — accessible with or without auth (page handles both) */}
+      <Route path="/join/:token" element={<JoinWorkspace />} />
+
+      {/* Email one-click action confirm sheet — accessible with or without
+          auth (page redirects to /login?redirect=... itself, preserving
+          the ?t= token, per docs/briefing-engine-plan.md §7.1) */}
+      <Route path="/brief/action" element={<BriefAction />} />
+
       {/* Protected app routes */}
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+
+      {/* Access denied */}
+      <Route path="/unauthorized" element={<Unauthorized />} />
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />

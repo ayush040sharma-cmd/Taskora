@@ -1,6 +1,6 @@
 /**
  * Approval Workflow Routes
- * POST /api/approvals              — super_boss creates approval request
+ * POST /api/approvals              — manager+ creates approval request
  * GET  /api/approvals?workspace_id — list approvals (filterable by status)
  * PUT  /api/approvals/:id/approve  — approver approves → task activates
  * PUT  /api/approvals/:id/reject   — approver rejects
@@ -11,12 +11,13 @@ const express = require("express");
 const router  = express.Router();
 const pool    = require("../db");
 const auth    = require("../middleware/auth");
+const { requireMinRole } = require("../middleware/rbac");
 const { notifyOne } = require("../services/notificationService");
 const { audit }     = require("../services/auditService");
 
 // ── POST /api/approvals ──────────────────────────────────────────────────────
-// Super Boss requests approval for assigning a task to a user
-router.post("/", auth, async (req, res) => {
+// Manager+ creates an approval request for a task assignment
+router.post("/", auth, requireMinRole("manager"), async (req, res) => {
   const { task_id, assigned_to, approver_id, justification, workspace_id } = req.body;
   if (!task_id || !assigned_to || !approver_id || !workspace_id) {
     return res.status(400).json({ message: "task_id, assigned_to, approver_id, workspace_id are required" });
@@ -62,7 +63,8 @@ router.post("/", auth, async (req, res) => {
 });
 
 // ── GET /api/approvals?workspace_id&status ────────────────────────────────────
-router.get("/", auth, async (req, res) => {
+// Full workspace approval queue — manager+ only (mirrors MANAGER_ONLY_VIEWS)
+router.get("/", auth, requireMinRole("manager"), async (req, res) => {
   const { workspace_id, status } = req.query;
   if (!workspace_id) return res.status(400).json({ message: "workspace_id required" });
   try {

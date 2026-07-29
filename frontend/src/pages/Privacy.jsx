@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
+import Logo from "../components/Logo";
 
 export default function Privacy() {
   const navigate = useNavigate();
@@ -9,11 +10,7 @@ export default function Privacy() {
     <div style={S.root}>
       <nav style={S.nav}>
         <div style={S.navInner}>
-          <div style={S.logoRow} onClick={() => navigate("/")}>
-            <div style={S.logoMark}>T</div>
-            <span style={S.logoText}>Taskora</span>
-            <span style={S.logoBadge}>AI</span>
-          </div>
+          <Logo iconSize={20} wordmarkSize={18} letterSpacing="-0.2px" style={S.logoRow} onClick={() => navigate("/")} />
           <div style={S.navActions}>
             <button style={S.ghostBtn} onClick={() => navigate("/login")}>Sign in</button>
             <button style={S.primaryBtn} onClick={() => navigate("/register")}>Start free →</button>
@@ -34,7 +31,7 @@ export default function Privacy() {
           {[
             {
               title: "1. Introduction",
-              body: `Welcome to Taskora ("we," "our," or "us"). We are committed to protecting your personal information and your right to privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our platform at taskora.app.
+              body: `Welcome to Taskora ("we," "our," or "us"). We are committed to protecting your personal information and your right to privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our platform at taskora.io.
 
 Please read this policy carefully. If you disagree with its terms, please discontinue use of the platform.`,
             },
@@ -82,11 +79,11 @@ We use Render.com (or your configured hosting provider) for infrastructure. Thei
               body: `You have the right to:
 
 • Access all data associated with your account via the dashboard
-• Request a full export of your data (email support@taskora.app)
+• Request a full export of your data (email support@taskora.io)
 • Request deletion of your account and all associated data
 • Correct inaccurate data in your profile at any time
 
-To exercise any of these rights, email support@taskora.app. We will respond within 30 days.`,
+To exercise any of these rights, email support@taskora.io. We will respond within 30 days.`,
             },
             {
               title: "8. Children",
@@ -100,10 +97,10 @@ To exercise any of these rights, email support@taskora.app. We will respond with
               title: "10. Contact",
               body: `For privacy questions or requests, contact us at:
 
-Email: privacy@taskora.app
-Support: support@taskora.app
+Email: privacy@taskora.io
+Support: support@taskora.io
 
-Taskora is built and maintained by Ayush Sharma and the Taskora team.`,
+Taskora is built and maintained by Sharma and the Taskora team.`,
             },
           ].map(s => (
             <div key={s.title} style={S.docSection}>
@@ -133,27 +130,27 @@ Taskora is built and maintained by Ayush Sharma and the Taskora team.`,
 }
 
 const S = {
-  root: { fontFamily: "system-ui, -apple-system, sans-serif", color: "#0f172a", lineHeight: 1.6, minHeight: "100vh" },
+  root: { fontFamily: "var(--tk-font-body, 'DM Sans'), -apple-system, sans-serif", color: "#0f172a", lineHeight: 1.6, minHeight: "100vh" },
   nav: { position: "sticky", top: 0, zIndex: 100, background: "rgba(255,255,255,0.95)", backdropFilter: "blur(10px)", borderBottom: "1px solid #f1f5f9" },
   navInner: { maxWidth: 1100, margin: "0 auto", padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64 },
   logoRow: { display: "flex", alignItems: "center", gap: 8, cursor: "pointer" },
-  logoMark: { width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg, #6366f1, #8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 16 },
+  logoMark: { width: 32, height: 32, borderRadius: 8, background: "var(--tk-accent, #3B82F6)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 16 },
   logoText: { fontSize: 18, fontWeight: 800, color: "#0f172a" },
-  logoBadge: { fontSize: 10, fontWeight: 700, color: "#6366f1", background: "rgba(99,102,241,0.1)", borderRadius: 4, padding: "2px 5px" },
+  logoBadge: { fontSize: 10, fontWeight: 700, color: "var(--tk-accent, #3B82F6)", background: "rgba(59,130,246,0.1)", borderRadius: 4, padding: "2px 5px" },
   navActions: { display: "flex", gap: 10 },
   ghostBtn: { padding: "8px 18px", background: "none", border: "1.5px solid #e2e8f0", borderRadius: 8, fontSize: 14, fontWeight: 600, color: "#374151", cursor: "pointer" },
-  primaryBtn: { padding: "8px 18px", background: "linear-gradient(135deg, #6366f1, #8b5cf6)", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, color: "#fff", cursor: "pointer" },
+  primaryBtn: { padding: "8px 18px", background: "var(--tk-accent, #3B82F6)", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, color: "#fff", cursor: "pointer" },
   hero: { padding: "60px 24px 48px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", textAlign: "center" },
   heroContent: { maxWidth: 600, margin: "0 auto" },
-  eyebrow: { display: "inline-block", background: "rgba(99,102,241,0.1)", color: "#6366f1", borderRadius: 99, padding: "4px 14px", fontSize: 12, fontWeight: 600, marginBottom: 12 },
-  h1: { fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 900, margin: "0 0 8px", letterSpacing: "-1px" },
+  eyebrow: { display: "inline-block", background: "rgba(59,130,246,0.1)", color: "var(--tk-accent, #3B82F6)", borderRadius: 99, padding: "4px 14px", fontSize: 12, fontWeight: 600, marginBottom: 12 },
+  h1: { fontFamily: "var(--tk-font-display, 'Syne')", fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 700, margin: "0 0 8px", letterSpacing: "-1px" },
   heroPara: { fontSize: 14, color: "#64748b" },
   section: { padding: "64px 24px" },
   docInner: { maxWidth: 740, margin: "0 auto" },
   docSection: { marginBottom: 40 },
   docH2: { fontSize: 18, fontWeight: 700, color: "#0f172a", margin: "0 0 12px", paddingBottom: 8, borderBottom: "1px solid #f1f5f9" },
   docBody: {},
-  docPara: { fontSize: 15, color: "#475569", lineHeight: 1.8, marginBottom: 12, whiteSpace: "pre-line" },
+  docPara: { fontSize: 14, color: "#475569", lineHeight: 1.8, marginBottom: 12, whiteSpace: "pre-line" },
   footer: { background: "#0f172a", padding: "20px 24px" },
   footerInner: { maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 },
   footerCopy: { fontSize: 13, color: "#475569" },

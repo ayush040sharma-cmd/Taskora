@@ -1,22 +1,30 @@
 /**
  * Feature → minimum required plan mapping.
- * 'free' = everyone, 'pro' = pro+enterprise, 'enterprise' = enterprise only
+ * Enforced in canAccess() — keep in sync with backend plan checks.
  */
 export const FEATURES = {
+  // Free
   board:         "free",
   summary:       "free",
   calendar:      "free",
   activity:      "free",
+  members:       "free",
+  workload:      "free",
+  manager:       "free",
+  analytics:     "free",
+  approvals:     "free",
+  // Pro
   gantt:         "pro",
   sprints:       "pro",
-  approvals:     "pro",
-  manager:       "free",
+  capacity:      "pro",
+  nlquery:       "pro",
+  aiAssistant:   "pro",
+  collaboration: "pro",
+  // Enterprise
   "ai-risk":     "enterprise",
   simulation:    "enterprise",
   integrations:  "enterprise",
-  workload:      "enterprise",
-  nlquery:       "enterprise",
-  aiAssistant:   "enterprise",
+  graph:         "enterprise",
 };
 
 export const PLAN_RANK = { free: 0, pro: 1, enterprise: 2 };

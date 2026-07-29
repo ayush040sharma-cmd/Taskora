@@ -1,4 +1,5 @@
 import React from "react";
+import Logo from "./Logo";
 
 export default class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -22,7 +23,7 @@ export default class ErrorBoundary extends React.Component {
       return (
         <div style={{ padding: "40px 24px", textAlign: "center", color: "#64748b" }}>
           <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
-          <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a", marginBottom: 6 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: "#0f172a", marginBottom: 6 }}>
             {this.props.viewName || "This view"} failed to load
           </div>
           <div style={{ fontSize: 13, marginBottom: 16, color: "#94a3b8" }}>
@@ -30,7 +31,7 @@ export default class ErrorBoundary extends React.Component {
           </div>
           <button
             onClick={() => this.setState({ hasError: false, error: null })}
-            style={{ padding: "8px 18px", borderRadius: 8, background: "#6366f1", color: "#fff", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600 }}
+            style={{ padding: "8px 18px", borderRadius: 8, background: "var(--tk-accent, #3B82F6)", color: "#fff", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600 }}
           >
             Try again
           </button>
@@ -52,7 +53,7 @@ export default class ErrorBoundary extends React.Component {
           </div>
           <h1 style={S.heading}>Something went wrong</h1>
           <p style={S.sub}>
-            An unexpected error occurred in Taskora. Our team has been notified.
+            An unexpected error occurred in Taskora. Please reload or contact support if the issue persists.
           </p>
 
           <div style={S.errorDetail}>
@@ -79,11 +80,11 @@ export default class ErrorBoundary extends React.Component {
           <div style={S.support}>
             <p style={S.supportText}>
               Still seeing this?{" "}
-              <a href="mailto:support@taskora.app" style={S.supportLink}>
-                Contact support@taskora.app
+              <a href="mailto:support@taskora.io" style={S.supportLink}>
+                Contact support@taskora.io
               </a>
             </p>
-            <p style={S.supportText} style={{ marginTop: 4 }}>
+            <p style={{ ...S.supportText, marginTop: 4 }}>
               Or report it on{" "}
               <a
                 href="https://github.com/ayushsharma/taskora/issues"
@@ -97,11 +98,7 @@ export default class ErrorBoundary extends React.Component {
           </div>
         </div>
 
-        <div style={S.logoRow}>
-          <div style={S.logoMark}>T</div>
-          <span style={S.logoText}>Taskora</span>
-          <span style={S.logoBadge}>AI</span>
-        </div>
+        <Logo iconSize={24} wordmarkSize={16} wordmarkColor="rgba(255,255,255,0.9)" letterSpacing="-0.2px" style={S.logoRow} />
       </div>
     );
   }
@@ -131,29 +128,29 @@ const S = {
     bottom: "-80px", right: "-80px", pointerEvents: "none",
   },
   card: {
-    background: "#fff",
+    background: "var(--card-bg, #1e293b)",
     borderRadius: 20,
     padding: "40px 44px",
     width: "100%",
     maxWidth: 480,
-    boxShadow: "0 25px 60px rgba(0,0,0,0.4)",
+    boxShadow: "0 25px 60px rgba(0,0,0,0.6)",
     position: "relative",
     zIndex: 1,
     textAlign: "center",
   },
   iconWrap: {
     width: 64, height: 64, borderRadius: "50%",
-    background: "#fef2f2",
+    background: "rgba(239,68,68,0.15)",
     display: "flex", alignItems: "center", justifyContent: "center",
     margin: "0 auto 20px",
   },
   heading: {
-    fontSize: 24, fontWeight: 800, color: "#0f172a",
+    fontSize: 24, fontWeight: 800, color: "var(--text-primary, #f1f5f9)",
     margin: "0 0 8px", letterSpacing: "-0.5px",
   },
-  sub: { fontSize: 14, color: "#64748b", margin: "0 0 20px", lineHeight: 1.6 },
+  sub: { fontSize: 14, color: "var(--text-secondary, #94a3b8)", margin: "0 0 20px", lineHeight: 1.6 },
   errorDetail: {
-    background: "#f8fafc", border: "1px solid #e2e8f0",
+    background: "var(--column-bg, #0f172a)", border: "1px solid var(--border, #334155)",
     borderRadius: 8, padding: "10px 14px", marginBottom: 24,
     textAlign: "left",
   },
@@ -164,33 +161,33 @@ const S = {
   actions: { display: "flex", gap: 12, marginBottom: 20 },
   primaryBtn: {
     flex: 1, padding: "12px",
-    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+    background: "var(--tk-accent, #3B82F6)",
     color: "#fff", border: "none", borderRadius: 10,
     fontSize: 14, fontWeight: 700, cursor: "pointer",
   },
   secondaryBtn: {
     flex: 1, padding: "12px",
-    background: "none", color: "#6366f1",
-    border: "1.5px solid #6366f1", borderRadius: 10,
+    background: "none", color: "var(--tk-accent, #3B82F6)",
+    border: "1.5px solid var(--tk-accent, #3B82F6)", borderRadius: 10,
     fontSize: 14, fontWeight: 600, cursor: "pointer",
   },
-  support: { borderTop: "1px solid #f1f5f9", paddingTop: 16 },
+  support: { borderTop: "1px solid var(--border, #334155)", paddingTop: 16 },
   supportText: { fontSize: 13, color: "#94a3b8", margin: "0 0 4px" },
-  supportLink: { color: "#6366f1", fontWeight: 600, textDecoration: "none" },
+  supportLink: { color: "var(--tk-accent, #3B82F6)", fontWeight: 600, textDecoration: "none" },
   logoRow: {
     display: "flex", alignItems: "center", gap: 8,
     position: "relative", zIndex: 1,
   },
   logoMark: {
     width: 28, height: 28, borderRadius: 8,
-    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+    background: "var(--tk-accent, #3B82F6)",
     display: "flex", alignItems: "center", justifyContent: "center",
     color: "#fff", fontWeight: 800, fontSize: 14,
   },
   logoText: { fontSize: 16, fontWeight: 800, color: "rgba(255,255,255,0.9)" },
   logoBadge: {
-    fontSize: 10, fontWeight: 700, color: "#6366f1",
-    background: "rgba(99,102,241,0.15)",
+    fontSize: 10, fontWeight: 700, color: "var(--tk-accent, #3B82F6)",
+    background: "rgba(59,130,246,0.15)",
     borderRadius: 4, padding: "2px 5px",
   },
 };

@@ -5,10 +5,12 @@ const jwt         = require("jsonwebtoken");
 const rateLimit   = require("express-rate-limit");
 const pool        = require("../db");
 const auth        = require("../middleware/auth");
+const { resolvePermissions } = require("../middleware/permission");
 const bruteForce  = require("../middleware/bruteForce");
 const { validate, schemas } = require("../utils/validate");
 const { setAuthCookie, clearAuthCookie } = require("../utils/cookies");
 const logger      = require("../utils/logger");
+const { sendPasswordReset } = require("../services/emailService");
 
 // Rate limiter: max 10 attempts per IP per 15 minutes on auth endpoints
 const authLimiter = rateLimit({
@@ -19,12 +21,38 @@ const authLimiter = rateLimit({
   message: { message: "Too many attempts. Please try again in 15 minutes." },
 });
 
+// Separate, lenient limiter for forgot-password (5 per hour — independent of login attempts)
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many password reset requests. Please try again in an hour." },
+});
+
+// Looser limiter for the demo endpoint — no credential to brute-force
+const demoLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many demo requests. Please wait a few minutes." },
+});
+
 // POST /api/auth/register
+// Health / keepalive — no auth, no rate limit
+router.get("/status", (req, res) => res.json({ ok: true, ts: Date.now() }));
+
 router.post("/register", authLimiter, validate(schemas.register), async (req, res) => {
   const { name, email, password, role } = req.body;
 
-  // Only allow safe role values; default to manager for solo/business/manager users
-  const safeRole = ["manager", "member"].includes(role) ? role : "manager";
+  // Map the frontend role selection to a platform role.
+  // Workspace creators get "manager" so they can manage their own workspace.
+  // "super_boss" is reserved for explicit admin promotion and never granted at registration.
+  const ROLE_MAP = { manager: "manager", member: "team_member" };
+  const safeRole = ROLE_MAP[role] || "manager";
+  // Preserve the stated preference for onboarding personalisation
+  const onboardingRole = role === "member" ? "member" : "manager";
 
   try {
     const existing = await pool.query("SELECT id FROM users WHERE email = $1", [email]);
@@ -36,12 +64,22 @@ router.post("/register", authLimiter, validate(schemas.register), async (req, re
     const password_hash = await bcrypt.hash(password, salt);
 
     const userResult = await pool.query(
-      `INSERT INTO users (name, email, password_hash, role)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, name, email, role, onboarding_role, onboarding_complete, plan, team_size`,
-      [name, email, password_hash, safeRole]
+      `INSERT INTO users (name, email, password_hash, role, onboarding_role)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, name, email, role, onboarding_role, onboarding_complete, plan, team_size, is_admin`,
+      [name, email, password_hash, safeRole, onboardingRole]
     );
     const user = userResult.rows[0];
+
+    // Assign super_admin enterprise role so requirePerm() works without legacy fallback
+    try {
+      await pool.query(
+        `INSERT INTO user_roles (user_id, role_id)
+         SELECT $1, id FROM roles WHERE name = 'super_admin'
+         ON CONFLICT DO NOTHING`,
+        [user.id]
+      );
+    } catch {}
 
     // Create default workspace for new user
     await pool.query(
@@ -50,7 +88,7 @@ router.post("/register", authLimiter, validate(schemas.register), async (req, re
     );
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, name: user.name, role: user.role },
+      { id: user.id, email: user.email, name: user.name, role: user.role, is_admin: user.is_admin ?? false },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
@@ -67,6 +105,7 @@ router.post("/register", authLimiter, validate(schemas.register), async (req, re
         onboarding_complete: user.onboarding_complete ?? false,
         plan:                user.plan                || "free",
         team_size:           user.team_size           || null,
+        is_admin:            user.is_admin            ?? false,
       },
     });
   } catch (err) {
@@ -98,7 +137,7 @@ router.post("/login", authLimiter, bruteForce.middleware, validate(schemas.login
     bruteForce.recordSuccess(ip);
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, name: user.name, role: user.role },
+      { id: user.id, email: user.email, name: user.name, role: user.role, is_admin: user.is_admin ?? false },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
@@ -115,6 +154,7 @@ router.post("/login", authLimiter, bruteForce.middleware, validate(schemas.login
       onboarding_complete: user.onboarding_complete ?? false,
       plan:                user.plan                || "free",
       team_size:           user.team_size           || null,
+      is_admin:            user.is_admin            ?? false,
     }});
   } catch (err) {
     logger.error(`Login error: ${err.message}`);
@@ -152,13 +192,27 @@ router.post("/logout", (req, res) => {
 
 // PUT /api/auth/profile  — update name
 router.put("/profile", auth, async (req, res) => {
-  const { name } = req.body;
+  const { name, timezone } = req.body;
   if (!name?.trim()) return res.status(400).json({ message: "Name is required" });
+  if (timezone !== undefined && (typeof timezone !== "string" || timezone.length > 50)) {
+    return res.status(400).json({ message: "Invalid timezone" });
+  }
   try {
-    const result = await pool.query(
-      "UPDATE users SET name = $1 WHERE id = $2 RETURNING id, name, email",
-      [name.trim(), req.user.id]
-    );
+    // timezone defaults to 'UTC' in the DB (schema-v5.sql) and was never
+    // actually settable from the frontend before this — RegionalSection's
+    // timezone picker only wrote to localStorage. See
+    // docs/briefing-engine-plan.md §6.4 for why this matters: the briefing
+    // scheduler sends at each user's local hour, so an unset/wrong
+    // users.timezone means briefings arrive at the wrong time.
+    const result = timezone !== undefined
+      ? await pool.query(
+          "UPDATE users SET name = $1, timezone = $2 WHERE id = $3 RETURNING id, name, email, timezone",
+          [name.trim(), timezone, req.user.id]
+        )
+      : await pool.query(
+          "UPDATE users SET name = $1 WHERE id = $2 RETURNING id, name, email, timezone",
+          [name.trim(), req.user.id]
+        );
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ message: "Server error" });
@@ -186,15 +240,29 @@ router.get("/me", auth, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT id, name, email, role, onboarding_role, team_size,
-              onboarding_complete, plan, created_at
+              onboarding_complete, plan, is_admin, created_at
        FROM users WHERE id = $1`,
       [req.user.id]
     );
     const user = result.rows[0];
     if (!user) return res.status(404).json({ message: "User not found" });
-    res.json({ ...user, plan: user.plan || "free" });
+    res.json({ ...user, plan: user.plan || "free", is_admin: user.is_admin ?? false });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+// GET /api/auth/me/sidebar-views — sidebar view IDs granted via custom roles
+router.get("/me/sidebar-views", auth, async (req, res) => {
+  try {
+    const perms = await resolvePermissions(req.user.id, null);
+    const views = [];
+    for (const [key] of perms) {
+      if (key.startsWith("sidebar:")) views.push(key.slice("sidebar:".length));
+    }
+    res.json({ views });
+  } catch {
+    res.json({ views: [] });
   }
 });
 
@@ -266,7 +334,7 @@ router.get("/google/status", (req, res) => {
 });
 
 // POST /api/auth/forgot-password — send reset link
-router.post("/forgot-password", authLimiter, validate(schemas.forgotPassword), async (req, res) => {
+router.post("/forgot-password", forgotPasswordLimiter, validate(schemas.forgotPassword), async (req, res) => {
   const { email } = req.body;
   // Always respond 200 to avoid email enumeration
   try {
@@ -280,40 +348,16 @@ router.post("/forgot-password", authLimiter, validate(schemas.forgotPassword), a
         "UPDATE users SET reset_token=$1, reset_token_expiry=$2 WHERE id=$3",
         [token, expiry, user.id]
       );
-      // Send email via Resend (falls back gracefully if RESEND_API_KEY not set)
       const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
       const resetLink   = `${frontendUrl}/reset-password?token=${token}`;
-      if (process.env.RESEND_API_KEY) {
-        try {
-          const { Resend } = require("resend");
-          const resend = new Resend(process.env.RESEND_API_KEY);
-          await resend.emails.send({
-            from:    process.env.EMAIL_FROM || "Taskora <noreply@taskora.app>",
-            to:      [email],
-            subject: "Reset your Taskora password",
-            html: `
-              <div style="font-family:sans-serif;max-width:480px;margin:auto">
-                <h2 style="color:#6366f1">Reset your password</h2>
-                <p>Hi ${user.name},</p>
-                <p>Click the button below to reset your Taskora password. This link expires in <strong>1 hour</strong>.</p>
-                <a href="${resetLink}" style="display:inline-block;padding:12px 24px;background:#6366f1;color:#fff;border-radius:8px;text-decoration:none;font-weight:700;margin:16px 0">
-                  Reset Password
-                </a>
-                <p style="color:#94a3b8;font-size:13px">If you didn't request this, you can safely ignore this email.</p>
-                <hr style="border:none;border-top:1px solid #f1f5f9">
-                <p style="color:#94a3b8;font-size:12px">Taskora · task management for modern teams</p>
-              </div>`,
-          });
-          logger.info(`Password reset email sent to ${email}`);
-        } catch (emailErr) {
-          logger.error(`Failed to send reset email: ${emailErr.message}`);
-        }
-      } else {
-        logger.warn(`RESEND_API_KEY not set — reset link for ${email}: ${resetLink}`);
-      }
+
+      // Always log the link — visible in Render logs as a fallback if email fails
+      logger.info(`[password-reset] link generated for ${email} → ${resetLink}`);
+
+      await sendPasswordReset({ toEmail: email, userName: user.name, resetLink });
     }
   } catch (err) {
-    logger.error(`Forgot password error: ${err.message}`);
+    logger.error(`Forgot password error: ${err.message}`, { stack: err.stack });
   }
   res.json({ message: "If that email exists, a reset link has been sent." });
 });
@@ -342,56 +386,69 @@ router.post("/reset-password", authLimiter, validate(schemas.resetPassword), asy
   }
 });
 
-// POST /api/auth/demo — instant demo login (creates/resets demo account)
-router.post("/demo", authLimiter, async (req, res) => {
-  const DEMO_EMAIL = "demo@taskora.app";
-  const DEMO_NAME  = "Demo User";
+// POST /api/auth/demo — creates a fresh isolated demo session per request.
+// Each caller gets their own ephemeral user + workspace so concurrent demo users
+// never share data or real-time socket events.
+router.post("/demo", demoLimiter, async (req, res) => {
+  const crypto = require("crypto");
 
   try {
-    let user;
-    const existing = await pool.query("SELECT id, name, email, role FROM users WHERE email = $1", [DEMO_EMAIL]);
+    // Purge expired ephemeral demo accounts (TTL = 2h, matching the JWT expiry).
+    // Delete workspaces first so tasks cascade, then delete the users.
+    await pool.query(
+      `DELETE FROM workspaces
+       WHERE user_id IN (
+         SELECT id FROM users
+         WHERE email LIKE 'demo\\_%@demo.taskora.internal' ESCAPE '\\'
+           AND created_at < NOW() - INTERVAL '2 hours'
+       )`
+    ).catch(() => {});
+    await pool.query(
+      `DELETE FROM users
+       WHERE email LIKE 'demo\\_%@demo.taskora.internal' ESCAPE '\\'
+         AND created_at < NOW() - INTERVAL '2 hours'`
+    ).catch(() => {});
 
-    if (existing.rows.length > 0) {
-      user = existing.rows[0];
-      await pool.query("UPDATE users SET last_login_at = NOW() WHERE id = $1", [user.id]);
-    } else {
-      const bcrypt = require("bcryptjs");
-      const hash = await bcrypt.hash("demo-password-not-for-login-" + Date.now(), 10);
-      const result = await pool.query(
-        "INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role",
-        [DEMO_NAME, DEMO_EMAIL, hash, "manager"]
-      );
-      user = result.rows[0];
+    // Create a unique ephemeral identity for this session
+    const uid  = crypto.randomBytes(6).toString("hex");
+    const demoEmail = `demo_${uid}@demo.taskora.internal`;
+    const demoName  = "Demo User";
 
-      // Create demo workspace
-      const ws = await pool.query(
-        "INSERT INTO workspaces (name, user_id) VALUES ($1, $2) RETURNING id",
-        ["Taskora Demo Workspace", user.id]
-      );
-      const workspaceId = ws.rows[0].id;
+    const hash = await bcrypt.hash(`demo-${uid}-not-for-login`, 10);
+    const result = await pool.query(
+      "INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role",
+      [demoName, demoEmail, hash, "manager"]
+    );
+    const user = result.rows[0];
 
-      // Seed demo tasks with correct schema column names
-      const demoTasks = [
-        { title: "Design new landing page",    type: "task",    status: "done",        priority: "high",   est: 16, pos: 1 },
-        { title: "Fix checkout flow bug",      type: "bug",     status: "done",        priority: "high",   est: 8,  pos: 2 },
-        { title: "Sprint planning — Q3",       type: "story",   status: "done",        priority: "medium", est: 4,  pos: 3 },
-        { title: "Q3 feature roadmap doc",     type: "story",   status: "in_progress", priority: "high",   est: 40, pos: 1 },
-        { title: "API rate limiting setup",    type: "upgrade", status: "in_progress", priority: "medium", est: 24, pos: 2 },
-        { title: "Mobile responsive audit",    type: "task",    status: "review",      priority: "medium", est: 16, pos: 1 },
-        { title: "Write integration docs",     type: "task",    status: "todo",        priority: "low",    est: 16, pos: 1 },
-        { title: "Add Slack notifications",    type: "upgrade", status: "todo",        priority: "medium", est: 32, pos: 2 },
-        { title: "Enterprise RFP — Acme Corp", type: "rfp",     status: "todo",        priority: "high",   est: 40, pos: 3 },
-        { title: "User onboarding flow v2",    type: "story",   status: "todo",        priority: "low",    est: 24, pos: 4 },
-      ];
+    // Create a private demo workspace for this session
+    const ws = await pool.query(
+      "INSERT INTO workspaces (name, user_id) VALUES ($1, $2) RETURNING id",
+      ["Taskora Demo Workspace", user.id]
+    );
+    const workspaceId = ws.rows[0].id;
 
-      for (const t of demoTasks) {
-        await pool.query(
-          `INSERT INTO tasks
-             (title, type, status, priority, workspace_id, assigned_user_id, estimated_hours, actual_hours, position)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-          [t.title, t.type, t.status, t.priority, workspaceId, user.id, t.est, 0, t.pos]
-        ).catch(() => {});  // skip if any error (idempotent re-seed guard)
-      }
+    // Seed realistic demo tasks
+    const demoTasks = [
+      { title: "Design new landing page",    type: "task",    status: "done",       priority: "high",   est: 16, pos: 1 },
+      { title: "Fix checkout flow bug",      type: "bug",     status: "done",       priority: "high",   est: 8,  pos: 2 },
+      { title: "Sprint planning — Q3",       type: "story",   status: "done",       priority: "medium", est: 4,  pos: 3 },
+      { title: "Q3 feature roadmap doc",     type: "story",   status: "inprogress", priority: "high",   est: 40, pos: 1 },
+      { title: "API rate limiting setup",    type: "upgrade", status: "inprogress", priority: "medium", est: 24, pos: 2 },
+      { title: "Mobile responsive audit",    type: "task",    status: "review",     priority: "medium", est: 16, pos: 1 },
+      { title: "Write integration docs",     type: "task",    status: "todo",       priority: "low",    est: 16, pos: 1 },
+      { title: "Add Slack notifications",    type: "upgrade", status: "todo",       priority: "medium", est: 32, pos: 2 },
+      { title: "Enterprise RFP — Acme Corp", type: "rfp",    status: "todo",       priority: "high",   est: 40, pos: 3 },
+      { title: "User onboarding flow v2",    type: "story",   status: "todo",       priority: "low",    est: 24, pos: 4 },
+    ];
+
+    for (const t of demoTasks) {
+      await pool.query(
+        `INSERT INTO tasks
+           (title, type, status, priority, workspace_id, assigned_user_id, estimated_hours, actual_hours, position)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+        [t.title, t.type, t.status, t.priority, workspaceId, user.id, t.est, 0, t.pos]
+      ).catch(() => {});
     }
 
     const token = jwt.sign(
@@ -407,7 +464,7 @@ router.post("/demo", authLimiter, async (req, res) => {
       isDemo: true,
     });
   } catch (err) {
-    console.error("Demo login error:", err);
+    logger.error(`Demo login error: ${err.message}`);
     res.status(500).json({ message: "Could not start demo session." });
   }
 });

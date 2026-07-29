@@ -10,17 +10,22 @@ const express = require("express");
 const router  = express.Router();
 const pool    = require("../db");
 const auth    = require("../middleware/auth");
+const { requireMinRole } = require("../middleware/rbac");
 const wl      = require("../services/workloadEngine");
 
 // ── GET /api/workload ─────────────────────────────────────────────────────────
-router.get("/", auth, async (req, res) => {
+// Team workload dashboard — manager+ only (mirrors MANAGER_ONLY_VIEWS frontend gate)
+router.get("/", auth, requireMinRole("manager"), async (req, res) => {
   const { workspace_id } = req.query;
   if (!workspace_id) return res.status(400).json({ message: "workspace_id required" });
 
   try {
-    // Verify workspace access
+    // Verify workspace access — owner OR member with manager+ role
     const ws = await pool.query(
-      "SELECT id FROM workspaces WHERE id=$1 AND user_id=$2",
+      `SELECT 1 FROM workspaces WHERE id=$1 AND user_id=$2
+       UNION ALL
+       SELECT 1 FROM workspace_members WHERE workspace_id=$1 AND user_id=$2
+       LIMIT 1`,
       [workspace_id, req.user.id]
     );
     if (!ws.rows.length) return res.status(403).json({ message: "Access denied" });
@@ -142,15 +147,28 @@ router.get("/", auth, async (req, res) => {
   }
 });
 
-// ── GET /api/workload/users?q=X ───────────────────────────────────────────────
+// ── GET /api/workload/users?q=X&workspace_id=Y ───────────────────────────────
+// Scoped to workspace members when workspace_id is provided
 router.get("/users", auth, async (req, res) => {
-  const { q } = req.query;
+  const { q, workspace_id } = req.query;
+  const wsId = workspace_id ? parseInt(workspace_id) : null;
   try {
     const result = await pool.query(
-      `SELECT id, name, email, role FROM users
-       WHERE ($1::text IS NULL OR name ILIKE $1 OR email ILIKE $1)
-       ORDER BY name LIMIT 20`,
-      [q ? `%${q}%` : null]
+      `SELECT u.id, u.name, u.email, u.role,
+              COALESCE(uc.on_leave, false)    AS on_leave,
+              COALESCE(uc.travel_mode, false)  AS travel_mode,
+              COALESCE(uc.travel_hours, 2)     AS travel_hours,
+              COALESCE(uc.daily_hours, 8)      AS daily_hours
+       FROM users u
+       LEFT JOIN user_capacity uc ON uc.user_id = u.id
+       WHERE ($1::text IS NULL OR u.name ILIKE $1 OR u.email ILIKE $1)
+         AND ($2::int IS NULL OR u.id IN (
+           SELECT user_id FROM workspaces WHERE id = $2
+           UNION
+           SELECT user_id FROM workspace_members WHERE workspace_id = $2
+         ))
+       ORDER BY u.name LIMIT 20`,
+      [q ? `%${q}%` : null, wsId]
     );
     res.json(result.rows);
   } catch (err) {

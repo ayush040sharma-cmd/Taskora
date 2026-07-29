@@ -39,13 +39,13 @@ export default function UpgradeModal({ feature, requiredPlan, onClose }) {
     >
       <div style={{
         background: "#0f172a",
-        border: "1.5px solid rgba(99,102,241,0.3)",
+        border: "1.5px solid rgba(59,130,246,0.3)",
         borderRadius: 18,
         padding: "36px 32px 28px",
         maxWidth: 420,
         width: "100%",
         textAlign: "center",
-        fontFamily: "'Inter', sans-serif",
+        fontFamily: "'DM Sans', sans-serif",
       }}>
         <div style={{ fontSize: 44, marginBottom: 16 }}>
           {requiredPlan === "enterprise" ? "🏢" : "⚡"}
@@ -66,7 +66,7 @@ export default function UpgradeModal({ feature, requiredPlan, onClose }) {
               padding: "12px",
               background: requiredPlan === "enterprise"
                 ? "linear-gradient(135deg, #7c3aed, #8b5cf6)"
-                : "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                : "var(--tk-accent, #3B82F6)",
               color: "#fff",
               border: "none",
               borderRadius: 10,

@@ -4,17 +4,19 @@
  */
 
 import { useState, useEffect, useRef } from "react";
+import { LuX, LuClipboardList, LuBug, LuBookOpen, LuFileStack, LuFilePenLine, LuPresentation, LuArrowUp, LuFlaskConical } from "react-icons/lu";
 import api from "../api/api";
+import { getWorkspacePref } from "../utils/workspacePrefs";
 
 const TYPE_META = {
-  task:         { label: "Task",         icon: "📋" },
-  bug:          { label: "Bug",          icon: "🐛" },
-  story:        { label: "Story",        icon: "📖" },
-  rfp:          { label: "RFP",          icon: "📑" },
-  proposal:     { label: "Proposal",     icon: "📝" },
-  presentation: { label: "Presentation", icon: "🎤" },
-  upgrade:      { label: "Upgrade",      icon: "⬆️" },
-  poc:          { label: "POC",          icon: "🔬" },
+  task:         { label: "Task",         icon: LuClipboardList },
+  bug:          { label: "Bug",          icon: LuBug },
+  story:        { label: "Story",        icon: LuBookOpen },
+  rfp:          { label: "RFP",          icon: LuFileStack },
+  proposal:     { label: "Proposal",     icon: LuFilePenLine },
+  presentation: { label: "Presentation", icon: LuPresentation },
+  upgrade:      { label: "Upgrade",      icon: LuArrowUp },
+  poc:          { label: "POC",          icon: LuFlaskConical },
 };
 
 const PRIORITIES = ["low", "medium", "high"];
@@ -22,6 +24,7 @@ const STATUSES   = [
   { value: "todo",       label: "To Do"       },
   { value: "inprogress", label: "In Progress"  },
   { value: "review",     label: "In Review"    },
+  { value: "blocked",    label: "Blocked"      },
   { value: "done",       label: "Done"         },
 ];
 
@@ -39,12 +42,7 @@ function formatDate(d) {
   return d ? new Date(d).toISOString().split("T")[0] : "";
 }
 
-const IconX = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-  </svg>
-);
+const IconX = () => <LuX size={16} />;
 
 // ── Subtasks Tab ──────────────────────────────────────────────
 function SubtasksTab({ taskId }) {
@@ -288,7 +286,7 @@ function CommentItem({ comment, currentUserId, onDelete }) {
 }
 
 // ── Main Modal ────────────────────────────────────────────────
-export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, currentUser }) {
+export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, currentUser, workspaceId }) {
   const [task, setTask]             = useState(initialTask);
   const [comments, setComments]     = useState([]);
   const [newComment, setNewComment] = useState("");
@@ -302,7 +300,17 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
   const [userSearch, setUserSearch] = useState(initialTask.assignee_name || "");
   const [userResults, setUserResults] = useState([]);
   const [toast, setToast]           = useState(null);
+  const [teams, setTeams]           = useState([]);
+  const [members, setMembers]       = useState([]);
   const commentBoxRef               = useRef(null);
+  const saveAbortRef                = useRef(null);
+
+  useEffect(() => {
+    const wsId = workspaceId || initialTask.workspace_id;
+    if (!wsId) return;
+    api.get(`/teams?workspace_id=${wsId}`).then(r => setTeams(r.data)).catch(() => {});
+    api.get(`/members?workspace_id=${wsId}`).then(r => setMembers(r.data)).catch(() => {});
+  }, [workspaceId, initialTask.workspace_id]);
 
   useEffect(() => {
     if (activeTab === "comments") loadComments();
@@ -321,14 +329,27 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
   };
 
   const saveField = async (field, value) => {
+    // Cancel any in-flight save to prevent out-of-order response overwrites
+    saveAbortRef.current?.abort();
+    const controller = new AbortController();
+    saveAbortRef.current = controller;
+
     setSaving(true);
     try {
-      const res = await api.put(`/tasks/${task.id}`, { [field]: value });
-      setTask(res.data);
-      onUpdate && onUpdate(res.data);
+      const res = await api.put(`/tasks/${task.id}`, { [field]: value }, { signal: controller.signal });
+      setTask(prev => ({
+        ...prev,
+        [field]: res.data[field],
+        completed_at: res.data.completed_at,
+        updated_at:   res.data.updated_at,
+      }));
+      onUpdate && onUpdate({ ...task, [field]: value });
       showMsg("Saved");
-    } catch { showMsg("Failed to save", "error"); }
-    finally  { setSaving(false); }
+    } catch (err) {
+      if (err.name !== "CanceledError" && err.code !== "ERR_CANCELED") {
+        showMsg("Failed to save", "error");
+      }
+    } finally { setSaving(false); }
   };
 
   const saveTitle = async () => {
@@ -346,7 +367,8 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
     if (!userSearch || userSearch === task.assignee_name) { setUserResults([]); return; }
     const t = setTimeout(async () => {
       try {
-        const res = await api.get(`/workload/users?q=${encodeURIComponent(userSearch)}`);
+        const wsId = workspaceId || initialTask.workspace_id;
+        const res = await api.get(`/workload/users?q=${encodeURIComponent(userSearch)}${wsId ? `&workspace_id=${wsId}` : ""}`);
         setUserResults(res.data);
       } catch {}
     }, 300);
@@ -386,7 +408,11 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
     } catch { showMsg("Failed to delete", "error"); }
   };
 
-  const overdueFlag = task.due_date && new Date(task.due_date) < new Date(new Date().toDateString());
+  useEffect(() => {
+    if (!editTitle) setTitleVal(task.title);
+  }, [task.title]); // eslint-disable-line
+
+  const overdueFlag = task.due_date && new Date(task.due_date) < new Date(new Date().setHours(0, 0, 0, 0));
 
   const TABS = [
     { id: "details",   label: "Details" },
@@ -402,7 +428,15 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
         {/* ── Header ── */}
         <div className="td-header">
           <div className="td-header-left">
-            <span className="td-type-icon">{TYPE_META[task.type]?.icon || "📋"}</span>
+            <span className="td-type-icon">
+              {(() => { const TypeIcon = TYPE_META[task.type]?.icon || LuClipboardList; return <TypeIcon size={14} />; })()}
+            </span>
+            <span
+              style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", letterSpacing: "0.03em", marginRight: 6, flexShrink: 0 }}
+              title="Task ID prefix is configurable in Settings → Workspace Preferences"
+            >
+              {getWorkspacePref(workspaceId || task.workspace_id, "task-prefix")}-{task.id}
+            </span>
             {editTitle ? (
               <input
                 className="td-title-input"
@@ -418,6 +452,7 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
               </h2>
             )}
           </div>
+          <button className="modal-close" onClick={onClose} aria-label="Close"><IconX /></button>
         </div>
 
         {/* ── Tabs ── */}
@@ -542,7 +577,7 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
                     onChange={e => { setTask(p => ({ ...p, type: e.target.value })); saveField("type", e.target.value); }}
                   >
                     {Object.entries(TYPE_META).map(([v, m]) => (
-                      <option key={v} value={v}>{m.icon} {m.label}</option>
+                      <option key={v} value={v}>{m.label}</option>
                     ))}
                   </select>
                 </div>
@@ -612,11 +647,15 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
 
                 {/* Recurrence */}
                 <div className="td-meta-row">
-                  <span className="td-meta-label">Recurrence</span>
+                  <span className="td-meta-label" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    Recurrence
+                    <span style={{ fontSize: 9, fontWeight: 700, background: "rgba(139,92,246,0.15)", color: "#a78bfa", borderRadius: 3, padding: "1px 4px", letterSpacing: "0.3px" }}>SOON</span>
+                  </span>
                   <select
                     className="td-meta-select"
                     value={task.recurrence || ""}
-                    onChange={e => { setTask(p => ({ ...p, recurrence: e.target.value || null })); saveField("recurrence", e.target.value || null); }}
+                    disabled
+                    style={{ opacity: 0.5, cursor: "not-allowed" }}
                   >
                     <option value="">None</option>
                     <option value="daily">🔁 Daily</option>
@@ -624,6 +663,83 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
                     <option value="monthly">🔁 Monthly</option>
                   </select>
                 </div>
+
+                {/* Team */}
+                {teams.length > 0 && (
+                  <div className="td-meta-row">
+                    <span className="td-meta-label">Team</span>
+                    <select
+                      className="td-meta-select"
+                      value={task.team_id || ""}
+                      onChange={e => { const v = e.target.value || null; setTask(p => ({ ...p, team_id: v })); saveField("team_id", v); }}
+                    >
+                      <option value="">— No team —</option>
+                      {teams.map(t => <option key={t.id} value={t.id}>{t.icon || "🏢"} {t.name}</option>)}
+                    </select>
+                  </div>
+                )}
+
+                {/* Blocked fields */}
+                {task.status === "blocked" && (
+                  <div style={{ background: "#7f1d1d22", border: "1px solid #ef444433", borderRadius: 8, padding: "10px 12px", marginTop: 8 }}>
+                    <div style={{ color: "#fca5a5", fontSize: 11, fontWeight: 700, marginBottom: 8 }}>🚫 Blocked Details</div>
+                    <div className="td-meta-row td-meta-row--col" style={{ marginBottom: 6 }}>
+                      <span className="td-meta-label">Reason</span>
+                      <input
+                        className="modal-input"
+                        style={{ fontSize: 12, padding: "4px 8px" }}
+                        placeholder="What is blocking this task?"
+                        value={task.blocked_reason || ""}
+                        onChange={e => setTask(p => ({ ...p, blocked_reason: e.target.value }))}
+                        onBlur={e => saveField("blocked_reason", e.target.value || null)}
+                      />
+                    </div>
+                    <div className="td-meta-row">
+                      <span className="td-meta-label">Severity</span>
+                      <select
+                        className="td-meta-select"
+                        value={task.blocked_severity || "medium"}
+                        onChange={e => { setTask(p => ({ ...p, blocked_severity: e.target.value })); saveField("blocked_severity", e.target.value); }}
+                      >
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="critical">Critical</option>
+                      </select>
+                    </div>
+                    <div className="td-meta-row">
+                      <span className="td-meta-label">Exp. Resolution</span>
+                      <input type="date" className="td-meta-date"
+                        value={formatDate(task.blocked_expected_resolution)}
+                        onChange={e => { setTask(p => ({ ...p, blocked_expected_resolution: e.target.value })); saveField("blocked_expected_resolution", e.target.value || null); }}
+                      />
+                    </div>
+                    {members.length > 0 && (
+                      <div className="td-meta-row">
+                        <span className="td-meta-label">Tagged</span>
+                        <select
+                          className="td-meta-select"
+                          value={task.blocked_tagged_user_id || ""}
+                          onChange={e => {
+                            const v = e.target.value ? parseInt(e.target.value) : null;
+                            const name = members.find(m => m.user_id === v)?.name || null;
+                            setTask(p => ({ ...p, blocked_tagged_user_id: v, blocked_tagged_user_name: name }));
+                            saveField("blocked_tagged_user_id", v);
+                          }}
+                        >
+                          <option value="">— No one tagged —</option>
+                          {members.map(m => <option key={m.user_id} value={m.user_id}>{m.name}</option>)}
+                        </select>
+                      </div>
+                    )}
+                    {task.date_blocked && (
+                      <div className="td-meta-row">
+                        <span className="td-meta-label">Blocked Since</span>
+                        <span className="td-meta-value" style={{ color: "#fca5a5" }}>{timeAgo(task.date_blocked)}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Timestamps */}
                 <div className="td-meta-row">
@@ -706,13 +822,15 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
 
         {/* ── Footer ── */}
         <div className="td-footer">
-          {saving && <span style={{ fontSize: 12, color: "#94a3b8", marginRight: "auto" }}>Saving…</span>}
+          <span style={{ fontSize: 12, color: "#94a3b8", marginRight: "auto" }}>
+            {saving ? "Saving…" : "All changes auto-saved"}
+          </span>
           <button className="btn-modal-cancel" onClick={onClose}>Close</button>
           <button
             className="btn-modal-save-primary"
             onClick={() => { onUpdate && onUpdate(task); onClose(); }}
           >
-            Save
+            Done
           </button>
         </div>
 

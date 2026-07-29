@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/api";
+import Logo from "../components/Logo";
 
 const STEPS = [
   { id: "workspace_setup", label: "Workspace", icon: "🏢" },
@@ -128,11 +129,7 @@ export default function WorkspaceSetup() {
 
       <div style={S.card}>
         {/* Logo */}
-        <div style={S.logoRow}>
-          <div style={S.logoMark}>T</div>
-          <span style={S.logoText}>Taskora</span>
-          <span style={S.badge}>Setup</span>
-        </div>
+        <Logo iconSize={32} wordmarkSize={22} wordmarkColor="#0f172a" style={{ marginBottom: 16 }} />
 
         {/* Progress bar */}
         <div style={S.progressWrap}>
@@ -145,7 +142,7 @@ export default function WorkspaceSetup() {
             <div key={s.id} style={S.stepItem}>
               <div style={{
                 ...S.stepDot,
-                background: i < stepIndex ? "#10b981" : i === stepIndex ? "#6366f1" : "#e2e8f0",
+                background: i < stepIndex ? "#10b981" : i === stepIndex ? "var(--tk-accent, #3B82F6)" : "#e2e8f0",
                 color: i <= stepIndex ? "#fff" : "#94a3b8",
               }}>
                 {i < stepIndex ? "✓" : s.icon}
@@ -173,7 +170,7 @@ export default function WorkspaceSetup() {
                 onChange={e => setWorkspaceName(e.target.value)}
                 placeholder="e.g. Acme Corp, Design Team, My Projects"
                 autoFocus
-                onFocus={e => e.target.style.borderColor = "#6366f1"}
+                onFocus={e => e.target.style.borderColor = "var(--tk-accent, #3B82F6)"}
                 onBlur={e => e.target.style.borderColor = "#e2e8f0"}
               />
             </div>
@@ -195,7 +192,7 @@ export default function WorkspaceSetup() {
                 value={inviteEmails}
                 onChange={e => setInviteEmails(e.target.value)}
                 placeholder={"alice@company.com\nbob@company.com"}
-                onFocus={e => e.target.style.borderColor = "#6366f1"}
+                onFocus={e => e.target.style.borderColor = "var(--tk-accent, #3B82F6)"}
                 onBlur={e => e.target.style.borderColor = "#e2e8f0"}
               />
             </div>
@@ -241,7 +238,7 @@ export default function WorkspaceSetup() {
                 onChange={e => setFirstTaskTitle(e.target.value)}
                 placeholder="e.g. Set up development environment"
                 autoFocus
-                onFocus={e => e.target.style.borderColor = "#6366f1"}
+                onFocus={e => e.target.style.borderColor = "var(--tk-accent, #3B82F6)"}
                 onBlur={e => e.target.style.borderColor = "#e2e8f0"}
               />
             </div>
@@ -258,7 +255,7 @@ export default function WorkspaceSetup() {
         <p style={S.skipAll}>
           Already set up?{" "}
           <span
-            style={{ color: "#6366f1", cursor: "pointer", textDecoration: "underline" }}
+            style={{ color: "var(--tk-accent, #3B82F6)", cursor: "pointer", textDecoration: "underline" }}
             onClick={() => advanceTo("complete")}
           >
             Skip setup
@@ -275,13 +272,13 @@ const S = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)",
+    background: "linear-gradient(135deg, #020617 0%, #0F172A 50%, #020617 100%)",
     padding: "24px",
     position: "relative",
     overflow: "hidden",
   },
-  blob1: { position: "absolute", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(99,102,241,0.3) 0%, transparent 70%)", top: "-100px", left: "-100px", pointerEvents: "none" },
-  blob2: { position: "absolute", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(168,85,247,0.2) 0%, transparent 70%)", bottom: "-80px", right: "-80px", pointerEvents: "none" },
+  blob1: { position: "absolute", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(59,130,246,0.3) 0%, transparent 70%)", top: "-100px", left: "-100px", pointerEvents: "none" },
+  blob2: { position: "absolute", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(6,182,212,0.18) 0%, transparent 70%)", bottom: "-80px", right: "-80px", pointerEvents: "none" },
   card: {
     background: "#ffffff",
     borderRadius: 20,
@@ -293,31 +290,31 @@ const S = {
     zIndex: 1,
   },
   logoRow: { display: "flex", alignItems: "center", gap: 10, marginBottom: 24 },
-  logoMark: { width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, #6366f1, #8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 18 },
+  logoMark: { width: 36, height: 36, borderRadius: 10, background: "var(--tk-accent, #3B82F6)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 18 },
   logoText: { fontSize: 20, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.5px" },
   badge: { background: "#ede9fe", color: "#6d28d9", fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 99, letterSpacing: "0.3px", textTransform: "uppercase" },
   progressWrap: { height: 4, background: "#e2e8f0", borderRadius: 99, marginBottom: 20, overflow: "hidden" },
-  progressBar: { height: "100%", background: "linear-gradient(90deg, #6366f1, #8b5cf6)", borderRadius: 99, transition: "width 0.4s ease" },
+  progressBar: { height: "100%", background: "var(--tk-accent, #3B82F6)", borderRadius: 99, transition: "width 0.4s ease" },
   stepsRow: { display: "flex", gap: 0, marginBottom: 28, alignItems: "center", justifyContent: "center" },
   stepItem: { display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flex: 1 },
-  stepDot: { width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 700, transition: "all 0.3s" },
+  stepDot: { width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, transition: "all 0.3s" },
   stepLabel: { fontSize: 11, fontWeight: 600, textAlign: "center", transition: "color 0.3s" },
   errorBox: { background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 16 },
   stepContent: { display: "flex", flexDirection: "column", gap: 16 },
-  stepHeading: { fontSize: 22, fontWeight: 800, color: "#0f172a", margin: 0, letterSpacing: "-0.3px" },
+  stepHeading: { fontFamily: "var(--tk-font-display, 'Syne')", fontSize: 22, fontWeight: 700, color: "#0f172a", margin: 0, letterSpacing: "-0.3px" },
   stepSub: { fontSize: 13, color: "#64748b", margin: 0 },
   field: { display: "flex", flexDirection: "column", gap: 6 },
   label: { fontSize: 13, fontWeight: 600, color: "#374151" },
   input: { width: "100%", padding: "11px 14px", border: "1.5px solid #e2e8f0", borderRadius: 10, fontSize: 14, color: "#0f172a", background: "#f8fafc", outline: "none", transition: "border-color 0.15s", boxSizing: "border-box", fontFamily: "inherit" },
-  btn: { padding: "13px 24px", background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", letterSpacing: "0.2px", transition: "opacity 0.15s" },
-  btnOutline: { padding: "13px 24px", background: "transparent", color: "#6366f1", border: "1.5px solid #e2e8f0", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer" },
+  btn: { padding: "13px 24px", background: "var(--tk-accent, #3B82F6)", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: "pointer", letterSpacing: "0.2px", transition: "opacity 0.15s" },
+  btnOutline: { padding: "13px 24px", background: "transparent", color: "var(--tk-accent, #3B82F6)", border: "1.5px solid #e2e8f0", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer" },
   btnRow: { display: "flex", gap: 12, justifyContent: "flex-end" },
   templateGrid: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 },
   templateBtn: { display: "flex", flexDirection: "column", gap: 2, padding: "10px 8px", border: "1.5px solid #e2e8f0", borderRadius: 10, background: "#f8fafc", cursor: "pointer", textAlign: "left", transition: "all 0.15s" },
-  templateBtnActive: { border: "1.5px solid #6366f1", background: "#ede9fe" },
+  templateBtnActive: { border: "1.5px solid var(--tk-accent, #3B82F6)", background: "#eff6ff" },
   templateIcon: { fontSize: 20 },
   templateLabel: { fontSize: 11, fontWeight: 700, color: "#0f172a" },
   templateDesc: { fontSize: 10, color: "#94a3b8" },
   skipAll: { textAlign: "center", marginTop: 20, fontSize: 13, color: "#94a3b8" },
-  spinner: { width: 36, height: 36, border: "3px solid rgba(255,255,255,0.2)", borderTop: "3px solid #6366f1", borderRadius: "50%", animation: "spin 0.7s linear infinite" },
+  spinner: { width: 36, height: 36, border: "3px solid rgba(255,255,255,0.2)", borderTop: "3px solid var(--tk-accent, #3B82F6)", borderRadius: "50%", animation: "spin 0.7s linear infinite" },
 };

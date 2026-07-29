@@ -7,23 +7,46 @@ const IS_PROD = process.env.NODE_ENV === "production";
 function setAuthCookie(res, token) {
   res.cookie("taskora_token", token, {
     httpOnly: true,
-    secure:   IS_PROD,              // HTTPS only in production
-    sameSite: IS_PROD ? "strict" : "lax",
-    maxAge:   7 * 24 * 60 * 60 * 1000, // 7 days (matches JWT expiry)
+    secure:   IS_PROD,
+    // "none" required for cross-origin (Vercel frontend → Render backend).
+    // "none" requires secure:true (HTTPS), which is always true in prod.
+    sameSite: IS_PROD ? "none" : "lax",
+    maxAge:   7 * 24 * 60 * 60 * 1000,
+    path:     "/",
+  });
+}
+
+function clearAuthCookie(res) {
+  res.clearCookie("taskora_token", {
+    httpOnly: true,
+    secure:   IS_PROD,
+    sameSite: IS_PROD ? "none" : "lax",
     path:     "/",
   });
 }
 
 /**
- * Clear the auth cookie (logout).
+ * CSRF state cookie for the OAuth flow (currently Google; reusable for any
+ * future provider). Short-lived -- only needs to survive the redirect
+ * roundtrip to the provider and back, not a real session.
  */
-function clearAuthCookie(res) {
-  res.clearCookie("taskora_token", {
+function setOAuthStateCookie(res, state) {
+  res.cookie("taskora_oauth_state", state, {
     httpOnly: true,
     secure:   IS_PROD,
-    sameSite: IS_PROD ? "strict" : "lax",
+    sameSite: IS_PROD ? "none" : "lax",
+    maxAge:   10 * 60 * 1000, // 10 minutes
     path:     "/",
   });
 }
 
-module.exports = { setAuthCookie, clearAuthCookie };
+function clearOAuthStateCookie(res) {
+  res.clearCookie("taskora_oauth_state", {
+    httpOnly: true,
+    secure:   IS_PROD,
+    sameSite: IS_PROD ? "none" : "lax",
+    path:     "/",
+  });
+}
+
+module.exports = { setAuthCookie, clearAuthCookie, setOAuthStateCookie, clearOAuthStateCookie };

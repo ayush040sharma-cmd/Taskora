@@ -1,16 +1,15 @@
 import { useState } from "react";
+import { LuX } from "react-icons/lu";
+import { getWorkspacePref } from "../utils/workspacePrefs";
 
-const IconX = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-  </svg>
-);
+const IconX = () => <LuX size={16} />;
 
-export default function SprintModal({ onClose, onSubmit }) {
+export default function SprintModal({ onClose, onSubmit, workspaceId }) {
   const today = new Date().toISOString().split("T")[0];
-  const twoWeeks = new Date(Date.now() + 14*86400000).toISOString().split("T")[0];
+  const defaultDurationDays = parseInt(getWorkspacePref(workspaceId, "sprint-days"), 10) || 14;
+  const defaultEnd = new Date(Date.now() + defaultDurationDays * 86400000).toISOString().split("T")[0];
 
-  const [form, setForm] = useState({ name: "", goal: "", start_date: today, end_date: twoWeeks });
+  const [form, setForm] = useState({ name: "", goal: "", start_date: today, end_date: defaultEnd });
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState("");
 

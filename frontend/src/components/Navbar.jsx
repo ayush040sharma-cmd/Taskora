@@ -1,51 +1,13 @@
-import { useState, useRef, useEffect } from "react";
-import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
-import ProfileModal from "./ProfileModal";
-import AccountSettingsModal from "./AccountSettingsModal";
+import { useState, useEffect } from "react";
 import NotificationBell from "./NotificationBell";
 import api from "../api/api";
+import { LuSearch, LuPlus } from "react-icons/lu";
 
-const IconSearch = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-  </svg>
-);
+const IconSearch = () => <LuSearch size={14} />;
+const IconPlus   = () => <LuPlus size={14} />;
 
-const IconPlus = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-  </svg>
-);
-
-const IconUser = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-  </svg>
-);
-
-const IconSettings = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="3"/>
-    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-  </svg>
-);
-
-const IconLogout = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-    <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
-  </svg>
-);
-
-export default function Navbar({ workspaceName, onCreateTask, user }) {
-  const { logout } = useAuth();
-  const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
+export default function Navbar({ workspaceName, onCreateTask, onMenuToggle, onOpenPalette, canEdit = true, user }) {
   const [myStatus, setMyStatus] = useState(null); // null | "on_leave" | "travel"
-  const ref = useRef(null);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -56,42 +18,27 @@ export default function Navbar({ workspaceName, onCreateTask, user }) {
     }).catch(() => {});
   }, [user?.id]);
 
-  const getInitials = (name = "") =>
-    name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
-
-  // Close on outside click
-  useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  const handleLogout = () => {
-    logout();
-    navigate("/");
-  };
-
   return (
-    <>
     <header className="navbar">
+      {/* Hamburger — only visible on mobile */}
+      <button className="navbar-hamburger" onClick={onMenuToggle} aria-label="Open menu">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+
       <div className="navbar-breadcrumb">
         <span>Taskora</span>
         <span>/</span>
         <span className="navbar-breadcrumb-current">{workspaceName || "Select a workspace"}</span>
       </div>
 
-      <div className="navbar-search">
+      <div className="navbar-search" onClick={onOpenPalette} role="button" tabIndex={0} onKeyDown={e => { if (e.key === "Enter") onOpenPalette?.(); }}>
         <div className="navbar-search-icon"><IconSearch /></div>
-        <input type="text" placeholder="Search tasks…" />
+        <input type="text" placeholder="Search tasks… (⌘K)" readOnly style={{ cursor: "pointer" }} tabIndex={-1} />
       </div>
 
       <div className="navbar-actions">
-        <button className="btn-create" onClick={onCreateTask}>
-          <IconPlus />
-          Create
-        </button>
-        <NotificationBell />
-
         {/* Status pill — shown when on leave or travelling */}
         {myStatus === "on_leave" && (
           <div className="navbar-status-pill navbar-status-pill--leave" title="You are marked as on leave">
@@ -104,65 +51,15 @@ export default function Navbar({ workspaceName, onCreateTask, user }) {
           </div>
         )}
 
-        {/* Avatar + dropdown */}
-        <div className="navbar-profile" ref={ref}>
-          <button
-            className={`navbar-avatar ${myStatus === "on_leave" ? "navbar-avatar--leave" : myStatus === "travel" ? "navbar-avatar--travel" : ""}`}
-            onClick={() => setOpen(v => !v)}
-            title={user?.name}
-          >
-            {getInitials(user?.name)}
+        <NotificationBell />
+
+        {canEdit && (
+          <button className="btn-create" onClick={onCreateTask} title="Create a new task">
+            <IconPlus />
+            New task
           </button>
-
-          {open && (
-            <div className="profile-dropdown">
-              {/* Header */}
-              <div className="profile-dropdown-header">
-                <div className={`profile-dropdown-avatar ${myStatus === "on_leave" ? "avatar--leave" : myStatus === "travel" ? "avatar--travel" : ""}`}>
-                  {getInitials(user?.name)}
-                </div>
-                <div className="profile-dropdown-info">
-                  <div className="profile-dropdown-name">{user?.name}</div>
-                  <div className="profile-dropdown-email">{user?.email}</div>
-                  {myStatus === "on_leave" && (
-                    <div className="profile-status-badge profile-status-badge--leave">🌴 On Leave</div>
-                  )}
-                  {myStatus === "travel" && (
-                    <div className="profile-status-badge profile-status-badge--travel">✈️ Travelling</div>
-                  )}
-                </div>
-              </div>
-
-              <div className="profile-dropdown-divider" />
-
-              {/* Menu items */}
-              <div className="profile-dropdown-menu">
-                <button className="profile-menu-item" onClick={() => { setOpen(false); setShowProfile(true); }}>
-                  <IconUser />
-                  <span>Profile</span>
-                </button>
-                <button className="profile-menu-item" onClick={() => { setOpen(false); setShowSettings(true); }}>
-                  <IconSettings />
-                  <span>Account settings</span>
-                </button>
-              </div>
-
-              <div className="profile-dropdown-divider" />
-
-              <div className="profile-dropdown-menu">
-                <button className="profile-menu-item profile-menu-item--danger" onClick={handleLogout}>
-                  <IconLogout />
-                  <span>Log out</span>
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+        )}
       </div>
     </header>
-
-    {showProfile  && <ProfileModal        onClose={() => setShowProfile(false)} />}
-    {showSettings && <AccountSettingsModal onClose={() => setShowSettings(false)} />}
-  </>
   );
 }

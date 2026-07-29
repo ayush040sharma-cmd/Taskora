@@ -36,20 +36,20 @@ function SevBadge({ severity }) {
   );
 }
 
-function StatCard({ label, value, color = "#6366f1", sub }) {
+function StatCard({ label, value, color = "var(--tk-accent, #3B82F6)", sub }) {
   return (
     <div style={{
-      background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12,
+      background: "var(--card-bg)", border: "1px solid var(--border)", borderRadius: 12,
       padding: "16px 20px", minWidth: 140,
     }}>
       <div style={{ fontSize: 28, fontWeight: 800, color }}>{value}</div>
-      <div style={{ fontSize: 13, color: "#64748b", marginTop: 2 }}>{label}</div>
-      {sub && <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>{sub}</div>}
+      <div style={{ fontSize: 13, color: "var(--text-secondary)", marginTop: 2 }}>{label}</div>
+      {sub && <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>{sub}</div>}
     </div>
   );
 }
 
-export default function SecurityDashboard({ token }) {
+export default function SecurityDashboard() {
   const [events, setEvents]     = useState([]);
   const [stats, setStats]       = useState(null);
   const [blockedIPs, setBlocked]= useState([]);
@@ -80,8 +80,10 @@ export default function SecurityDashboard({ token }) {
   useEffect(() => {
     load();
 
+    const token = sessionStorage.getItem("_sk") || localStorage.getItem("token");
     const socket = io(import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:3001", {
-      auth: { token },
+      withCredentials: true,
+      auth: token ? { token } : {},
       transports: ["websocket"],
     });
 
@@ -102,7 +104,7 @@ export default function SecurityDashboard({ token }) {
     });
 
     return () => { socket.disconnect(); };
-  }, [load, token]);
+  }, [load]);
 
   const handleUnblock = async (ip) => {
     await api.post(`/firewall/unblock/${encodeURIComponent(ip)}`);
@@ -126,7 +128,7 @@ export default function SecurityDashboard({ token }) {
   const highCount = stats?.by_severity?.find(s => s.severity === "high")?.count || 0;
 
   return (
-    <div style={{ padding: "24px 28px", background: "#f8fafc", minHeight: "100vh" }}>
+    <div style={{ padding: "24px 28px", background: "var(--main-bg)", minHeight: "100vh" }}>
 
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
@@ -137,8 +139,8 @@ export default function SecurityDashboard({ token }) {
           fontSize: 20,
         }}>🛡️</div>
         <div>
-          <div style={{ fontSize: 20, fontWeight: 800, color: "#0f172a" }}>Security Firewall</div>
-          <div style={{ fontSize: 13, color: "#64748b" }}>Real-time threat monitoring & IP management</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)" }}>Security Firewall</div>
+          <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>Real-time threat monitoring & IP management</div>
         </div>
         {liveCount > 0 && (
           <div style={{
@@ -153,7 +155,7 @@ export default function SecurityDashboard({ token }) {
 
       {/* Stats row */}
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 24 }}>
-        <StatCard label="Total Events"   value={events.length}         color="#6366f1" />
+        <StatCard label="Total Events"   value={events.length}         color="var(--tk-accent, #3B82F6)" />
         <StatCard label="Last 24h"       value={stats?.last_24h || 0}  color="#0ea5e9" />
         <StatCard label="Critical"       value={critCount}              color="#dc2626" />
         <StatCard label="High"           value={highCount}              color="#ea580c" />
@@ -163,17 +165,17 @@ export default function SecurityDashboard({ token }) {
       {/* Top threat types */}
       {stats?.by_type?.length > 0 && (
         <div style={{
-          background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12,
+          background: "var(--card-bg)", border: "1px solid var(--border)", borderRadius: 12,
           padding: 16, marginBottom: 20,
         }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 10 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", marginBottom: 10 }}>
             Threat Breakdown
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {stats.by_type.map(t => (
               <div key={t.threat_type} style={{
-                background: "#f1f5f9", borderRadius: 8, padding: "6px 12px",
-                fontSize: 12, color: "#475569",
+                background: "var(--column-bg)", borderRadius: 8, padding: "6px 12px",
+                fontSize: 12, color: "var(--text-secondary)",
               }}>
                 <span style={{ fontWeight: 700 }}>{THREAT_LABEL[t.threat_type] || t.threat_type}</span>
                 <span style={{ color: "#94a3b8", marginLeft: 6 }}>{t.count}</span>
@@ -189,16 +191,16 @@ export default function SecurityDashboard({ token }) {
           <button key={t} onClick={() => setTab(t)} style={{
             padding: "7px 18px", borderRadius: 8, border: "none", cursor: "pointer",
             fontSize: 13, fontWeight: 600,
-            background: tab === t ? "#6366f1" : "#e2e8f0",
-            color:      tab === t ? "#fff"    : "#64748b",
+            background: tab === t ? "var(--tk-accent, #3B82F6)" : "var(--column-bg)",
+            color:      tab === t ? "#fff"    : "var(--text-secondary)",
           }}>
             {t === "events" ? `Events (${events.length})` : `Blocked IPs (${blockedIPs.length})`}
           </button>
         ))}
         <button onClick={load} style={{
           marginLeft: "auto", padding: "7px 14px", borderRadius: 8,
-          border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer",
-          fontSize: 12, color: "#64748b",
+          border: "1px solid var(--border)", background: "var(--card-bg)", cursor: "pointer",
+          fontSize: 12, color: "var(--text-secondary)",
         }}>
           ↻ Refresh
         </button>
@@ -207,15 +209,15 @@ export default function SecurityDashboard({ token }) {
       {/* Events table */}
       {tab === "events" && (
         <div style={{
-          background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden",
+          background: "var(--card-bg)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden",
         }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
-              <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+              <tr style={{ background: "var(--column-bg)", borderBottom: "1px solid var(--border)" }}>
                 {["Time", "IP", "Type", "Severity", "Method", "URL", "Blocked"].map(h => (
                   <th key={h} style={{
                     padding: "10px 14px", textAlign: "left",
-                    fontWeight: 700, color: "#374151", fontSize: 12,
+                    fontWeight: 700, color: "var(--text-primary)", fontSize: 12,
                   }}>{h}</th>
                 ))}
               </tr>
@@ -228,24 +230,24 @@ export default function SecurityDashboard({ token }) {
               )}
               {events.map((e, i) => (
                 <tr key={e.id || i} style={{
-                  borderBottom: "1px solid #f1f5f9",
-                  background: i % 2 === 0 ? "#fff" : "#fafafa",
+                  borderBottom: "1px solid var(--border)",
+                  background: i % 2 === 0 ? "var(--card-bg)" : "var(--column-bg)",
                 }}>
-                  <td style={{ padding: "8px 14px", color: "#64748b", whiteSpace: "nowrap" }}>
+                  <td style={{ padding: "8px 14px", color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
                     {new Date(e.timestamp).toLocaleTimeString()}
                   </td>
-                  <td style={{ padding: "8px 14px", fontFamily: "monospace", color: "#0f172a" }}>
+                  <td style={{ padding: "8px 14px", fontFamily: "monospace", color: "var(--text-primary)" }}>
                     {e.ip}
                   </td>
-                  <td style={{ padding: "8px 14px", fontWeight: 600, color: "#374151" }}>
+                  <td style={{ padding: "8px 14px", fontWeight: 600, color: "var(--text-primary)" }}>
                     {THREAT_LABEL[e.threat_type] || e.threat_type}
                   </td>
                   <td style={{ padding: "8px 14px" }}>
                     <SevBadge severity={e.severity} />
                   </td>
-                  <td style={{ padding: "8px 14px", color: "#64748b" }}>{e.method}</td>
+                  <td style={{ padding: "8px 14px", color: "var(--text-secondary)" }}>{e.method}</td>
                   <td style={{
-                    padding: "8px 14px", color: "#64748b",
+                    padding: "8px 14px", color: "var(--text-secondary)",
                     maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                   }} title={e.url}>
                     {e.url}
@@ -267,11 +269,11 @@ export default function SecurityDashboard({ token }) {
         <div>
           {/* Manual block form */}
           <div style={{
-            background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12,
+            background: "var(--card-bg)", border: "1px solid var(--border)", borderRadius: 12,
             padding: 16, marginBottom: 16, display: "flex", gap: 10, alignItems: "flex-end",
           }}>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: "#64748b", marginBottom: 4 }}>IP ADDRESS</div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 4 }}>IP ADDRESS</div>
               <input
                 value={blockInput.ip}
                 onChange={e => setBlockIn(p => ({ ...p, ip: e.target.value }))}
@@ -283,7 +285,7 @@ export default function SecurityDashboard({ token }) {
               />
             </div>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: "#64748b", marginBottom: 4 }}>REASON</div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 4 }}>REASON</div>
               <input
                 value={blockInput.reason}
                 onChange={e => setBlockIn(p => ({ ...p, reason: e.target.value }))}
@@ -304,15 +306,15 @@ export default function SecurityDashboard({ token }) {
           </div>
 
           <div style={{
-            background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden",
+            background: "var(--card-bg)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden",
           }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <thead>
-                <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                <tr style={{ background: "var(--column-bg)", borderBottom: "1px solid var(--border)" }}>
                   {["IP Address", "Reason", "Blocked By", "Blocked At", "Expires", ""].map(h => (
                     <th key={h} style={{
                       padding: "10px 14px", textAlign: "left",
-                      fontWeight: 700, color: "#374151", fontSize: 12,
+                      fontWeight: 700, color: "var(--text-primary)", fontSize: 12,
                     }}>{h}</th>
                   ))}
                 </tr>
@@ -325,24 +327,24 @@ export default function SecurityDashboard({ token }) {
                 )}
                 {blockedIPs.map((b, i) => (
                   <tr key={b.ip} style={{
-                    borderBottom: "1px solid #f1f5f9",
-                    background: i % 2 === 0 ? "#fff" : "#fafafa",
+                    borderBottom: "1px solid var(--border)",
+                    background: i % 2 === 0 ? "var(--card-bg)" : "var(--column-bg)",
                   }}>
                     <td style={{ padding: "8px 14px", fontFamily: "monospace", fontWeight: 700, color: "#dc2626" }}>
                       {b.ip}
                     </td>
-                    <td style={{ padding: "8px 14px", color: "#374151" }}>{b.reason}</td>
-                    <td style={{ padding: "8px 14px", color: "#64748b" }}>{b.blocked_by}</td>
-                    <td style={{ padding: "8px 14px", color: "#64748b", whiteSpace: "nowrap" }}>
+                    <td style={{ padding: "8px 14px", color: "var(--text-primary)" }}>{b.reason}</td>
+                    <td style={{ padding: "8px 14px", color: "var(--text-secondary)" }}>{b.blocked_by}</td>
+                    <td style={{ padding: "8px 14px", color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
                       {new Date(b.blocked_at).toLocaleString()}
                     </td>
-                    <td style={{ padding: "8px 14px", color: "#64748b" }}>
+                    <td style={{ padding: "8px 14px", color: "var(--text-secondary)" }}>
                       {b.expires_at ? new Date(b.expires_at).toLocaleString() : "Permanent"}
                     </td>
                     <td style={{ padding: "8px 14px" }}>
                       <button onClick={() => handleUnblock(b.ip)} style={{
                         padding: "4px 12px", borderRadius: 6,
-                        border: "1px solid #e2e8f0", background: "#fff",
+                        border: "1px solid var(--border)", background: "var(--card-bg)",
                         fontSize: 12, color: "#16a34a", cursor: "pointer", fontWeight: 600,
                       }}>
                         Unblock

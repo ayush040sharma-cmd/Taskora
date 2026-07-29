@@ -1,0 +1,26 @@
+name: Render Keepalive Ping
+
+on:
+  schedule:
+    # Ping every 14 minutes — Render free tier sleeps after 15 min inactivity
+    - cron: "*/14 * * * *"
+  workflow_dispatch:   # allow manual trigger
+
+jobs:
+  ping:
+    name: Ping backend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake up Render backend
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            --max-time 30 \
+            "https://taskora-9sjl.onrender.com/api/auth/status" 2>/dev/null || echo "000")
+          echo "Backend responded with HTTP $STATUS"
+          if [ "$STATUS" = "000" ]; then
+            echo "⚠️  Backend did not respond — may still be waking up"
+          elif [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 500 ]; then
+            echo "✅  Backend is alive"
+          else
+            echo "❌  Backend returned error $STATUS"
+          fi

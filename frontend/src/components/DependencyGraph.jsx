@@ -1,9 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import api from "../api/api";
+import BlockedDashboard from "./BlockedDashboard";
 
-const STATUS_COLOR  = { todo: "#94a3b8", inprogress: "#6366f1", in_progress: "#6366f1", done: "#10b981", review: "#f59e0b" };
+const STATUS_COLOR  = { todo: "#94a3b8", inprogress: "#3B82F6", in_progress: "#3B82F6", done: "#10b981", review: "#f59e0b" };
 const RISK_COLOR    = (score) => score >= 75 ? "#dc2626" : score >= 50 ? "#ef4444" : score >= 25 ? "#f59e0b" : "#10b981";
-const PRIORITY_ICON = { critical: "🔴", high: "🟠", medium: "🟡", low: "🟢" };
+const PRIORITY_COLOR_DOT = { critical: "#EF4444", high: "#F97316", medium: "#F59E0B", low: "#22C55E" };
+const PriorityDot = ({ priority }) => priority ? (
+  <span
+    style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: PRIORITY_COLOR_DOT[priority] || "#94A3B8", flexShrink: 0 }}
+    title={`${priority} priority`}
+  />
+) : null;
 
 const NODE_W  = 160;
 const NODE_H  = 52;
@@ -88,7 +95,7 @@ function layoutGraph(nodes, edges) {
 }
 
 function GraphNode({ node, selected, onClick }) {
-  const borderColor = selected ? "#6366f1"
+  const borderColor = selected ? "var(--tk-accent, #3B82F6)"
     : node.risk_score >= 50 ? RISK_COLOR(node.risk_score)
     : STATUS_COLOR[node.status] || "#94a3b8";
 
@@ -103,10 +110,10 @@ function GraphNode({ node, selected, onClick }) {
         height={NODE_H}
         rx={8}
         ry={8}
-        fill={selected ? "#eef2ff" : "#fff"}
+        fill={selected ? "rgba(59,130,246,0.07)" : "#fff"}
         stroke={borderColor}
         strokeWidth={selected ? 2.5 : 1.5}
-        style={{ filter: selected ? "drop-shadow(0 2px 8px rgba(99,102,241,0.3))" : "none" }}
+        style={{ filter: selected ? "drop-shadow(0 2px 8px rgba(59,130,246,0.3))" : "none" }}
       />
       {/* Status indicator strip */}
       <rect
@@ -129,7 +136,7 @@ function GraphNode({ node, selected, onClick }) {
             lineHeight: "1.3",
           }}
         >
-          {PRIORITY_ICON[node.priority] || ""} {node.title}
+          <PriorityDot priority={node.priority} /> {node.title}
         </div>
       </foreignObject>
       {/* Assignee + risk */}
@@ -152,7 +159,8 @@ function GraphNode({ node, selected, onClick }) {
   );
 }
 
-export default function DependencyGraph({ workspaceId }) {
+export default function DependencyGraph({ workspaceId, onTaskClick }) {
+  const [activeTab, setActiveTab] = useState("graph");
   const [graph, setGraph]         = useState({ nodes: [], edges: [] });
   const [layout, setLayout]       = useState({ positioned: [], edgePaths: [] });
   const [selected, setSelected]   = useState(null);
@@ -195,12 +203,44 @@ export default function DependencyGraph({ workspaceId }) {
   const maxX = layout.positioned.reduce((m, n) => Math.max(m, n.x + NODE_W), 0) + H_GAP;
   const maxY = layout.positioned.reduce((m, n) => Math.max(m, n.y + NODE_H), 0) + V_GAP;
 
+  const TABS = [
+    { id: "graph",   label: "Dependency Graph" },
+    { id: "blocked", label: "Blocked Tasks" },
+  ];
+
   return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      {/* Tab bar */}
+      <div style={{ display: "flex", gap: 4, borderBottom: "1px solid var(--tk-border, #1E293B)", padding: "0 0 0 0", marginBottom: 0, flexShrink: 0 }}>
+        {TABS.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setActiveTab(t.id)}
+            style={{
+              padding: "10px 20px", fontSize: 13, fontWeight: activeTab === t.id ? 700 : 500,
+              background: "none", border: "none", cursor: "pointer",
+              color: activeTab === t.id ? "var(--tk-accent, #3B82F6)" : "var(--tk-text-secondary, #94A3B8)",
+              borderBottom: activeTab === t.id ? "2px solid var(--tk-accent, #3B82F6)" : "2px solid transparent",
+              marginBottom: -1,
+            }}
+          >{t.label}</button>
+        ))}
+      </div>
+
+      {/* Blocked Tasks tab */}
+      {activeTab === "blocked" && (
+        <div style={{ flex: 1, overflowY: "auto" }}>
+          <BlockedDashboard workspaceId={workspaceId} onTaskClick={onTaskClick} />
+        </div>
+      )}
+
+      {/* Graph tab */}
+      {activeTab === "graph" && (
     <div className="dep-graph-wrap">
       <div className="dep-graph-toolbar">
         <span className="dep-graph-legend">
           <span className="dep-legend-item" style={{ background: "#94a3b8" }}>Todo</span>
-          <span className="dep-legend-item" style={{ background: "#6366f1" }}>In Progress</span>
+          <span className="dep-legend-item" style={{ background: "#3B82F6" }}>In Progress</span>
           <span className="dep-legend-item" style={{ background: "#10b981" }}>Done</span>
           <span className="dep-legend-item" style={{ background: "#ef4444" }}>At Risk</span>
         </span>
@@ -243,7 +283,7 @@ export default function DependencyGraph({ workspaceId }) {
                   key={e.key}
                   d={e.d}
                   fill="none"
-                  stroke={e.toId === selected?.id || e.fromId === selected?.id ? "#6366f1" : "#cbd5e1"}
+                  stroke={e.toId === selected?.id || e.fromId === selected?.id ? "#3B82F6" : "#cbd5e1"}
                   strokeWidth={e.toId === selected?.id || e.fromId === selected?.id ? 2 : 1.5}
                   strokeDasharray={e.toId === selected?.id || e.fromId === selected?.id ? "none" : "4 3"}
                   markerEnd="url(#arrowhead)"
@@ -269,7 +309,7 @@ export default function DependencyGraph({ workspaceId }) {
                 <button onClick={() => setSelected(null)} className="dep-detail-close">✕</button>
               </div>
               <div className="dep-detail-row"><span>Status</span><span className="dep-detail-val" style={{ color: STATUS_COLOR[selected.status] }}>{selected.status}</span></div>
-              <div className="dep-detail-row"><span>Priority</span><span className="dep-detail-val">{PRIORITY_ICON[selected.priority]} {selected.priority}</span></div>
+              <div className="dep-detail-row"><span>Priority</span><span className="dep-detail-val"><PriorityDot priority={selected.priority} /> {selected.priority}</span></div>
               <div className="dep-detail-row"><span>Assignee</span><span className="dep-detail-val">{selected.assignee_name || "—"}</span></div>
               <div className="dep-detail-row"><span>Progress</span><span className="dep-detail-val">{selected.progress || 0}%</span></div>
               {selected.risk_score > 0 && (
@@ -308,6 +348,8 @@ export default function DependencyGraph({ workspaceId }) {
       )}
 
       <div className="dep-graph-hint">Drag to pan · Click node for details · {graph.nodes.length} tasks · {graph.edges.length} dependencies</div>
+    </div>
+      )}
     </div>
   );
 }

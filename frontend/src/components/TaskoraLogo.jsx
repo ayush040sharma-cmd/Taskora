@@ -44,7 +44,7 @@ export default function TaskoraLogo({ size = 32, color = "#ffffff", showName = t
           fontWeight: 800,
           color: nameColor,
           letterSpacing: "-0.5px",
-          fontFamily: "'Inter', sans-serif",
+          fontFamily: "'Sora', sans-serif",
           lineHeight: 1,
         }}>
           Taskora

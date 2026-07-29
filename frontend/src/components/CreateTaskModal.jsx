@@ -1,43 +1,48 @@
 import { useState, useEffect } from "react";
+import { LuX, LuClipboardList, LuBug, LuBookOpen, LuFileStack, LuFilePenLine, LuPresentation, LuArrowUp, LuFlaskConical } from "react-icons/lu";
 import api from "../api/api";
+import { getWorkspacePref } from "../utils/workspacePrefs";
 
-const IconX = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-  </svg>
-);
+const IconX = () => <LuX size={16} />;
 
 const TYPE_META = {
-  task:         { label: "Task",         desc: "General work item",   icon: "📋", days: 1,  range: "~1 day"    },
-  bug:          { label: "Bug",          desc: "Something is broken", icon: "🐛", days: 1,  range: "~1 day"    },
-  story:        { label: "Story",        desc: "User-facing feature", icon: "📖", days: 3,  range: "~3 days"   },
-  rfp:          { label: "RFP",          desc: "Request for proposal",icon: "📑", days: 15, range: "2–3 weeks" },
-  proposal:     { label: "Proposal",     desc: "Sales proposal",      icon: "📝", days: 2,  range: "2–3 days"  },
-  presentation: { label: "Presentation", desc: "Deck / demo",         icon: "🎤", days: 1,  range: "1–2 days"  },
-  upgrade:      { label: "Upgrade",      desc: "Version upgrade",     icon: "⬆️", days: 5,  range: "~1 week"   },
-  poc:          { label: "POC",          desc: "Proof of concept",    icon: "🔬", days: 30, range: "1–2 months"},
+  task:         { label: "Task",         desc: "General work item",   icon: LuClipboardList, days: 1,  range: "~1 day"    },
+  bug:          { label: "Bug",          desc: "Something is broken", icon: LuBug,           days: 1,  range: "~1 day"    },
+  story:        { label: "Story",        desc: "User-facing feature", icon: LuBookOpen,      days: 3,  range: "~3 days"   },
+  rfp:          { label: "RFP",          desc: "Request for proposal",icon: LuFileStack,     days: 15, range: "2–3 weeks" },
+  proposal:     { label: "Proposal",     desc: "Sales proposal",      icon: LuFilePenLine,   days: 2,  range: "2–3 days"  },
+  presentation: { label: "Presentation", desc: "Deck / demo",         icon: LuPresentation,  days: 1,  range: "1–2 days"  },
+  upgrade:      { label: "Upgrade",      desc: "Version upgrade",     icon: LuArrowUp,       days: 5,  range: "~1 week"   },
+  poc:          { label: "POC",          desc: "Proof of concept",    icon: LuFlaskConical,  days: 30, range: "1–2 months"},
 };
 
-export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "todo", sprints = [] }) {
+export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "todo", sprints = [], workspaceId }) {
   const [form, setForm] = useState({
     title: "", description: "", status: defaultStatus,
-    priority: "medium", due_date: "", start_date: "",
+    priority: getWorkspacePref(workspaceId, "default-priority"), due_date: "", start_date: "",
     type: "task", estimated_days: 1,
-    assigned_user_id: "", sprint_id: "",
-    estimated_duration: 1,  // system suggested (from TYPE_META)
-    final_duration: 1,      // user confirmed
-    recurrence: "",         // none | daily | weekly | monthly
+    assigned_user_id: "", sprint_id: "", team_id: "",
+    estimated_duration: 1,
+    final_duration: 1,
+    recurrence: "",
   });
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState("");
   const [users, setUsers]         = useState([]);
+  const [teams, setTeams]         = useState([]);
   const [userSearch, setUserSearch] = useState("");
   const [workloadWarn, setWorkloadWarn] = useState("");
   const [daysAutoFilled, setDaysAutoFilled] = useState(false);
 
+  useEffect(() => {
+    if (!workspaceId) return;
+    api.get(`/teams?workspace_id=${workspaceId}`).then(r => setTeams(r.data)).catch(() => {});
+  }, [workspaceId]);
+
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   // Auto-fill estimated_days + compute due_date when type changes
+  // Only auto-fills due_date if the user hasn't already entered one manually
   const selectType = (t) => {
     const meta = TYPE_META[t];
     const days = meta?.days ?? 1;
@@ -49,7 +54,7 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
         estimated_duration: days,   // system suggested — locked at type selection
         final_duration:     days,   // starts equal; user can edit
       };
-      if (f.start_date) {
+      if (f.start_date && !f.due_date) {
         const due = new Date(f.start_date);
         due.setDate(due.getDate() + days);
         newForm.due_date = due.toISOString().split("T")[0];
@@ -77,7 +82,7 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
     if (!userSearch) { setUsers([]); return; }
     const t = setTimeout(async () => {
       try {
-        const res = await api.get(`/workload/users?q=${encodeURIComponent(userSearch)}`);
+        const res = await api.get(`/workload/users?q=${encodeURIComponent(userSearch)}${workspaceId ? `&workspace_id=${workspaceId}` : ""}`);
         setUsers(res.data);
       } catch {}
     }, 300);
@@ -108,8 +113,13 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
         progress: 0,
         assigned_user_id: form.assigned_user_id || undefined,
         sprint_id: form.sprint_id || undefined,
+        team_id: form.team_id || undefined,
         due_date: form.due_date || undefined,
         start_date: form.start_date || undefined,
+        recurrence: form.recurrence || undefined,
+        blocked_reason: form.blocked_reason || undefined,
+        blocked_severity: form.status === "blocked" ? (form.blocked_severity || "medium") : undefined,
+        blocked_expected_resolution: form.blocked_expected_resolution || undefined,
       });
       onClose();
     } catch (err) {
@@ -156,7 +166,7 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
                     className={`task-type-btn ${form.type === t ? "active" : ""}`}
                     onClick={() => selectType(t)}
                   >
-                    <span className="task-type-icon">{meta.icon}</span>
+                    <span className="task-type-icon"><meta.icon size={16} /></span>
                     <strong>{meta.label}</strong>
                     <span>{meta.desc}</span>
                     <span className="task-type-range">{meta.range}</span>
@@ -174,6 +184,7 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
                   <option value="inprogress">In Progress</option>
                   <option value="review">In Review</option>
                   <option value="done">Done</option>
+                  <option value="blocked">Blocked</option>
                 </select>
               </div>
               {/* Priority */}
@@ -268,11 +279,60 @@ export default function CreateTaskModal({ onClose, onSubmit, defaultStatus = "to
               </div>
             )}
 
-            {/* Recurrence — Phase 10 */}
+            {/* Team */}
+            {teams.length > 0 && (
+              <div className="modal-form-group">
+                <label className="modal-label">Assign to Team</label>
+                <select className="modal-select" value={form.team_id}
+                  onChange={e => set("team_id", e.target.value)}>
+                  <option value="">— No team —</option>
+                  {teams.map(t => <option key={t.id} value={t.id}>{t.icon || "🏢"} {t.name}</option>)}
+                </select>
+              </div>
+            )}
+
+            {/* Blocked fields */}
+            {form.status === "blocked" && (
+              <div style={{ background: "#7f1d1d22", border: "1px solid #ef444433", borderRadius: 10, padding: "14px 16px", marginBottom: 4 }}>
+                <div style={{ color: "#fca5a5", fontSize: 12, fontWeight: 700, marginBottom: 12 }}>🚫 Blocked Task Details</div>
+                <div className="modal-form-group">
+                  <label className="modal-label">Reason for being blocked</label>
+                  <input className="modal-input" placeholder="What is blocking this task?"
+                    value={form.blocked_reason || ""}
+                    onChange={e => set("blocked_reason", e.target.value)} />
+                </div>
+                <div className="modal-row">
+                  <div className="modal-form-group">
+                    <label className="modal-label">Severity</label>
+                    <select className="modal-select" value={form.blocked_severity || "medium"}
+                      onChange={e => set("blocked_severity", e.target.value)}>
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="critical">Critical</option>
+                    </select>
+                  </div>
+                  <div className="modal-form-group">
+                    <label className="modal-label">Expected Resolution</label>
+                    <input type="date" className="modal-input"
+                      value={form.blocked_expected_resolution || ""}
+                      onChange={e => set("blocked_expected_resolution", e.target.value)} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Recurrence — coming soon */}
             <div className="modal-form-group">
-              <label className="modal-label">🔁 Recurrence</label>
-              <select className="modal-select" value={form.recurrence}
-                onChange={e => set("recurrence", e.target.value)}>
+              <label className="modal-label" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                🔁 Recurrence
+                <span style={{ fontSize: 10, fontWeight: 700, background: "rgba(139,92,246,0.15)", color: "#a78bfa", borderRadius: 4, padding: "1px 6px", letterSpacing: "0.3px" }}>
+                  COMING SOON
+                </span>
+              </label>
+              <select className="modal-select" value={form.recurrence} disabled
+                onChange={e => set("recurrence", e.target.value)}
+                style={{ opacity: 0.5, cursor: "not-allowed" }}>
                 <option value="">None (one-time)</option>
                 <option value="daily">Daily</option>
                 <option value="weekly">Weekly</option>

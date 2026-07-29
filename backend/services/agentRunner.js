@@ -2,10 +2,18 @@
  * Multi-Agent Automation Runner — Phase 15
  *
  * Runs background agents on a schedule:
- *   Agent 1 (Risk Monitor)   — every hour: re-score all tasks, fire Slack alerts for new critical
- *   Agent 2 (Overdue Tagger) — every 6 hours: detect newly overdue tasks, notify workspace owners
- *   Agent 3 (Workload Sync)  — every 30 min: refresh workload_logs for all active users
- *   Agent 4 (Digest Mailer)  — daily 8am: send daily digest (when email configured)
+ *   Agent 1 (Risk Monitor)     — every hour: re-score all tasks, fire Slack alerts for new critical
+ *   Agent 2 (Overdue Tagger)   — every 6 hours: detect newly overdue tasks, notify workspace owners
+ *   Agent 3 (Workload Sync)    — every 30 min: refresh workload_logs for all active users
+ *   Agent 4 (Digest Mailer)    — daily 8am: send daily digest (when email configured)
+ *   Agent 5 (Metrics Snapshot) — daily 23:50: write execution_score/sprint_confidence/focus_time
+ *                                 to metric_snapshots (briefing engine Phase 1, see
+ *                                 docs/briefing-engine-plan.md §3.2 — must run before the
+ *                                 briefing engine's first send or there's no trend history)
+ *   Agent 6 (Briefing Scheduler)— hourly at :00: dispatch due daily briefing emails
+ *                                 (briefing engine Phase 4, §6.4 — Option A from §0.1;
+ *                                 routes/internal.js's tick endpoint is the Option C
+ *                                 external fallback for the same underlying tick)
  *
  * All agents are non-blocking and log to agent_runs table.
  */
@@ -14,6 +22,9 @@ const cron   = require("node-cron");
 const pool   = require("../db");
 const ai     = require("./aiEngine");
 const axios  = require("axios");
+const { refreshUserWorkloadLog } = require("./workloadLogger");
+const { runDailySnapshot }       = require("./metrics");
+const { runSchedulerTick }       = require("./briefing");
 
 let started = false;
 
@@ -122,7 +133,7 @@ async function runOverdueTagger() {
     const wsRow = await pool.query("SELECT id, user_id FROM workspaces");
     for (const ws of wsRow.rows) {
       try {
-        // Find newly overdue tasks (due yesterday or before, never notified)
+        // Find overdue tasks not yet notified today
         const overdueRow = await pool.query(
           `SELECT t.id, t.title, t.due_date, u.name AS assignee_name, t.assigned_user_id
            FROM tasks t
@@ -130,7 +141,12 @@ async function runOverdueTagger() {
            WHERE t.workspace_id=$1
              AND t.due_date < NOW()
              AND t.status != 'done'
-             AND (t.ai_last_analyzed_at IS NULL OR t.due_date::date != (t.ai_last_analyzed_at - INTERVAL '1 day')::date)
+             AND NOT EXISTS (
+               SELECT 1 FROM notifications n
+               WHERE (n.data->>'task_id')::text = t.id::text
+                 AND n.type = 'overdue'
+                 AND n.created_at::date = CURRENT_DATE
+             )
            LIMIT 10`,
           [ws.id]
         );
@@ -183,7 +199,6 @@ async function runWorkloadSync() {
 
     for (const { user_id, workspace_id } of usersRow.rows) {
       try {
-        const { refreshUserWorkloadLog } = require("./workloadLogger");
         await refreshUserWorkloadLog(user_id, workspace_id);
       } catch { /* ignore */ }
     }
@@ -194,6 +209,28 @@ async function runWorkloadSync() {
   }
 }
 
+// ── Agent 5: Metrics Snapshot ─────────────────────────────────────────────────
+async function runMetricsSnapshot() {
+  try {
+    const summary = await runDailySnapshot();
+    await logRun("metrics_snapshot", null, summary);
+  } catch (e) {
+    console.error("[Agent:MetricsSnapshot]", e.message);
+    await logRun("metrics_snapshot", null, {}, "error", e.message);
+  }
+}
+
+// ── Agent 6: Briefing Scheduler ───────────────────────────────────────────────
+async function runBriefingScheduler() {
+  try {
+    const summary = await runSchedulerTick();
+    await logRun("briefing_scheduler", null, summary);
+  } catch (e) {
+    console.error("[Agent:BriefingScheduler]", e.message);
+    await logRun("briefing_scheduler", null, {}, "error", e.message);
+  }
+}
+
 // ── Start all agents ──────────────────────────────────────────────────────────
 function startAgents() {
   if (started) return;
@@ -201,23 +238,35 @@ function startAgents() {
 
   // Agent 1: Risk Monitor — every hour at minute 5
   cron.schedule("5 * * * *", () => {
-    console.log("[Agent:RiskMonitor] Running…");
-    runRiskMonitor();
+    runRiskMonitor().catch(e => console.error("[Agent:RiskMonitor] uncaught:", e.message));
   });
 
   // Agent 2: Overdue Tagger — every 6 hours
   cron.schedule("0 */6 * * *", () => {
-    console.log("[Agent:OverdueTagger] Running…");
-    runOverdueTagger();
+    runOverdueTagger().catch(e => console.error("[Agent:OverdueTagger] uncaught:", e.message));
   });
 
   // Agent 3: Workload Sync — every 30 minutes
   cron.schedule("*/30 * * * *", () => {
-    console.log("[Agent:WorkloadSync] Running…");
-    runWorkloadSync();
+    runWorkloadSync().catch(e => console.error("[Agent:WorkloadSync] uncaught:", e.message));
   });
 
-  console.log("✅ Background agents started (RiskMonitor, OverdueTagger, WorkloadSync)");
+  // Agent 5: Metrics Snapshot — daily at 23:50 (server time)
+  cron.schedule("50 23 * * *", () => {
+    runMetricsSnapshot().catch(e => console.error("[Agent:MetricsSnapshot] uncaught:", e.message));
+  });
+
+  // Agent 6: Briefing Scheduler — hourly at :00, matches docs/briefing-engine-plan.md §6.4
+  if (process.env.BRIEFINGS_ENABLED !== "false") {
+    cron.schedule("0 * * * *", () => {
+      runBriefingScheduler().catch(e => console.error("[Agent:BriefingScheduler] uncaught:", e.message));
+    });
+  }
+
+  console.log("✅ Background agents started (RiskMonitor, OverdueTagger, WorkloadSync, MetricsSnapshot, BriefingScheduler)");
 }
 
-module.exports = { startAgents, runRiskMonitor, runOverdueTagger, runWorkloadSync };
+module.exports = {
+  startAgents, runRiskMonitor, runOverdueTagger, runWorkloadSync,
+  runMetricsSnapshot, runBriefingScheduler,
+};

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { analytics } from "../../utils/analytics";
 import api from "../../api/api";
+import Logo from "../../components/Logo";
 
 const ROLES = [
   {
@@ -80,31 +81,13 @@ export default function RoleSelection() {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      fontFamily: "'Inter', sans-serif",
+      fontFamily: "'DM Sans', sans-serif",
       padding: "24px",
     }}>
       <div style={{ width: "100%", maxWidth: 680 }}>
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <div style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 10,
-            marginBottom: 8,
-          }}>
-            <div style={{
-              width: 36, height: 36, borderRadius: 10,
-              background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <rect x="2" y="10" width="4" height="12" rx="1.5" fill="#fff"/>
-                <rect x="10" y="6" width="4" height="16" rx="1.5" fill="#fff"/>
-                <rect x="18" y="2" width="4" height="20" rx="1.5" fill="#fff"/>
-              </svg>
-            </div>
-            <span style={{ fontSize: 22, fontWeight: 700, color: "#fff" }}>Taskora</span>
-          </div>
+          <Logo iconSize={32} wordmarkSize={22} justify="center" style={{ display: "inline-flex", marginBottom: 8 }} />
           <div style={{ color: "#94a3b8", fontSize: 14 }}>
             Step {step} of 2 — Let's personalise your experience
           </div>
@@ -116,7 +99,7 @@ export default function RoleSelection() {
             <div style={{
               width: step === 1 ? "50%" : "100%",
               height: "100%",
-              background: "linear-gradient(90deg, #6366f1, #8b5cf6)",
+              background: "var(--tk-accent, #3B82F6)",
               borderRadius: 4,
               transition: "width 0.3s ease",
             }} />
@@ -129,7 +112,7 @@ export default function RoleSelection() {
             <h1 style={{ color: "#f1f5f9", fontSize: 26, fontWeight: 700, textAlign: "center", marginBottom: 8 }}>
               What describes you best?
             </h1>
-            <p style={{ color: "#94a3b8", textAlign: "center", marginBottom: 32, fontSize: 15 }}>
+            <p style={{ color: "#94a3b8", textAlign: "center", marginBottom: 32, fontSize: 14 }}>
               We'll customise your workspace views and features based on how you work.
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -139,12 +122,12 @@ export default function RoleSelection() {
                   onClick={() => setSelectedRole(role.id)}
                   style={{
                     background: selectedRole === role.id
-                      ? "rgba(99,102,241,0.15)"
+                      ? "rgba(59,130,246,0.15)"
                       : "rgba(255,255,255,0.04)",
                     border: selectedRole === role.id
-                      ? "1.5px solid #6366f1"
+                      ? "1.5px solid var(--tk-accent, #3B82F6)"
                       : "1.5px solid rgba(255,255,255,0.08)",
-                    borderRadius: 14,
+                    borderRadius: 12,
                     padding: "20px 24px",
                     cursor: "pointer",
                     textAlign: "left",
@@ -164,12 +147,12 @@ export default function RoleSelection() {
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                       {role.highlights.map(h => (
                         <span key={h} style={{
-                          background: "rgba(99,102,241,0.12)",
-                          color: "#a5b4fc",
+                          background: "rgba(59,130,246,0.12)",
+                          color: "#06B6D4",
                           fontSize: 12,
                           padding: "3px 10px",
                           borderRadius: 20,
-                          border: "1px solid rgba(99,102,241,0.2)",
+                          border: "1px solid rgba(59,130,246,0.2)",
                         }}>{h}</span>
                       ))}
                     </div>
@@ -178,7 +161,7 @@ export default function RoleSelection() {
                     width: 20, height: 20, borderRadius: "50%", flexShrink: 0, marginTop: 4,
                     border: selectedRole === role.id ? "none" : "2px solid #334155",
                     background: selectedRole === role.id
-                      ? "linear-gradient(135deg, #6366f1, #8b5cf6)"
+                      ? "var(--tk-accent, #3B82F6)"
                       : "transparent",
                     display: "flex", alignItems: "center", justifyContent: "center",
                   }}>
@@ -200,7 +183,7 @@ export default function RoleSelection() {
             <h1 style={{ color: "#f1f5f9", fontSize: 26, fontWeight: 700, textAlign: "center", marginBottom: 8 }}>
               How big is your team?
             </h1>
-            <p style={{ color: "#94a3b8", textAlign: "center", marginBottom: 32, fontSize: 15 }}>
+            <p style={{ color: "#94a3b8", textAlign: "center", marginBottom: 32, fontSize: 14 }}>
               This helps us recommend the right plan for you.
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -210,16 +193,16 @@ export default function RoleSelection() {
                   onClick={() => setSelectedSize(s.id)}
                   style={{
                     background: selectedSize === s.id
-                      ? "rgba(99,102,241,0.15)"
+                      ? "rgba(59,130,246,0.15)"
                       : "rgba(255,255,255,0.04)",
                     border: selectedSize === s.id
-                      ? "1.5px solid #6366f1"
+                      ? "1.5px solid var(--tk-accent, #3B82F6)"
                       : "1.5px solid rgba(255,255,255,0.08)",
                     borderRadius: 12,
                     padding: "16px 20px",
                     cursor: "pointer",
                     color: selectedSize === s.id ? "#a5b4fc" : "#94a3b8",
-                    fontSize: 15,
+                    fontSize: 14,
                     fontWeight: selectedSize === s.id ? 600 : 400,
                     transition: "all 0.15s ease",
                   }}
@@ -253,12 +236,12 @@ export default function RoleSelection() {
             marginTop: 28,
             padding: "14px",
             background: saving || (step === 1 && !selectedRole)
-              ? "rgba(99,102,241,0.3)"
-              : "linear-gradient(135deg, #6366f1, #8b5cf6)",
+              ? "rgba(59,130,246,0.3)"
+              : "var(--tk-accent, #3B82F6)",
             color: "#fff",
             border: "none",
             borderRadius: 12,
-            fontSize: 15,
+            fontSize: 14,
             fontWeight: 600,
             cursor: saving || (step === 1 && !selectedRole) ? "not-allowed" : "pointer",
             transition: "opacity 0.15s",

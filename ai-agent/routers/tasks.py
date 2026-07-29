@@ -47,4 +47,5 @@ async def list_tasks(workspace_id: int, token: str):
     try:
         return await fetch_tasks(client, workspace_id)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Task fetch error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Could not fetch tasks. Please try again.")

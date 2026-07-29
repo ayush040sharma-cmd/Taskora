@@ -15,8 +15,8 @@ function LoadBar({ pct, label, color }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
       {label && <span style={{ fontSize: 11, color: "#64748b" }}>{label}</span>}
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <div style={{ flex: 1, height: 8, background: "#f1f5f9", borderRadius: 99, overflow: "hidden" }}>
-          <div style={{ width: `${Math.min(pct, 100)}%`, height: "100%", background: color || "#6366f1", borderRadius: 99, transition: "width 0.4s" }} />
+        <div style={{ flex: 1, height: 8, background: "var(--column-bg, #334155)", borderRadius: 99, overflow: "hidden" }}>
+          <div style={{ width: `${Math.min(pct, 100)}%`, height: "100%", background: color || "var(--tk-accent, #3B82F6)", borderRadius: 99, transition: "width 0.4s" }} />
         </div>
         <span style={{ fontSize: 12, fontWeight: 700, color, minWidth: 36 }}>{pct}%</span>
       </div>
@@ -129,7 +129,7 @@ export default function SimulationModal({ task, workspaceId, onClose, onAssign }
                         </div>
                       </div>
                       {simLoading && selected === s.user_id && (
-                        <div style={{ fontSize: 12, color: "#6366f1" }}>Simulating…</div>
+                        <div style={{ fontSize: 12, color: "var(--tk-accent, #3B82F6)" }}>Simulating…</div>
                       )}
                     </div>
                   ))}
@@ -156,7 +156,7 @@ export default function SimulationModal({ task, workspaceId, onClose, onAssign }
               <div className="sim-compare">
                 <div className="sim-compare-col">
                   <div className="sim-compare-label">Before</div>
-                  <LoadBar pct={sim.before.pct} color="#6366f1" label={`${sim.before.hours}h · ${sim.before.tasks} tasks`} />
+                  <LoadBar pct={sim.before.pct} color="var(--tk-accent, #3B82F6)" label={`${sim.before.hours}h · ${sim.before.tasks} tasks`} />
                 </div>
                 <div className="sim-compare-arrow">→</div>
                 <div className="sim-compare-col">
@@ -224,7 +224,7 @@ export default function SimulationModal({ task, workspaceId, onClose, onAssign }
               onClick={handleAssign}
               disabled={!sim?.feasible && sim?.canOverride && !justification.trim()}
               style={{
-                background: sim && !sim.feasible ? "#f59e0b" : "#6366f1",
+                background: sim && !sim.feasible ? "#f59e0b" : "var(--tk-accent, #3B82F6)",
               }}
             >
               {sim && !sim.feasible ? "⚠️ Override & Assign" : "Assign task"}

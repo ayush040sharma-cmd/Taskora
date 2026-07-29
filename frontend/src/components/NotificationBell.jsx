@@ -1,12 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import api from "../api/api";
+import { getSocket } from "../hooks/useSocket";
+import { useAuth } from "../context/AuthContext";
+import { LuBell } from "react-icons/lu";
 
-const IconBell = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-  </svg>
-);
+const IconBell = () => <LuBell size={16} />;
 
 const TYPE_ICON = {
   task_assigned:     "📋",
@@ -28,6 +26,7 @@ function timeAgo(ts) {
 }
 
 export default function NotificationBell() {
+  const { user } = useAuth();
   const [open,   setOpen]   = useState(false);
   const [items,  setItems]  = useState([]);
   const [count,  setCount]  = useState(0);
@@ -49,9 +48,24 @@ export default function NotificationBell() {
   };
 
   useEffect(() => {
+    if (!user) return;
     fetchCount();
-    const interval = setInterval(fetchCount, 30000);
+    // Poll every 2 min as a fallback only — socket handles real-time delivery
+    const interval = setInterval(fetchCount, 120000);
     return () => clearInterval(interval);
+  }, [user]);
+
+  // Real-time: listen on personal socket room for instant notification delivery
+  useEffect(() => {
+    if (!user) return;
+    const socket = getSocket();
+    if (!socket.connected) socket.connect();
+    const handler = (notif) => {
+      setCount(c => c + 1);
+      setItems(prev => [notif, ...prev].slice(0, 20));
+    };
+    socket.on("notification", handler);
+    return () => socket.off("notification", handler);
   }, []);
 
   useEffect(() => {

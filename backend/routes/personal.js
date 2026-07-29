@@ -12,6 +12,7 @@ const router  = express.Router();
 const pool    = require("../db");
 const auth    = require("../middleware/auth");
 const wl      = require("../services/workloadEngine");
+const { buildBriefingContext } = require("../services/briefing");
 
 // ── Scoring ───────────────────────────────────────────────────────────────────
 
@@ -361,6 +362,58 @@ router.get("/dashboard", auth, async (req, res) => {
     });
   } catch (err) {
     console.error("personal dashboard error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ── GET /api/personal/my-tasks ──────────────────────────────────────────────
+// Every task assigned to the current user across EVERY workspace they belong
+// to (owned or member), not just the currently-selected one. Board views are
+// necessarily single-workspace since drag-and-drop reorders within a column's
+// workspace-scoped position; this is the deliberately workspace-agnostic
+// counterpart for "what do I owe, everywhere."
+router.get("/my-tasks", auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const includeDone = req.query.include_done === "true";
+
+    const result = await pool.query(
+      `SELECT t.*, w.name AS workspace_name
+       FROM tasks t
+       JOIN workspaces w ON w.id = t.workspace_id
+       WHERE t.assigned_user_id = $1
+         AND (
+           EXISTS (SELECT 1 FROM workspaces WHERE id = t.workspace_id AND user_id = $1)
+           OR EXISTS (SELECT 1 FROM workspace_members WHERE workspace_id = t.workspace_id AND user_id = $1)
+         )
+         ${includeDone ? "" : "AND t.status != 'done'"}
+       ORDER BY
+         CASE WHEN t.due_date IS NOT NULL AND t.due_date < NOW() THEN 0 ELSE 1 END,
+         CASE t.priority WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END,
+         t.due_date ASC NULLS LAST,
+         t.created_at DESC`,
+      [userId]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("my-tasks error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ── GET /api/personal/today ─────────────────────────────────────────────────
+// In-app version of the briefing engine's daily email — same facts, same
+// buildBriefingContext() call, just rendered in the UI instead of an email
+// template. Aggregates across all of the user's workspaces (no workspace_id
+// passed through), matching the email briefing's default scope.
+router.get("/today", auth, async (req, res) => {
+  try {
+    const type = req.query.type === "evening" ? "evening" : "morning";
+    const facts = await buildBriefingContext(req.user.id, type);
+    res.json(facts);
+  } catch (err) {
+    console.error("today briefing error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });

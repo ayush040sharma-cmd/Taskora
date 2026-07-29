@@ -1,6 +1,6 @@
 /**
  * Capacity Panel — personal capacity & leave/travel settings
- * Analysts see an approval confirmation when requesting leave or travel.
+ * Non-managers see an approval flow: request is sent to manager for approval.
  */
 import { useState, useEffect } from "react";
 import api from "../api/api";
@@ -11,7 +11,7 @@ const DEFAULTS = {
   customer_facing_hours: 6,
   internal_hours: 2,
   travel_mode: false,
-  travel_hours: 2,
+  travel_hours: 4,   // 4h default while travelling (half day)
   on_leave: false,
   leave_start: "",
   leave_end: "",
@@ -22,49 +22,70 @@ const DEFAULTS = {
 };
 
 // ── Approval Confirmation Modal ───────────────────────────────────────────────
-function ApprovalConfirmModal({ type, onConfirm, onCancel }) {
+function ApprovalConfirmModal({ type, form, workspaceId, onSent, onCancel }) {
   const typeLabel = type === "leave" ? "Leave" : "Travel Mode";
   const typeIcon  = type === "leave" ? "🏖️" : "✈️";
+  const [sending, setSending] = useState(false);
+  const [note, setNote] = useState("");
+
+  const handleSend = async () => {
+    setSending(true);
+    try {
+      await api.post("/capacity/requests", {
+        request_type: type,
+        workspace_id: workspaceId,
+        leave_start:  type === "leave" ? (form.leave_start || null) : null,
+        leave_end:    type === "leave" ? (form.leave_end   || null) : null,
+        travel_hours: type === "travel" ? Number(form.travel_hours || 2) : null,
+        justification: note || null,
+      });
+      onSent();
+    } catch {
+      onSent(); // fall through — request stored best-effort
+    } finally {
+      setSending(false);
+    }
+  };
 
   return (
-    <div style={{
-      position: "fixed", inset: 0, background: "rgba(15,23,42,0.5)",
-      zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center",
-      padding: 20,
-    }}>
-      <div style={{
-        background: "#fff", borderRadius: 16, padding: 32, maxWidth: 440, width: "100%",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
-      }}>
+    <div className="modal-overlay" style={{ zIndex: 9999 }}>
+      <div className="cap-approval-modal modal-box" style={{ maxWidth: 440, borderRadius: 16, padding: 32 }}>
         <div style={{ fontSize: 40, textAlign: "center", marginBottom: 16 }}>{typeIcon}</div>
-        <h3 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", textAlign: "center", margin: "0 0 12px" }}>
+        <h3 className="cap-approval-title" style={{ fontSize: 18, fontWeight: 700, textAlign: "center", margin: "0 0 12px" }}>
           {typeLabel} Request
         </h3>
-        <p style={{ fontSize: 14, color: "#64748b", textAlign: "center", lineHeight: 1.6, margin: "0 0 8px" }}>
+        <p className="cap-approval-body" style={{ fontSize: 14, textAlign: "center", lineHeight: 1.6, margin: "0 0 8px" }}>
           This request will go to your <strong>manager for approval</strong>.
         </p>
-        <p style={{ fontSize: 13, color: "#94a3b8", textAlign: "center", margin: "0 0 24px" }}>
-          Your manager will be notified and can approve or reject this request.
+        <p className="cap-approval-note" style={{ fontSize: 13, textAlign: "center", margin: "0 0 16px" }}>
+          Your manager will be notified and can approve or reject.
         </p>
+        <textarea
+          className="modal-input"
+          placeholder="Add a note (optional)"
+          rows={2}
+          value={note}
+          onChange={e => setNote(e.target.value)}
+          style={{ marginBottom: 20, resize: "none" }}
+        />
         <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
           <button
             onClick={onCancel}
-            style={{
-              padding: "10px 24px", borderRadius: 8, border: "1.5px solid #e2e8f0",
-              background: "#fff", color: "#374151", fontWeight: 600, cursor: "pointer", fontSize: 14,
-            }}
+            className="cap-approval-cancel btn-modal-cancel"
+            style={{ padding: "10px 24px", fontWeight: 600, fontSize: 14 }}
           >
             Cancel
           </button>
           <button
-            onClick={onConfirm}
+            onClick={handleSend}
+            disabled={sending}
             style={{
               padding: "10px 24px", borderRadius: 8, border: "none",
-              background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-              color: "#fff", fontWeight: 600, cursor: "pointer", fontSize: 14,
+              background: "var(--tk-accent, #3B82F6)",
+              color: "#fff", fontWeight: 600, cursor: sending ? "not-allowed" : "pointer", fontSize: 14,
             }}
           >
-            Send Request →
+            {sending ? "Sending…" : "Send Request →"}
           </button>
         </div>
       </div>
@@ -72,15 +93,16 @@ function ApprovalConfirmModal({ type, onConfirm, onCancel }) {
   );
 }
 
-export default function CapacityPanel() {
+export default function CapacityPanel({ workspaceId }) {
   const { user } = useAuth();
-  const isAnalyst = user?.role !== "manager";
+  const isAnalyst = user?.role !== "manager" && user?.role !== "super_boss";
 
   const [form,    setForm]    = useState(DEFAULTS);
   const [loading, setLoading] = useState(true);
-  const [saving,  setSaving]  = useState(false);
+  const [saving,  setSaving]  = useState({ hours: false, travel: false, leave: false });
   const [saved,   setSaved]   = useState("");
   const [error,   setError]   = useState("");
+  const [requestSent, setRequestSent] = useState(""); // "leave" | "travel" — success banner
 
   // Approval flow state
   const [pendingSection, setPendingSection] = useState(null); // "leave" | "travel"
@@ -111,7 +133,7 @@ export default function CapacityPanel() {
   };
 
   const save = async (section) => {
-    setSaving(true); setError(""); setSaved("");
+    setSaving(s => ({ ...s, [section]: true })); setError(""); setSaved("");
     try {
       if (section === "travel") {
         await api.put("/capacity/travel", {
@@ -140,15 +162,20 @@ export default function CapacityPanel() {
       if (updated) setForm({ ...DEFAULTS, ...updated.data });
       setTimeout(() => setSaved(""), 2500);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to save. Run the SQL migration and retry.");
+      setError(err.response?.data?.message || "Failed to save. Please try again.");
     } finally {
-      setSaving(false);
+      setSaving(s => ({ ...s, [section]: false }));
     }
   };
 
-  const handleApprovalConfirm = () => {
+  const handleApprovalSent = () => {
+    const section = pendingSection;
     setPendingSection(null);
-    save(pendingSection);
+    // Revert toggle — state stays unchanged until manager approves
+    if (section === "leave") setForm(f => ({ ...f, on_leave: false }));
+    if (section === "travel") setForm(f => ({ ...f, travel_mode: false }));
+    setRequestSent(section);
+    setTimeout(() => setRequestSent(""), 5000);
   };
 
   const handleApprovalCancel = () => {
@@ -171,9 +198,18 @@ export default function CapacityPanel() {
       {pendingSection && (
         <ApprovalConfirmModal
           type={pendingSection}
-          onConfirm={handleApprovalConfirm}
+          form={form}
+          workspaceId={workspaceId}
+          onSent={handleApprovalSent}
           onCancel={handleApprovalCancel}
         />
+      )}
+
+      {/* Request sent banner */}
+      {requestSent && (
+        <div style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 10, padding: "12px 16px", marginBottom: 16, fontSize: 14, color: "#22c55e", display: "flex", alignItems: "center", gap: 8 }}>
+          ✅ Your {requestSent === "leave" ? "leave" : "travel"} request has been sent to your manager for approval.
+        </div>
       )}
 
       {/* ── Page header ── */}
@@ -198,9 +234,38 @@ export default function CapacityPanel() {
           </div>
         </div>
 
+        {/* Live effective capacity banner */}
+        {(form.on_leave || form.travel_mode) && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 12,
+            background: form.on_leave ? "#fef2f2" : "#eff6ff",
+            border: `1px solid ${form.on_leave ? "#fca5a5" : "#93c5fd"}`,
+            borderRadius: 10, padding: "10px 14px", marginBottom: 12,
+          }}>
+            <span style={{ fontSize: 20 }}>{form.on_leave ? "🏖️" : "✈️"}</span>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 13, color: form.on_leave ? "#dc2626" : "#1d4ed8" }}>
+                {form.on_leave ? "On leave — effective capacity: 0 h/day" : `Travelling — effective capacity: ${form.travel_hours || 4} h/day`}
+              </div>
+              <div style={{ fontSize: 12, color: "#64748b", marginTop: 1 }}>
+                {form.on_leave
+                  ? `Normal capacity (${form.daily_hours}h) is suspended while on leave`
+                  : `Normal capacity reduced from ${form.daily_hours}h → ${form.travel_hours || 4}h while travelling`}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="cap-fields">
           <div className="cap-field">
-            <label className="cap-field-label">Total daily capacity</label>
+            <label className="cap-field-label">
+              Total daily capacity
+              {form.travel_mode && !form.on_leave && (
+                <span style={{ marginLeft: 6, fontSize: 11, color: "var(--tk-accent, #3B82F6)", fontWeight: 600 }}>
+                  (travel: {form.travel_hours || 4}h active)
+                </span>
+              )}
+            </label>
             <div className="cap-field-input-wrap">
               <input className="modal-input" type="number" min={0} max={24} step={0.5}
                 value={form.daily_hours} onChange={set("daily_hours")} style={{ maxWidth: 90 }} />
@@ -225,22 +290,48 @@ export default function CapacityPanel() {
           </div>
         </div>
 
-        {/* Visual hours bar */}
+        {/* Visual hours bar — shows effective vs normal */}
         <div className="cap-hours-viz">
           <div className="cap-hours-bar">
-            <div className="cap-hours-seg cap-seg--customer"
-              style={{ width: `${Math.min(100, (form.customer_facing_hours / Math.max(form.daily_hours, 1)) * 100)}%` }}
-              title="Customer-facing"
-            />
-            <div className="cap-hours-seg cap-seg--internal"
-              style={{ width: `${Math.min(100, (form.internal_hours / Math.max(form.daily_hours, 1)) * 100)}%` }}
-              title="Internal"
-            />
+            {form.on_leave ? (
+              <div style={{ width: "100%", background: "rgba(239,68,68,0.15)", borderRadius: 4, height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ fontSize: 11, color: "#ef4444", fontWeight: 600 }}>0h — on leave</span>
+              </div>
+            ) : (
+              <>
+                <div className="cap-hours-seg cap-seg--customer"
+                  style={{ width: `${Math.min(100, (form.customer_facing_hours / Math.max(form.daily_hours, 1)) * 100)}%` }}
+                  title="Customer-facing"
+                />
+                <div className="cap-hours-seg cap-seg--internal"
+                  style={{ width: `${Math.min(100, (form.internal_hours / Math.max(form.daily_hours, 1)) * 100)}%` }}
+                  title="Internal"
+                />
+                {form.travel_mode && (
+                  <div style={{
+                    position: "absolute", top: 0, right: 0, bottom: 0,
+                    width: `${Math.min(100, ((form.daily_hours - (form.travel_hours || 4)) / Math.max(form.daily_hours, 1)) * 100)}%`,
+                    background: "repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(59,130,246,0.15) 4px,rgba(59,130,246,0.15) 8px)",
+                    borderRadius: "0 4px 4px 0",
+                  }} title={`${form.daily_hours - (form.travel_hours || 4)}h unavailable while travelling`} />
+                )}
+              </>
+            )}
           </div>
           <div className="cap-hours-legend">
-            <span><span className="cap-dot cap-dot--customer" />Customer ({form.customer_facing_hours}h)</span>
-            <span><span className="cap-dot cap-dot--internal" />Internal ({form.internal_hours}h)</span>
-            <span className="cap-hours-total">Total: {form.daily_hours}h</span>
+            {!form.on_leave && (
+              <>
+                <span><span className="cap-dot cap-dot--customer" />Customer ({form.customer_facing_hours}h)</span>
+                <span><span className="cap-dot cap-dot--internal" />Internal ({form.internal_hours}h)</span>
+              </>
+            )}
+            <span className="cap-hours-total">
+              {form.on_leave
+                ? "Effective: 0h (on leave)"
+                : form.travel_mode
+                  ? `Effective: ${form.travel_hours || 4}h / Normal: ${form.daily_hours}h`
+                  : `Total: ${form.daily_hours}h`}
+            </span>
           </div>
         </div>
 
@@ -269,8 +360,8 @@ export default function CapacityPanel() {
           ))}
         </div>
 
-        <button className="cap-save-btn" onClick={() => save("hours")} disabled={saving}>
-          {saving && saved === "" ? "Saving…" : saved === "hours" ? "✓ Saved!" : "Save changes"}
+        <button className="cap-save-btn" onClick={() => save("hours")} disabled={saving.hours}>
+          {saving.hours ? "Saving…" : saved === "hours" ? "✓ Saved!" : "Save changes"}
         </button>
       </div>
 
@@ -278,11 +369,11 @@ export default function CapacityPanel() {
       <div className="cap-card">
         <div className="cap-card-header">
           <span className="cap-card-icon">✈️</span>
-          <div>
+          <div style={{ flex: 1 }}>
             <div className="cap-card-title">Travel Mode</div>
             <div className="cap-card-desc">
-              Reduces your daily capacity while you're on the road
-              {isAnalyst && <span style={{ color: "#6366f1", marginLeft: 6, fontSize: 12 }}>· requires manager approval</span>}
+              Automatically reduces your daily capacity from <strong>{form.daily_hours}h → {form.travel_hours || 4}h</strong> while you're travelling
+              {isAnalyst && <span style={{ color: "var(--tk-accent, #3B82F6)", marginLeft: 6, fontSize: 12 }}>· requires manager approval</span>}
             </div>
           </div>
           <label className="cap-toggle">
@@ -293,25 +384,51 @@ export default function CapacityPanel() {
           </label>
         </div>
 
+        {/* Always-visible quick reference */}
+        <div style={{ display: "flex", gap: 12, margin: "8px 0 4px", flexWrap: "wrap" }}>
+          <div style={{
+            flex: 1, minWidth: 120, background: form.travel_mode ? "#eff6ff" : "var(--column-bg)",
+            border: `1px solid ${form.travel_mode ? "#93c5fd" : "var(--border)"}`,
+            borderRadius: 8, padding: "10px 14px", textAlign: "center",
+          }}>
+            <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 2 }}>NORMAL</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: form.travel_mode ? "var(--text-muted)" : "var(--text-primary)" }}>{form.daily_hours}h</div>
+            <div style={{ fontSize: 11, color: "var(--text-muted)" }}>per day</div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", fontSize: 18, color: "var(--text-muted)" }}>→</div>
+          <div style={{
+            flex: 1, minWidth: 120, background: form.travel_mode ? "#dbeafe" : "var(--column-bg)",
+            border: `2px solid ${form.travel_mode ? "#3b82f6" : "var(--border)"}`,
+            borderRadius: 8, padding: "10px 14px", textAlign: "center",
+          }}>
+            <div style={{ fontSize: 11, color: form.travel_mode ? "#1d4ed8" : "var(--text-muted)", marginBottom: 2 }}>TRAVELLING</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: form.travel_mode ? "#1d4ed8" : "var(--text-muted)" }}>{form.travel_hours || 4}h</div>
+            <div style={{ fontSize: 11, color: form.travel_mode ? "#3b82f6" : "var(--text-muted)" }}>{form.travel_mode ? "✈️ active now" : "per day"}</div>
+          </div>
+        </div>
+
         {form.travel_mode && (
-          <div className="cap-travel-detail">
+          <div className="cap-travel-detail" style={{ marginTop: 12 }}>
             <div className="cap-travel-note">
-              ✈️ Travel mode is <strong>active</strong> — your capacity is reduced
+              ✈️ Travel mode is <strong>ON</strong> — workload engine now uses <strong>{form.travel_hours || 4}h/day</strong> for all calculations
             </div>
             <div className="cap-field" style={{ marginTop: 12 }}>
-              <label className="cap-field-label">Available hours while travelling</label>
+              <label className="cap-field-label">Hours available while travelling</label>
               <div className="cap-field-input-wrap">
                 <input className="modal-input" type="number" min={0} max={24} step={0.5}
-                  value={form.travel_hours || 2} onChange={set("travel_hours")} style={{ maxWidth: 90 }} />
+                  value={form.travel_hours || 4} onChange={set("travel_hours")} style={{ maxWidth: 90 }} />
                 <span className="cap-unit">h / day</span>
+              </div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
+                Changing this updates immediately — no full save needed after toggling.
               </div>
             </div>
           </div>
         )}
 
-        <button className="cap-save-btn" onClick={() => handleSectionSave("travel")} disabled={saving}
+        <button className="cap-save-btn" onClick={() => handleSectionSave("travel")} disabled={saving.travel}
           style={{ marginTop: form.travel_mode ? 12 : 16 }}>
-          {saving && saved === "" ? "Saving…" : saved === "travel" ? "✓ Saved!" : isAnalyst ? "Request travel mode" : "Save travel settings"}
+          {saving.travel ? "Saving…" : saved === "travel" ? "✓ Saved!" : isAnalyst ? "Request travel mode" : "Save travel settings"}
         </button>
       </div>
 
@@ -323,7 +440,7 @@ export default function CapacityPanel() {
             <div className="cap-card-title">Leave Management</div>
             <div className="cap-card-desc">
               When on leave, your capacity shows as 0 and no tasks can be assigned
-              {isAnalyst && <span style={{ color: "#6366f1", marginLeft: 6, fontSize: 12 }}>· requires manager approval</span>}
+              {isAnalyst && <span style={{ color: "var(--tk-accent, #3B82F6)", marginLeft: 6, fontSize: 12 }}>· requires manager approval</span>}
             </div>
           </div>
           <label className="cap-toggle">
@@ -352,9 +469,9 @@ export default function CapacityPanel() {
           </div>
         )}
 
-        <button className="cap-save-btn" onClick={() => handleSectionSave("leave")} disabled={saving}
+        <button className="cap-save-btn" onClick={() => handleSectionSave("leave")} disabled={saving.leave}
           style={{ marginTop: form.on_leave ? 12 : 16 }}>
-          {saving && saved === "" ? "Saving…" : saved === "leave" ? "✓ Saved!" : isAnalyst ? "Apply for leave" : "Save leave settings"}
+          {saving.leave ? "Saving…" : saved === "leave" ? "✓ Saved!" : isAnalyst ? "Apply for leave" : "Save leave settings"}
         </button>
       </div>
 

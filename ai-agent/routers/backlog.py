@@ -68,7 +68,8 @@ async def generate_backlog(req: BacklogRequest, db: AsyncSession = Depends(get_d
             workspace_id=req.workspace_id,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Backlog generation error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Backlog generation failed. Please try again.")
 
     items = []
     execution_order = []

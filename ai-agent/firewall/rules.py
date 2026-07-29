@@ -9,7 +9,10 @@ from typing import Tuple
 # ── SQL Injection patterns ────────────────────────────────────────────────────
 SQL_PATTERNS = [
     r"(\b(select|insert|update|delete|drop|create|alter|truncate|exec|execute|union|having|where)\b.{0,20}\b(from|into|table|database|schema)\b)",
-    r"('|\"|`)\s*(or|and)\s*('|\"|`)?\s*[\w\d]+\s*=\s*[\w\d]+",
+    # Optional quotes around BOTH sides of the comparison -- without the
+    # closing-quote alternation this missed the canonical admin' OR '1'='1
+    # bypass, since [\w\d]+ can't match into a quote character.
+    r"('|\"|`)\s*(or|and)\s*('|\"|`)?\s*[\w\d]+\s*('|\"|`)?\s*=\s*('|\"|`)?\s*[\w\d]+",
     r"--\s*$",                        # SQL comment at end
     r";\s*(drop|delete|truncate)\b",  # Stacked queries
     r"\bunion\s+(all\s+)?select\b",
@@ -76,12 +79,19 @@ PATH_TRAVERSAL = [
 ]
 
 # ── Compiled rule sets ────────────────────────────────────────────────────────
+# check_payload returns the FIRST matching category, so order matters:
+# path_traversal is checked before command_injection because CMD_PATTERNS
+# still contains its own "../../ " pattern (kept there since it's also a
+# real command-injection signal in some contexts) -- without this ordering,
+# every plain "../../etc/passwd"-style payload was mislabeled as
+# command_injection before path_traversal's own patterns ever ran. Blocking
+# behavior is unaffected either way; only the reported attack_type changes.
 _COMPILED: dict[str, list] = {
     "sql_injection":     [re.compile(p, re.IGNORECASE) for p in SQL_PATTERNS],
     "xss":               [re.compile(p, re.IGNORECASE) for p in XSS_PATTERNS],
+    "path_traversal":    [re.compile(p, re.IGNORECASE) for p in PATH_TRAVERSAL],
     "command_injection": [re.compile(p, re.IGNORECASE) for p in CMD_PATTERNS],
     "ssrf":              [re.compile(p, re.IGNORECASE) for p in SSRF_PATTERNS],
-    "path_traversal":    [re.compile(p, re.IGNORECASE) for p in PATH_TRAVERSAL],
 }
 
 SEVERITY_MAP = {
@@ -146,3 +156,44 @@ def scan_dict(data: dict, prefix: str = "") -> list[dict]:
                     findings.extend(scan_dict(item, f"{field}[{i}]"))
 
     return findings
+
+
+# ── Prompt injection heuristics ───────────────────────────────────────────────
+# Unlike SQLi/XSS/command injection above, there is no regex that reliably
+# solves prompt injection -- it's not a syntax attack, it's natural-language
+# instructions trying to override the system prompt, and a sufficiently
+# rephrased attempt will always slip past any fixed pattern list. These
+# patterns catch unsophisticated, common attempts and give an audit trail;
+# they are NOT a security boundary on their own. detect_prompt_injection()
+# deliberately returns signals rather than a block decision -- the real
+# mitigation is that the agent's tool access is already scoped to the
+# authenticated user's own permissions (see services/taskora_client.py),
+# which limits the blast radius even when an injection attempt succeeds.
+PROMPT_INJECTION_PATTERNS = [
+    r"\bignore\s+(all\s+|the\s+)?(previous|prior|above)\s+instructions?\b",
+    r"\bdisregard\s+(all\s+|the\s+)?(previous|prior|above)\b",
+    r"\bforget\s+(everything|all|your)\s+(you|above|instructions?)?\b",
+    r"\byou\s+are\s+now\b",
+    r"\bpretend\s+(you\s+are|to\s+be)\b",
+    r"\b(reveal|show|print|output)\s+(your\s+)?(system\s+)?(prompt|instructions)\b",
+    r"\bwhat\s+(are|were)\s+your\s+(initial\s+)?instructions\b(?!\s+for\b)",
+    r"\bnew\s+instructions\s*:",
+    r"^\s*#{2,}\s*instructions?\b",
+    r"\bdo\s+anything\s+now\b",           # "DAN" jailbreak family
+    r"\bdeveloper\s+mode\b",
+    r"\bjailbreak\b",
+]
+_COMPILED_PROMPT_INJECTION = [
+    (raw, re.compile(raw, re.IGNORECASE)) for raw in PROMPT_INJECTION_PATTERNS
+]
+
+
+def detect_prompt_injection(text: str) -> list[str]:
+    """
+    Returns the matched pattern(s) as raw regex source strings (empty if
+    none) -- callers should log this for visibility, not block on it. See
+    module docstring above for why this can't be a hard security boundary.
+    """
+    if not isinstance(text, str):
+        return []
+    return [raw for raw, compiled in _COMPILED_PROMPT_INJECTION if compiled.search(text)]

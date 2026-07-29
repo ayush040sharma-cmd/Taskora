@@ -7,16 +7,16 @@ import api from "../api/api";
 const PLAN_DETAILS = {
   pro: {
     title: "Pro",
-    price: "₹699",
-    amount: 699,
+    price: "$7",
+    amount: 7,
     description: "Unlimited projects, Gantt, Sprints, 500 AI requests/month",
-    color: "#6366f1",
+    color: "#3B82F6",
     features: ["Unlimited projects & tasks", "25 team members", "Gantt + Sprints", "Task approvals", "500 AI requests/month"],
   },
   enterprise: {
     title: "Enterprise",
-    price: "₹2,499",
-    amount: 2499,
+    price: "$25",
+    amount: 25,
     description: "Everything in Pro plus AI Risk, Simulation, Integrations, unlimited members",
     color: "#8b5cf6",
     features: ["Everything in Pro", "Unlimited members", "AI Risk Heatmap", "Simulation engine", "Integrations + SLA"],
@@ -75,7 +75,7 @@ export default function Payment() {
       }
 
       const options = {
-        key: order.key,
+        key: order.key_id,
         amount: order.amount,
         currency: order.currency,
         name: "Taskora",
@@ -110,6 +110,10 @@ export default function Payment() {
       };
 
       const rz = new window.Razorpay(options);
+      rz.on("payment.failed", (response) => {
+        setError(response.error?.description || "Payment failed. Please try again.");
+        setLoading(false);
+      });
       rz.open();
     } catch (err) {
       setError(err.response?.data?.error || err.message || "Something went wrong. Please try again.");
@@ -126,7 +130,7 @@ export default function Payment() {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      fontFamily: "'Inter', sans-serif",
+      fontFamily: "'DM Sans', sans-serif",
       padding: 24,
     }}>
       <div style={{ width: "100%", maxWidth: 460 }}>
@@ -142,7 +146,7 @@ export default function Payment() {
             <h2 style={{ color: "#34d399", fontSize: 22, fontWeight: 700, marginBottom: 8 }}>
               You're on {details.title}!
             </h2>
-            <p style={{ color: "#94a3b8", fontSize: 15 }}>
+            <p style={{ color: "#94a3b8", fontSize: 14 }}>
               Your plan has been upgraded. Redirecting to dashboard…
             </p>
           </div>
@@ -232,11 +236,11 @@ export default function Payment() {
                   style={{
                     width: "100%",
                     padding: "13px",
-                    background: loading ? "rgba(99,102,241,0.3)" : `linear-gradient(135deg, ${details.color}, #8b5cf6)`,
+                    background: loading ? "rgba(59,130,246,0.3)" : `linear-gradient(135deg, ${details.color}, #8b5cf6)`,
                     color: "#fff",
                     border: "none",
                     borderRadius: 10,
-                    fontSize: 15,
+                    fontSize: 14,
                     fontWeight: 600,
                     cursor: loading ? "not-allowed" : "pointer",
                     marginBottom: 12,
@@ -246,7 +250,7 @@ export default function Payment() {
                 </button>
 
                 <p style={{ textAlign: "center", fontSize: 12, color: "#475569" }}>
-                  🔒 Secure payment · Cancel anytime · GST applicable
+                  🔒 Secure payment · Cancel anytime
                 </p>
               </div>
             </div>

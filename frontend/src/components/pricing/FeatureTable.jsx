@@ -42,7 +42,7 @@ export default function FeatureTable({ highlight = "pro" }) {
                 padding: "10px 16px",
                 color: highlight === c.key ? "#a5b4fc" : "#64748b",
                 fontWeight: highlight === c.key ? 700 : 500,
-                background: highlight === c.key ? "rgba(99,102,241,0.06)" : "transparent",
+                background: highlight === c.key ? "rgba(59,130,246,0.06)" : "transparent",
               }}>
                 {c.label}
               </th>
@@ -60,7 +60,7 @@ export default function FeatureTable({ highlight = "pro" }) {
                 <td key={c.key} style={{
                   textAlign: "center",
                   padding: "10px 16px",
-                  background: highlight === c.key ? "rgba(99,102,241,0.04)" : "transparent",
+                  background: highlight === c.key ? "rgba(59,130,246,0.04)" : "transparent",
                 }}>
                   <Cell val={row[c.key]} />
                 </td>

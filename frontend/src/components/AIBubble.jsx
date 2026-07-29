@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import api from "../api/api";
+import UpgradeModal from "./upgrade/UpgradeModal";
 
 const SUGGESTIONS = [
+  "Create a task for FiberCops Demo for next week",
   "What tasks are overdue?",
-  "Who has the most tasks?",
   "What's high priority?",
   "Summarize the workspace",
 ];
@@ -28,6 +29,7 @@ export default function AIBubble({ workspaceId }) {
   ]);
   const [input, setInput]     = useState("");
   const [loading, setLoading] = useState(false);
+  const [upgradeError, setUpgradeError] = useState(null);
   const bottomRef = useRef(null);
   const inputRef  = useRef(null);
 
@@ -38,6 +40,9 @@ export default function AIBubble({ workspaceId }) {
     }
   }, [messages, open, minimized]);
 
+  // Detect action commands that should go to Jarvis instead of nlquery
+  const ACTION_RE = /\b(create|add|make|new|mark|move|set|assign|delete|remove|complete|finish)\b.{0,40}\b(task|bug|story|ticket|issue|feature|item)\b|\b(task|bug|story|ticket|issue)\b.{0,40}\b(done|complete|finished|in.?progress|todo)\b/i;
+
   const send = async (text) => {
     const q = (text || input).trim();
     if (!q || loading) return;
@@ -45,7 +50,7 @@ export default function AIBubble({ workspaceId }) {
     if (!workspaceId) {
       setMsgs(m => [...m,
         { role: "user", text: q },
-        { role: "assistant", text: "Please open a workspace first, then I can answer questions about your tasks." },
+        { role: "assistant", text: "Please open a workspace first, then I can help you." },
       ]);
       setInput("");
       return;
@@ -55,27 +60,41 @@ export default function AIBubble({ workspaceId }) {
     setMsgs(m => [...m, { role: "user", text: q }]);
     setLoading(true);
     try {
-      const { data } = await api.post(`/nlquery/${workspaceId}`, { query: q });
-      const answer = data.answer || data.response || data.message || "I couldn't find an answer to that.";
+      const isCommand = ACTION_RE.test(q);
 
-      // Build reply: text answer + up to 5 task titles if returned
-      let replyText = answer;
-      if (data.tasks?.length && data.type !== "summary" && data.type !== "members") {
-        const titles = data.tasks.slice(0, 5).map(t => `• ${t.title}`).join("\n");
-        replyText = answer + "\n" + titles;
-        if (data.tasks.length > 5) replyText += `\n…and ${data.tasks.length - 5} more`;
-      }
-      if (data.type === "members" && data.tasks?.length) {
-        const members = data.tasks.slice(0, 5).map(m => `• ${m.name}: ${m.load_pct ?? "?"}%`).join("\n");
-        replyText = answer + "\n" + members;
-      }
+      if (isCommand) {
+        // Route task creation/modification commands to Jarvis
+        const { data } = await api.post("/jarvis/command", { message: q, workspace_id: workspaceId });
+        const replyText = data.reply || "Done!";
+        setMsgs(m => [...m, { role: "assistant", text: replyText }]);
+      } else {
+        // Route queries to nlquery
+        const { data } = await api.post(`/nlquery/${workspaceId}`, { query: q });
+        const answer = data.answer || data.response || data.message || "I couldn't find an answer to that.";
 
-      setMsgs(m => [...m, { role: "assistant", text: replyText }]);
+        let replyText = answer;
+        if (data.tasks?.length && data.type !== "summary" && data.type !== "members") {
+          const titles = data.tasks.slice(0, 5).map(t => `• ${t.title}`).join("\n");
+          replyText = answer + "\n" + titles;
+          if (data.tasks.length > 5) replyText += `\n…and ${data.tasks.length - 5} more`;
+        }
+        if (data.type === "members" && data.tasks?.length) {
+          const members = data.tasks.slice(0, 5).map(m => `• ${m.name}: ${m.load_pct ?? "?"}%`).join("\n");
+          replyText = answer + "\n" + members;
+        }
+        setMsgs(m => [...m, { role: "assistant", text: replyText }]);
+      }
     } catch (err) {
-      const msg = err.response?.status === 403
-        ? "You don't have access to this workspace."
-        : "Couldn't connect right now. Try again in a moment.";
-      setMsgs(m => [...m, { role: "assistant", text: msg }]);
+      const code = err.response?.data?.code;
+      if (code === "PLAN_UPGRADE_REQUIRED" || code === "LIMIT_EXCEEDED") {
+        setUpgradeError(err);
+        setMsgs(m => [...m, { role: "assistant", text: "This action needs a plan upgrade." }]);
+      } else {
+        const msg = err.response?.status === 403
+          ? "You don't have access to this workspace."
+          : "Couldn't connect right now. Try again in a moment.";
+        setMsgs(m => [...m, { role: "assistant", text: msg }]);
+      }
     } finally {
       setLoading(false);
     }
@@ -93,13 +112,13 @@ export default function AIBubble({ workspaceId }) {
               <span className="ai-bubble-header-badge">Beta</span>
             </div>
             <div className="ai-bubble-header-actions">
-              <button className="ai-bubble-icon-btn" title="Minimize" onClick={() => setMin(true)}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <button className="ai-bubble-icon-btn" title="Minimize" aria-label="Minimize" onClick={() => setMin(true)}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
                   <line x1="5" y1="12" x2="19" y2="12"/>
                 </svg>
               </button>
-              <button className="ai-bubble-icon-btn" title="Close" onClick={() => setOpen(false)}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <button className="ai-bubble-icon-btn" title="Close" aria-label="Close AI Assistant" onClick={() => setOpen(false)}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
                   <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                 </svg>
               </button>
@@ -155,8 +174,9 @@ export default function AIBubble({ workspaceId }) {
               className="ai-bubble-send"
               onClick={() => send()}
               disabled={!input.trim() || loading}
+              aria-label="Send message"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
                 <line x1="22" y1="2" x2="11" y2="13"/>
                 <polygon points="22 2 15 22 11 13 2 9 22 2"/>
               </svg>
@@ -169,7 +189,7 @@ export default function AIBubble({ workspaceId }) {
       {open && minimized && (
         <div className="ai-bubble-minimized" onClick={() => setMin(false)}>
           <span>✨ AI Assistant</span>
-          <button className="ai-bubble-icon-btn" onClick={e => { e.stopPropagation(); setOpen(false); setMin(false); }}>✕</button>
+          <button className="ai-bubble-icon-btn" aria-label="Close AI Assistant" onClick={e => { e.stopPropagation(); setOpen(false); setMin(false); }}>✕</button>
         </div>
       )}
 
@@ -179,9 +199,18 @@ export default function AIBubble({ workspaceId }) {
           className="ai-bubble-fab"
           onClick={() => { setOpen(true); setMin(false); }}
           title="AI Assistant (⌘/)"
+          aria-label="Open AI Assistant"
         >
-          <span style={{ fontSize: 22, lineHeight: 1 }}>✨</span>
+          <span style={{ fontSize: 22, lineHeight: 1 }} aria-hidden="true">✨</span>
         </button>
+      )}
+
+      {upgradeError && (
+        <UpgradeModal
+          feature={upgradeError.response?.data?.feature}
+          requiredPlan={(upgradeError.response?.data?.requiredPlan || "pro").toLowerCase()}
+          onClose={() => setUpgradeError(null)}
+        />
       )}
     </div>
   );

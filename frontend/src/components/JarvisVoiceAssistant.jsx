@@ -37,7 +37,7 @@ const STATES = {
 
 const STATE_CONFIG = {
   [STATES.IDLE]:          { label: "Say 'Jarvis' to activate",  color: "#475569", glow: "none" },
-  [STATES.WAKE_DETECTED]: { label: "Listening...",               color: "#6366f1", glow: "0 0 40px rgba(99,102,241,0.6)" },
+  [STATES.WAKE_DETECTED]: { label: "Listening...",               color: "#3B82F6", glow: "0 0 40px rgba(59,130,246,0.6)" },
   [STATES.PROCESSING]:    { label: "Jarvis is thinking...",      color: "#f59e0b", glow: "0 0 40px rgba(245,158,11,0.6)" },
   [STATES.SPEAKING]:      { label: "Speaking...",                color: "#10b981", glow: "0 0 40px rgba(16,185,129,0.6)" },
   [STATES.ERROR]:         { label: "Error — try again",          color: "#ef4444", glow: "0 0 30px rgba(239,68,68,0.4)" },
@@ -213,14 +213,16 @@ export default function JarvisVoiceAssistant({ workspaceId }) {
   const [messages, dispatchMessages]          = useReducer(messagesReducer, []);
 
   // ── Refs for stable callbacks ────────────────────────────────────────────────
-  const assistantStateRef  = useRef(STATES.IDLE);
-  const commandBufferRef   = useRef("");
-  const commandTimerRef    = useRef(null);
-  const lastProcessedRef   = useRef("");
-  const debounceTimerRef   = useRef(null);
-  const processingRef      = useRef(false);
-  const abortRef           = useRef(null);
-  const chatEndRef         = useRef(null);
+  const assistantStateRef      = useRef(STATES.IDLE);
+  const commandBufferRef       = useRef("");
+  const commandTimerRef        = useRef(null);
+  const lastProcessedRef       = useRef("");
+  const debounceTimerRef       = useRef(null);
+  const processingRef          = useRef(false);
+  const abortRef               = useRef(null);
+  const chatEndRef             = useRef(null);
+  // Stores pending_action/pending_task_id/pending_params from a confirm_required response
+  const pendingConfirmationRef = useRef(null);
 
   const setState = useCallback((s) => {
     assistantStateRef.current = s;
@@ -260,11 +262,31 @@ export default function JarvisVoiceAssistant({ workspaceId }) {
     abortRef.current = controller;
 
     try {
+      const pending = pendingConfirmationRef.current;
       const { data } = await api.post(
         "/jarvis/command",
-        { message: command, workspace_id: workspaceId },
+        {
+          message: command,
+          workspace_id: workspaceId,
+          ...(pending ? {
+            pending_action:  pending.action,
+            pending_task_id: pending.task_id,
+            pending_params:  pending.params,
+          } : {}),
+        },
         { signal: controller.signal }
       );
+
+      // Store or clear pending confirmation based on response
+      if (data.action === "confirm_required") {
+        pendingConfirmationRef.current = {
+          action:  data.pending_action,
+          task_id: data.pending_task_id,
+          params:  data.pending_params,
+        };
+      } else {
+        pendingConfirmationRef.current = null;
+      }
 
       const reply = data.reply || data.message || "I couldn't process that command.";
 
@@ -280,6 +302,7 @@ export default function JarvisVoiceAssistant({ workspaceId }) {
       // Swallow cancellations silently
       if (err.name === "AbortError" || err.name === "CanceledError" || err.code === "ERR_CANCELED") return;
 
+      pendingConfirmationRef.current = null;
       const serverMsg = err.response?.data?.reply || err.response?.data?.message;
       const spokenErr = serverMsg || "Sorry, something went wrong. Please try again.";
 
@@ -445,11 +468,21 @@ export default function JarvisVoiceAssistant({ workspaceId }) {
                 </div>
               </div>
               <div className="jarvis-panel-controls">
+                {/* Stop speaking */}
+                <button
+                  className={`jarvis-ctrl-btn ${assistantState === STATES.SPEAKING ? "jarvis-ctrl-btn--speaking" : ""}`}
+                  onClick={stopSpeaking}
+                  disabled={assistantState !== STATES.SPEAKING}
+                  title="Stop speaking"
+                  style={{ opacity: assistantState === STATES.SPEAKING ? 1 : 0.35 }}
+                >
+                  ⏹
+                </button>
                 {/* Toggle mic */}
                 <button
                   className={`jarvis-ctrl-btn ${enabled ? "jarvis-ctrl-btn--on" : "jarvis-ctrl-btn--off"}`}
                   onClick={handleToggle}
-                  title={enabled ? "Disable Jarvis (Alt+J)" : "Enable Jarvis (Alt+J)"}
+                  title={enabled ? "Disable mic (Alt+J)" : "Enable mic (Alt+J)"}
                 >
                   {enabled ? "🎙️" : "🔇"}
                 </button>
@@ -528,7 +561,7 @@ export default function JarvisVoiceAssistant({ workspaceId }) {
             </div>
 
             {/* Manual input fallback */}
-            <ManualInput onSend={handleManualSend} disabled={processingRef.current} />
+            <ManualInput onSend={handleManualSend} disabled={assistantState === STATES.PROCESSING} />
 
             {/* Footer */}
             <div className="jarvis-panel-footer">

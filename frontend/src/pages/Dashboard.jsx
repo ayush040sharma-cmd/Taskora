@@ -1,8 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
+import { hasPermission } from "../utils/canAccess";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
+import DashboardMobile from "../layouts/DashboardMobile";
+import DashboardDesktop from "../layouts/DashboardDesktop";
+import { useIsMobile } from "../hooks/useIsMobile";
 import KanbanBoard from "../components/KanbanBoard";
+import { getWorkspacePref } from "../utils/workspacePrefs";
 import CreateTaskModal from "../components/CreateTaskModal";
 import WorkspaceModal from "../components/WorkspaceModal";
 import WorkloadDashboard from "../components/WorkloadDashboard";
@@ -17,6 +22,7 @@ import FilterBar from "../components/FilterBar";
 import IntegrationsPanel from "../components/IntegrationsPanel";
 import ActivityFeed from "../components/ActivityFeed";
 import SimulationPanel from "../components/SimulationPanel";
+import UpgradeGate from "../components/upgrade/UpgradeGate";
 import AIRiskHeatmap from "../components/AIRiskHeatmap";
 import NLChat from "../components/NLChat";
 import GanttChart from "../components/GanttChart";
@@ -31,15 +37,16 @@ import AIInsightsPanel from "../components/AIInsightsPanel";
 import ErrorBoundary from "../components/ErrorBoundary";
 import JarvisVoiceAssistant from "../components/JarvisVoiceAssistant";
 import SecurityDashboard from "../components/SecurityDashboard";
+import DependencyGraph from "../components/DependencyGraph";
+import CollaborationScore from "../components/CollaborationScore";
 import OnboardingChecklist from "../components/onboarding/OnboardingChecklist";
+import NotificationCenter from "../components/NotificationCenter";
+import SettingsPage from "./SettingsPage";
+import CommandCenter from "../components/CommandCenter";
+import TodayView from "../components/TodayView";
 
-const EMPTY_COLS = { todo: [], inprogress: [], done: [] };
+import ImportWizard from "../components/ImportWizard";
 
-function tasksToColumns(tasks) {
-  const c = { todo: [], inprogress: [], done: [] };
-  tasks.forEach(t => { if (c[t.status]) c[t.status].push(t); });
-  return c;
-}
 
 // ── Undo Toast ────────────────────────────────────────────────────
 function UndoToast({ item, onUndo, onDismiss }) {
@@ -182,16 +189,116 @@ function ShortcutsModal({ onClose }) {
   );
 }
 
+// ── Blocked-reason capture ──────────────────────────────────────────
+// Shown when a task is dragged into the Blocked column. Uses the same
+// blocked_reason / blocked_severity / blocked_by_task_id fields the task's
+// own Details tab and Create Task form already save -- just the one gap
+// where dropping a card onto Blocked skipped capturing them entirely.
+function BlockedTaskModal({ task, otherTasks, members, onCancel, onConfirm }) {
+  const [reason, setReason]     = useState("");
+  const [severity, setSeverity] = useState("medium");
+  const [blockedByTaskId, setBlockedByTaskId] = useState("");
+  const [taggedUserId, setTaggedUserId]       = useState("");
+  const [saving, setSaving]     = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!reason.trim()) return;
+    setSaving(true);
+    await onConfirm({
+      blocked_reason: reason.trim(),
+      blocked_severity: severity,
+      blocked_by_task_id: blockedByTaskId ? parseInt(blockedByTaskId) : null,
+      blocked_tagged_user_id: taggedUserId ? parseInt(taggedUserId) : null,
+    });
+    setSaving(false);
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onCancel}>
+      <div className="modal" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <span className="modal-title">Why is this task blocked?</span>
+          <button className="modal-close" onClick={onCancel}>✕</button>
+        </div>
+        <form onSubmit={submit}>
+          <div className="modal-body">
+            <p style={{ color: "var(--text-secondary)", fontSize: 13, margin: "0 0 14px" }}>
+              Moving <strong style={{ color: "var(--text-primary)" }}>{task?.title}</strong> to Blocked.
+              This shows up on the card and in the Blocked/Manager views so the team knows what's stuck and why.
+            </p>
+            <div className="modal-form-group">
+              <label className="modal-label">Reason</label>
+              <textarea
+                className="modal-input"
+                rows={2}
+                autoFocus
+                required
+                placeholder="What's blocking this?"
+                value={reason}
+                onChange={e => setReason(e.target.value)}
+              />
+            </div>
+            <div className="modal-form-group">
+              <label className="modal-label">Severity</label>
+              <select className="modal-select" value={severity} onChange={e => setSeverity(e.target.value)}>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+              </select>
+            </div>
+            {otherTasks.length > 0 && (
+              <div className="modal-form-group">
+                <label className="modal-label">Blocked by (optional)</label>
+                <select className="modal-select" value={blockedByTaskId} onChange={e => setBlockedByTaskId(e.target.value)}>
+                  <option value="">No linked task</option>
+                  {otherTasks.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.title}{t.assignee_name ? ` — ${t.assignee_name}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {members.length > 0 && (
+              <div className="modal-form-group">
+                <label className="modal-label">Tag responsible person (optional)</label>
+                <select className="modal-select" value={taggedUserId} onChange={e => setTaggedUserId(e.target.value)}>
+                  <option value="">No one tagged</option>
+                  {members.map(m => (
+                    <option key={m.user_id} value={m.user_id}>{m.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+          <div className="modal-footer">
+            <button type="button" className="btn-modal-cancel" onClick={onCancel}>Cancel</button>
+            <button type="submit" className="btn-modal-submit" disabled={saving || !reason.trim()}>
+              {saving ? "Moving…" : "Move to Blocked"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [workspaces, setWorkspaces]             = useState([]);
   const [currentWorkspace, setCurrentWorkspace] = useState(null);
   const [allTasks, setAllTasks]                 = useState([]);
-  const [columns, setColumns]                   = useState(EMPTY_COLS);
   const [sprints, setSprints]                   = useState([]);
   const [activeSprint, setActiveSprint]         = useState(null);
+  const [sprintsUpgradeError, setSprintsUpgradeError] = useState(null);
   const [loading, setLoading]                   = useState(true);
+  const [wakeStatus, setWakeStatus]             = useState(null); // null | "waking" | "error"
+  const [wakeAttempt, setWakeAttempt]           = useState(0);
   const [view, setView]                         = useState("board");
 
   const [showCreateTask, setShowCreateTask]       = useState(false);
@@ -199,11 +306,20 @@ export default function Dashboard() {
   const [showWorkspaceModal, setShowWorkspaceModal] = useState(false);
   const [showSprintModal, setShowSprintModal]     = useState(false);
   const [detailTask, setDetailTask]               = useState(null);
-  const [filters, setFilters] = useState({ search: "", type: "", priority: "", status: "", assignee: "" });
+  const [showImportModal, setShowImportModal]     = useState(false);
+  const [filters, setFilters] = useState({ search: "", type: "", priority: "", assignee: "" });
 
   // UI overlays
   const [cmdOpen, setCmdOpen]           = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showBoardMenu, setShowBoardMenu] = useState(false);
+  const boardMenuRef = useRef(null);
+
+  useEffect(() => {
+    const h = (e) => { if (boardMenuRef.current && !boardMenuRef.current.contains(e.target)) setShowBoardMenu(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
 
   // Undo state: { msg, undo: async fn }
   const [undoPending, setUndoPending]   = useState(null);
@@ -228,24 +344,42 @@ export default function Dashboard() {
     setTimeout(() => dismissSecAlert(id), ttl);
   }, [dismissSecAlert]);
 
-  // ── Load workspaces ──────────────────────────────────────────
-  const loadWorkspaces = useCallback(async () => {
+  // ── Load workspaces with auto-retry for sleeping Render backend ──
+  const loadWorkspaces = useCallback(async (attempt = 0) => {
+    setWakeStatus(attempt > 0 ? "waking" : null);
+    setWakeAttempt(attempt);
     try {
       const { data } = await api.get("/workspaces");
+      setWakeStatus(null);
       setWorkspaces(data);
       if (data.length > 0 && !currentWorkspace) setCurrentWorkspace(data[0]);
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      // 401 → api.js already redirects to login
+      if (err.response?.status === 401) return;
+
+      const isServerSleep = !err.response || err.response.status >= 500 || err.response.status === 503;
+      if (isServerSleep && attempt < 8) {
+        // Server is waking up — retry with backoff (Render cold start ~45s)
+        const delays = [5000, 10000, 15000, 20000, 25000, 30000];
+        setWakeStatus("waking");
+        setTimeout(() => loadWorkspaces(attempt + 1), delays[attempt] || 10000);
+      } else {
+        setWakeStatus("error");
+      }
+    }
   }, []); // eslint-disable-line
 
   // ── Load tasks ───────────────────────────────────────────────
   const loadTasks = useCallback(async (wsId) => {
-    if (!wsId) { setAllTasks([]); setColumns(EMPTY_COLS); return; }
+    if (!wsId) { setAllTasks([]); return; }
     try {
       const { data } = await api.get(`/tasks/workspace/${wsId}`);
       setAllTasks(data);
-      setColumns(tasksToColumns(data));
-    } catch (err) { console.error(err); }
-  }, []);
+    } catch (err) {
+      console.error(err);
+      if (err.response?.status !== 401) showToast("Failed to load tasks — check your connection", "error");
+    }
+  }, [showToast]); // eslint-disable-line
 
   // ── Load sprints ─────────────────────────────────────────────
   const loadSprints = useCallback(async (wsId) => {
@@ -253,20 +387,39 @@ export default function Dashboard() {
     try {
       const { data } = await api.get(`/sprints?workspace_id=${wsId}`);
       setSprints(data);
-      if (!activeSprint && data.length > 0) setActiveSprint(data[0]);
-    } catch {}
-  }, []); // eslint-disable-line
+      setActiveSprint(prev => (prev && data.find(s => s.id === prev.id)) ? prev : (data[0] || null));
+      setSprintsUpgradeError(null);
+    } catch (err) {
+      const code = err.response?.data?.code;
+      if (code === "PLAN_UPGRADE_REQUIRED" || code === "LIMIT_EXCEEDED") {
+        setSprintsUpgradeError(err);
+      } else if (err.response?.status !== 401) {
+        showToast("Failed to load sprints", "error");
+      }
+    }
+  }, [showToast]); // eslint-disable-line
+
+  // ── Load members (for the "tag responsible person" picker on blocked tasks) ──
+  const [members, setMembers] = useState([]);
+  const loadMembers = useCallback(async (wsId) => {
+    if (!wsId) { setMembers([]); return; }
+    try {
+      const { data } = await api.get(`/members?workspace_id=${wsId}`);
+      setMembers(data);
+    } catch { /* non-critical — picker just shows empty */ }
+  }, []);
 
   useEffect(() => {
-    loadWorkspaces().finally(() => setLoading(false));
+    loadWorkspaces(0).finally(() => setLoading(false));
   }, [loadWorkspaces]);
 
   useEffect(() => {
     if (currentWorkspace) {
       loadTasks(currentWorkspace.id);
       loadSprints(currentWorkspace.id);
+      loadMembers(currentWorkspace.id);
     }
-  }, [currentWorkspace, loadTasks, loadSprints]);
+  }, [currentWorkspace, loadTasks, loadSprints, loadMembers]);
 
   // ── Global keyboard shortcuts ─────────────────────────────────
   useEffect(() => {
@@ -313,6 +466,35 @@ export default function Dashboard() {
   }, []); // eslint-disable-line
 
   // ── Drag & Drop ──────────────────────────────────────────────
+  // Moving a task into "Blocked" pauses here instead of committing right
+  // away -- blockedPrompt holds the pending move until the reason/severity
+  // form is submitted (or cancelled, which just leaves allTasks untouched
+  // so the card springs back to its original column).
+  const [blockedPrompt, setBlockedPrompt] = useState(null); // { taskId, position } | null
+
+  const commitMove = async (taskId, newStatus, position, extraFields = {}) => {
+    const moved = allTasks.find(t => t.id === taskId);
+    if (!moved) return;
+
+    setAllTasks(prev => prev.map(t =>
+      t.id === taskId
+        ? { ...t, ...extraFields, status: newStatus, progress: newStatus === "done" ? 100 : t.progress, status_changed_at: new Date().toISOString() }
+        : t
+    ));
+
+    try {
+      await api.put(`/tasks/${taskId}`, {
+        status:   newStatus,
+        position,
+        progress: newStatus === "done" ? 100 : moved.progress,
+        ...extraFields,
+      });
+    } catch {
+      loadTasks(currentWorkspace.id);
+      showToast("Failed to move task", "error");
+    }
+  };
+
   const handleDragEnd = async ({ source, destination, draggableId }) => {
     if (!destination) return;
     if (source.droppableId === destination.droppableId && source.index === destination.index) return;
@@ -322,33 +504,43 @@ export default function Dashboard() {
     const moved     = allTasks.find(t => t.id === taskId);
     if (!moved) return;
 
-    // Optimistically update allTasks — filteredColumns derives from this,
-    // so the board updates instantly without waiting for the API round-trip.
-    setAllTasks(prev => prev.map(t =>
-      t.id === taskId
-        ? { ...t, status: newStatus, progress: newStatus === "done" ? 100 : t.progress }
-        : t
-    ));
-
-    try {
-      await api.put(`/tasks/${draggableId}`, {
-        status:   newStatus,
-        position: destination.index,
-        progress: newStatus === "done" ? 100 : moved.progress,
-      });
-    } catch {
-      // Revert on failure
-      loadTasks(currentWorkspace.id);
-      showToast("Failed to move task", "error");
+    if (newStatus === "blocked" && moved.status !== "blocked") {
+      setBlockedPrompt({ taskId, position: destination.index });
+      return;
     }
+
+    commitMove(taskId, newStatus, destination.index);
   };
 
   // ── Create task ───────────────────────────────────────────────
   const handleCreateTask = async (formData) => {
     if (!currentWorkspace) throw new Error("No workspace selected");
-    const { data } = await api.post("/tasks", { ...formData, workspace_id: currentWorkspace.id });
-    setAllTasks(p => [...p, data]);
-    setColumns(tasksToColumns([...allTasks, data]));
+    const { data: task } = await api.post("/tasks", { ...formData, workspace_id: currentWorkspace.id });
+    setAllTasks(p => p.some(t => t.id === task.id) ? p : [...p, task]);
+
+    // Super Boss: route through manager approval instead of direct assignment
+    if (user?.role === "super_boss" && formData.assigned_user_id) {
+      try {
+        const membersRes = await api.get(`/members?workspace_id=${currentWorkspace.id}`);
+        const manager = membersRes.data.find(
+          m => (m.role === "manager" || m.global_role === "manager") && m.user_id !== user.id
+        );
+        if (manager) {
+          await api.post("/approvals", {
+            task_id: task.id,
+            assigned_to: formData.assigned_user_id,
+            approver_id: manager.user_id,
+            workspace_id: currentWorkspace.id,
+            justification: `Assignment request from ${user.name}`,
+          });
+          setAllTasks(p => p.map(t => t.id === task.id ? { ...t, status: "pending_approval" } : t));
+          showToast("Assignment sent to manager for approval");
+          return;
+        }
+      } catch (err) {
+        console.error("Approval creation failed:", err);
+      }
+    }
     showToast("Task created");
   };
 
@@ -357,63 +549,67 @@ export default function Dashboard() {
     const taskToDelete = allTasks.find(t => t.id === taskId);
     if (!taskToDelete) return;
 
-    // Optimistically remove from UI
-    const next = allTasks.filter(t => t.id !== taskId);
-    setAllTasks(next);
-    setColumns(tasksToColumns(next));
+    // Optimistically remove using functional updater (avoids stale closure)
+    setAllTasks(p => p.filter(t => t.id !== taskId));
 
-    // Store for potential undo
-    undoDataRef.current = { taskId, task: taskToDelete, wsId: currentWorkspace?.id };
     let deleted = false;
 
-    // Show undo toast
     setUndoPending({
       msg: `"${taskToDelete.title}" deleted`,
-      undo: async () => {
-        deleted = true; // cancel the deletion
-        // Restore task in UI immediately
-        const restored = [...next, taskToDelete];
-        setAllTasks(restored);
-        setColumns(tasksToColumns(restored));
+      undo: () => {
+        deleted = true;
+        // Re-insert the saved task object; dedup in case socket also restored it
+        setAllTasks(p => p.some(t => t.id === taskToDelete.id) ? p : [...p, taskToDelete]);
         setUndoPending(null);
         showToast("Task restored");
       },
     });
 
-    // After 5 seconds, actually delete if not undone
     setTimeout(async () => {
       if (!deleted) {
         try {
           await api.delete(`/tasks/${taskId}`);
         } catch {
-          // If delete fails, restore
           loadTasks(currentWorkspace?.id);
           showToast("Failed to delete task", "error");
         }
         setUndoPending(null);
       }
-    }, 5500); // slight buffer after toast dismisses
+    }, 5500);
   };
 
   // ── Update task ───────────────────────────────────────────────
   const handleTaskUpdated = (updatedTask) => {
     if (!updatedTask) { loadTasks(currentWorkspace?.id); return; }
+    // Single source of truth: allTasks → filteredColumns derives from it automatically
     setAllTasks(p => p.map(t => t.id === updatedTask.id ? { ...t, ...updatedTask } : t));
-    setColumns(p => {
-      const next = { ...p };
-      Object.keys(next).forEach(col => {
-        next[col] = next[col].map(t => t.id === updatedTask.id ? { ...t, ...updatedTask } : t);
-      });
-      return next;
-    });
   };
 
   // ── Create workspace ──────────────────────────────────────────
-  const handleCreateWorkspace = async (name) => {
-    const { data } = await api.post("/workspaces", { name });
+  const handleCreateWorkspace = async (name, template, options = {}) => {
+    const { workspace_type, invites } = options;
+    const { data } = await api.post("/workspaces", {
+      name, template: template || undefined, workspace_type, invites,
+    });
     setWorkspaces(p => [...p, data]);
     setCurrentWorkspace(data);
-    showToast("Workspace created");
+    showToast(template ? `Workspace created with ${template} template` : "Workspace created");
+  };
+
+  // ── Delete workspace ──────────────────────────────────────────
+  const handleDeleteWorkspace = async (wsId) => {
+    try {
+      await api.delete(`/workspaces/${wsId}`);
+      const remaining = workspaces.filter(w => w.id !== wsId);
+      setWorkspaces(remaining);
+      if (currentWorkspace?.id === wsId) {
+        setCurrentWorkspace(remaining[0] || null);
+        setAllTasks([]);
+      }
+      showToast("Workspace deleted");
+    } catch (err) {
+      showToast(err.response?.data?.message || "Failed to delete workspace", "error");
+    }
   };
 
   // ── Create sprint ─────────────────────────────────────────────
@@ -435,33 +631,14 @@ export default function Dashboard() {
       addSecAlert(event);
     },
     "task:created": (task) => {
-      setAllTasks(prev => {
-        if (prev.find(t => t.id === task.id)) return prev;
-        return [...prev, task];
-      });
-      setColumns(prev => {
-        const col = task.status in prev ? task.status : "todo";
-        if (prev[col]?.find(t => t.id === task.id)) return prev;
-        return { ...prev, [col]: [...(prev[col] || []), task] };
-      });
+      // Dedup: handleCreateTask may have already added this via API response
+      setAllTasks(prev => prev.some(t => t.id === task.id) ? prev : [...prev, task]);
     },
     "task:updated": (task) => {
       setAllTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...task } : t));
-      setColumns(prev => {
-        const next = { todo: [], inprogress: [], done: [] };
-        [...prev.todo, ...prev.inprogress, ...prev.done]
-          .map(t => t.id === task.id ? { ...t, ...task } : t)
-          .forEach(t => { if (next[t.status]) next[t.status].push(t); });
-        return next;
-      });
     },
     "task:deleted": ({ id }) => {
       setAllTasks(prev => prev.filter(t => t.id !== id));
-      setColumns(prev => ({
-        todo:       prev.todo.filter(t => t.id !== id),
-        inprogress: prev.inprogress.filter(t => t.id !== id),
-        done:       prev.done.filter(t => t.id !== id),
-      }));
     },
   });
 
@@ -471,7 +648,6 @@ export default function Dashboard() {
       if (filters.search && !t.title.toLowerCase().includes(filters.search.toLowerCase())) return false;
       if (filters.type && t.type !== filters.type) return false;
       if (filters.priority && t.priority !== filters.priority) return false;
-      if (filters.status && t.status !== filters.status) return false;
       if (filters.assignee) {
         if (filters.assignee === "__unassigned__" && t.assigned_user_id) return false;
         if (filters.assignee !== "__unassigned__" && String(t.assigned_user_id) !== filters.assignee) return false;
@@ -481,10 +657,28 @@ export default function Dashboard() {
   };
 
   const filteredTasks   = applyFilters(allTasks);
+  // "Show completed tasks on board" / "Auto-archive done tasks after N days"
+  // -- Settings → Workspace Preferences. Auto-archive only hides tasks from
+  // the active board view (status_changed_at, falling back to updated_at
+  // for tasks moved to done before that column existed); it never deletes
+  // anything.
+  const showCompletedPref = getWorkspacePref(currentWorkspace?.id, "show-completed") !== "false";
+  const autoArchiveDays   = parseInt(getWorkspacePref(currentWorkspace?.id, "auto-archive-days"), 10) || 0;
+  const nowMs = Date.now(); // eslint-disable-line -- a per-render "how old is this" snapshot for filtering, not stateful
+  const doneTasks = filteredTasks.filter(t => {
+    if (t.status !== "done") return false;
+    if (!autoArchiveDays) return true;
+    const changedAt = t.status_changed_at || t.updated_at;
+    if (!changedAt) return true;
+    const ageDays = (nowMs - new Date(changedAt).getTime()) / 86400000;
+    return ageDays < autoArchiveDays;
+  });
   const filteredColumns = {
-    todo:       filteredTasks.filter(t => t.status === "todo"),
+    todo:       filteredTasks.filter(t => t.status === "todo" || t.status === "pending_approval"),
     inprogress: filteredTasks.filter(t => t.status === "inprogress" || t.status === "in_progress"),
-    done:       filteredTasks.filter(t => t.status === "done"),
+    review:     filteredTasks.filter(t => t.status === "review"),
+    blocked:    filteredTasks.filter(t => t.status === "blocked"),
+    done:       showCompletedPref ? doneTasks : [],
   };
 
   const assignees = Array.from(
@@ -494,6 +688,41 @@ export default function Dashboard() {
         .map(t => [t.assigned_user_id, { id: t.assigned_user_id, name: t.assignee_name }])
     ).values()
   );
+
+  // ── Server waking up / error screen ──────────────────────────
+  if (wakeStatus === "waking" && !workspaces.length) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: 16, padding: 24, background: "var(--main-bg)" }}>
+        <div style={{ width: 56, height: 56, borderRadius: "50%", background: "var(--tk-accent, #3B82F6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, animation: "spin 2s linear infinite" }}>
+          ⚡
+        </div>
+        <h2 style={{ color: "var(--text-primary)", fontSize: 18, fontWeight: 700, margin: 0 }}>Just a moment…</h2>
+        <p style={{ color: "var(--text-secondary)", fontSize: 14, textAlign: "center", maxWidth: 340, margin: 0 }}>
+          Getting things ready. This usually takes about 30 seconds on the first load.
+        </p>
+        <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+          {[0,1,2,3,4,5,6,7].map(i => (
+            <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: i < wakeAttempt ? "var(--tk-accent, #3B82F6)" : "var(--border)", transition: "background 0.3s" }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (wakeStatus === "error") {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: 16, padding: 24, background: "var(--main-bg)" }}>
+        <div style={{ fontSize: 44 }}>😴</div>
+        <h2 style={{ color: "var(--text-primary)", fontSize: 18, fontWeight: 700 }}>Taking longer than expected</h2>
+        <p style={{ color: "var(--text-secondary)", fontSize: 14, textAlign: "center", maxWidth: 340 }}>
+          We're having trouble connecting. Please refresh the page or try again.
+        </p>
+        <button className="btn-primary" onClick={() => { setWakeStatus(null); loadWorkspaces(0); }} style={{ marginTop: 8 }}>
+          Try again
+        </button>
+      </div>
+    );
+  }
 
   // ── Loading skeleton ──────────────────────────────────────────
   if (loading) {
@@ -523,28 +752,12 @@ export default function Dashboard() {
   }
 
   const totalTasks = allTasks.length;
+  // Cosmetic only -- hides edit affordances for viewer-access members.
+  // The backend enforces this independently on every write route.
+  const canEdit = currentWorkspace?.my_access_level !== "viewer";
 
-  return (
-    <div className="app-layout">
-      <Sidebar
-        workspaces={workspaces}
-        currentWorkspace={currentWorkspace}
-        onWorkspaceChange={ws => { setCurrentWorkspace(ws); setActiveSprint(null); }}
-        onNewWorkspace={() => setShowWorkspaceModal(true)}
-        activeView={view}
-        onViewChange={setView}
-        onOpenPalette={() => setCmdOpen(true)}
-      />
-
-      <div className="main-area">
-        <Navbar
-          workspaceName={currentWorkspace?.name}
-          onCreateTask={() => openCreateTask("todo")}
-          user={user}
-        />
-
-        {/* ── Content ────────────────────────────────────────────── */}
-        <div className="board-content">
+  // ── Shared view content (used by both layouts) ────────────────
+  const viewContent = (<>
 
           {/* ── Board view ── */}
           {view === "board" && (
@@ -552,10 +765,41 @@ export default function Dashboard() {
               <div className="board-header">
                 <div className="board-title-area">
                   <h1>{currentWorkspace?.name || "Select a workspace"}</h1>
-                  <p>{totalTasks} task{totalTasks !== 1 ? "s" : ""} · Press <kbd className="inline-kbd">N</kbd> to add</p>
+                  <p>{totalTasks} task{totalTasks !== 1 ? "s" : ""}</p>
                 </div>
-                <div className="board-header-actions">
-                  <button className="btn-primary" onClick={() => openCreateTask("todo")}>+ New task</button>
+                <div className="board-header-actions" ref={boardMenuRef} style={{ position: "relative" }}>
+                  {canEdit && (
+                  <button
+                    className="tk-btn-secondary"
+                    title="More actions"
+                    onClick={() => setShowBoardMenu(v => !v)}
+                    style={{ padding: "7px 12px" }}
+                  >
+                    ⋯
+                  </button>
+                  )}
+                  {showBoardMenu && (
+                    <div
+                      style={{
+                        position: "absolute", top: "calc(100% + 6px)", right: 0,
+                        background: "var(--card-bg)", border: "1px solid var(--border)",
+                        borderRadius: 10, boxShadow: "var(--shadow-lg, 0 8px 24px rgba(0,0,0,0.15))",
+                        zIndex: 200, minWidth: 170, overflow: "hidden", padding: "6px 0",
+                      }}
+                    >
+                      <button
+                        onClick={() => { setShowBoardMenu(false); setShowImportModal(true); }}
+                        style={{
+                          width: "100%", display: "flex", alignItems: "center", gap: 8,
+                          padding: "8px 14px", fontSize: 13, fontWeight: 500,
+                          color: "var(--text-primary)", background: "none", border: "none",
+                          cursor: "pointer", textAlign: "left",
+                        }}
+                      >
+                        📥 Import tasks
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -576,13 +820,14 @@ export default function Dashboard() {
                     onDeleteTask={handleDeleteTask}
                     onUpdateTask={handleTaskUpdated}
                     onOpenDetail={setDetailTask}
+                    canEdit={canEdit}
                   />
                 </div>
               ) : (
                 <div className="empty-state" style={{ marginTop: 80 }}>
                   <div className="empty-state-icon" style={{ fontSize: 56 }}>🗂️</div>
-                  <h2 style={{ marginTop: 16, color: "#172b4d" }}>No workspace yet</h2>
-                  <p style={{ color: "#5e6c84", marginTop: 8 }}>Create a workspace to start tracking your work</p>
+                  <h2 style={{ marginTop: 16, color: "var(--text-primary)" }}>No workspace yet</h2>
+                  <p style={{ color: "var(--text-secondary)", marginTop: 8 }}>Create a workspace to start tracking your work</p>
                   <button className="btn-primary" style={{ marginTop: 20 }}
                     onClick={() => setShowWorkspaceModal(true)}>
                     Create workspace
@@ -590,6 +835,13 @@ export default function Dashboard() {
                 </div>
               )}
             </>
+          )}
+
+          {/* ── Today ── */}
+          {view === "today" && (
+            <ErrorBoundary inline viewName="Today">
+              <TodayView onOpenTask={setDetailTask} />
+            </ErrorBoundary>
           )}
 
           {/* ── Summary ── */}
@@ -602,7 +854,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <ErrorBoundary inline viewName="Summary">
-                <SummaryDashboard workspaceId={currentWorkspace?.id} />
+                <SummaryDashboard workspaceId={currentWorkspace?.id} onOpenTask={setDetailTask} />
               </ErrorBoundary>
             </>
           )}
@@ -622,7 +874,7 @@ export default function Dashboard() {
 
           {/* ── Sprints ── */}
           {view === "sprints" && (
-            <>
+            <UpgradeGate upgradeError={sprintsUpgradeError}>
               <div className="board-header">
                 <div className="board-title-area">
                   <h1>Sprint Planning</h1>
@@ -636,7 +888,7 @@ export default function Dashboard() {
                 <div className="empty-state" style={{ marginTop: 60 }}>
                   <div style={{ fontSize: 56 }}>🏃</div>
                   <h2 style={{ marginTop: 16 }}>No sprints yet</h2>
-                  <p style={{ color: "#5e6c84", marginTop: 8 }}>Create a sprint to start planning iterations</p>
+                  <p style={{ color: "var(--text-secondary)", marginTop: 8 }}>Create a sprint to start planning iterations</p>
                   <button className="btn-primary" style={{ marginTop: 20 }} onClick={() => setShowSprintModal(true)}>
                     Create first sprint
                   </button>
@@ -666,7 +918,7 @@ export default function Dashboard() {
                   )}
                 </div>
               )}
-            </>
+            </UpgradeGate>
           )}
 
           {/* ── Manager ── */}
@@ -675,7 +927,21 @@ export default function Dashboard() {
               <div className="board-header">
                 <div className="board-title-area"><h1>Manager</h1><p>Team workload, capacity, analytics, approvals & predictions</p></div>
               </div>
-              <ManagerDashboard workspaceId={currentWorkspace?.id} workspaceName={currentWorkspace?.name} onNavigate={setView} />
+              {!hasPermission("manager:view", user?.role) ? (
+                <div style={{ textAlign: "center", padding: "64px 0", color: "var(--text-secondary)" }}>
+                  <div style={{ fontSize: 40, marginBottom: 12 }}>🔒</div>
+                  <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Access restricted</div>
+                  <div style={{ fontSize: 13 }}>Manager View is available to managers and above.</div>
+                </div>
+              ) : (
+              <ManagerDashboard
+                workspaceId={currentWorkspace?.id}
+                workspaceName={currentWorkspace?.name}
+                onNavigate={setView}
+                allTasks={allTasks}
+                onRefreshTasks={() => loadTasks(currentWorkspace?.id)}
+              />
+              )}
             </>
           )}
 
@@ -745,18 +1011,113 @@ export default function Dashboard() {
           {/* ── Security Firewall ── */}
           {view === "security" && (
             <ErrorBoundary inline viewName="Security">
-              <SecurityDashboard token={localStorage.getItem("token")} />
+              <SecurityDashboard />
             </ErrorBoundary>
           )}
 
-        </div>
-      </div>
+          {/* ── Team Workload ── */}
+          {view === "workload" && (
+            <>
+              <div className="board-header">
+                <div className="board-title-area"><h1>Team Workload</h1><p>Capacity, tasks in flight, and leave across the team</p></div>
+              </div>
+              <ErrorBoundary inline viewName="Workload">
+                <WorkloadDashboard workspaceId={currentWorkspace?.id} />
+              </ErrorBoundary>
+            </>
+          )}
 
+          {/* ── Members ── */}
+          {view === "members" && (
+            <>
+              <div className="board-header">
+                <div className="board-title-area"><h1>Members</h1><p>Manage workspace members and roles</p></div>
+              </div>
+              <ErrorBoundary inline viewName="Members">
+                <MembersPanel workspaceId={currentWorkspace?.id} />
+              </ErrorBoundary>
+            </>
+          )}
+
+          {/* ── Analytics ── */}
+          {view === "analytics" && (
+            <>
+              <div className="board-header">
+                <div className="board-title-area"><h1>Analytics</h1><p>Task throughput, velocity, and team performance</p></div>
+              </div>
+              <ErrorBoundary inline viewName="Analytics">
+                <AnalyticsDashboard workspaceId={currentWorkspace?.id} onNavigate={setView} onOpenDetail={setDetailTask} tasks={allTasks} />
+              </ErrorBoundary>
+            </>
+          )}
+
+          {/* ── My Capacity ── */}
+          {view === "capacity" && (
+            <>
+              <div className="board-header">
+                <div className="board-title-area"><h1>My Capacity</h1><p>Set your availability, leave, and travel mode</p></div>
+              </div>
+              <ErrorBoundary inline viewName="Capacity">
+                <CapacityPanel workspaceId={currentWorkspace?.id} />
+              </ErrorBoundary>
+            </>
+          )}
+
+          {/* ── Collaboration Score ── */}
+          {view === "collaboration" && (
+            <>
+              <div className="board-header">
+                <div className="board-title-area"><h1>Collaboration</h1><p>Team collaboration health and cross-member activity</p></div>
+              </div>
+              <ErrorBoundary inline viewName="Collaboration">
+                <CollaborationScore workspaceId={currentWorkspace?.id} />
+              </ErrorBoundary>
+            </>
+          )}
+
+          {/* ── Dependency Graph ── */}
+          {view === "graph" && (
+            <>
+              <div className="board-header">
+                <div className="board-title-area"><h1>Dependency Graph</h1><p>Visual map of task dependencies and blockers</p></div>
+              </div>
+              <ErrorBoundary inline viewName="Dependency Graph">
+                <DependencyGraph workspaceId={currentWorkspace?.id} onTaskClick={setDetailTask} />
+              </ErrorBoundary>
+            </>
+          )}
+
+          {/* ── Settings ── */}
+          {view === "settings" && (
+            <ErrorBoundary inline viewName="Settings">
+              <SettingsPage
+                currentWorkspaceId={currentWorkspace?.id}
+                currentWorkspace={currentWorkspace}
+                onWorkspaceUpdated={(updated) => {
+                  setCurrentWorkspace(prev => prev?.id === updated.id ? { ...prev, ...updated } : prev);
+                  setWorkspaces(prev => prev.map(w => w.id === updated.id ? { ...w, ...updated } : w));
+                }}
+              />
+            </ErrorBoundary>
+          )}
+
+          {/* ── Notification Center ── */}
+          {view === "notifications" && (
+            <ErrorBoundary inline viewName="Notifications">
+              <NotificationCenter />
+            </ErrorBoundary>
+          )}
+
+  </>); // end viewContent
+
+  // ── Shared overlays (modals, toasts, AI) — rendered in both layouts ──
+  const sharedOverlays = (<>
       {/* ── Modals ───────────────────────────────────────────────── */}
       {showCreateTask && (
         <CreateTaskModal
           defaultStatus={createTaskStatus}
           sprints={sprints}
+          workspaceId={currentWorkspace?.id}
           onClose={() => setShowCreateTask(false)}
           onSubmit={handleCreateTask}
         />
@@ -765,15 +1126,35 @@ export default function Dashboard() {
         <WorkspaceModal onClose={() => setShowWorkspaceModal(false)} onSubmit={handleCreateWorkspace} />
       )}
       {showSprintModal && (
-        <SprintModal onClose={() => setShowSprintModal(false)} onSubmit={handleCreateSprint} />
+        <SprintModal onClose={() => setShowSprintModal(false)} onSubmit={handleCreateSprint} workspaceId={currentWorkspace?.id} />
       )}
       {detailTask && (
         <TaskDetailModal
           task={detailTask}
           currentUser={user}
+          workspaceId={detailTask.workspace_id || currentWorkspace?.id}
           onClose={() => setDetailTask(null)}
           onUpdate={(updated) => { handleTaskUpdated(updated); setDetailTask(updated); }}
         />
+      )}
+
+      {/* ── Import / Export modal ────────────────────────────────── */}
+      {showImportModal && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 1100, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "40px 20px", overflowY: "auto" }}
+          onClick={e => e.target === e.currentTarget && setShowImportModal(false)}
+        >
+          <div style={{ background: "var(--card-bg, #0B1220)", border: "1px solid var(--border, #1E293B)", borderRadius: 16, width: "100%", maxWidth: 780, position: "relative", marginBottom: 40, padding: 28 }}>
+            <button
+              onClick={() => setShowImportModal(false)}
+              style={{ position: "absolute", top: 14, right: 14, background: "none", border: "none", color: "var(--text-secondary)", fontSize: 20, cursor: "pointer", zIndex: 10, lineHeight: 1 }}
+              aria-label="Close"
+            >✕</button>
+            <ErrorBoundary inline viewName="Import / Export">
+              <ImportWizard workspaceId={currentWorkspace?.id} />
+            </ErrorBoundary>
+          </div>
+        </div>
       )}
 
       {/* ── Command palette ───────────────────────────────────────── */}
@@ -782,12 +1163,27 @@ export default function Dashboard() {
         onClose={() => setCmdOpen(false)}
         onViewChange={(v) => { setView(v); setCmdOpen(false); }}
         onCreateTask={() => { openCreateTask("todo"); setCmdOpen(false); }}
+        onOpenTask={(task) => { setDetailTask(task); setCmdOpen(false); }}
         tasks={allTasks}
         currentView={view}
       />
 
       {/* ── Keyboard shortcuts modal ─────────────────────────────── */}
       {showShortcuts && <ShortcutsModal onClose={() => setShowShortcuts(false)} />}
+
+      {/* ── Blocked-reason capture (drag-to-Blocked) ─────────────── */}
+      {blockedPrompt && (
+        <BlockedTaskModal
+          task={allTasks.find(t => t.id === blockedPrompt.taskId)}
+          otherTasks={allTasks.filter(t => t.id !== blockedPrompt.taskId)}
+          members={members}
+          onCancel={() => setBlockedPrompt(null)}
+          onConfirm={async (fields) => {
+            await commitMove(blockedPrompt.taskId, "blocked", blockedPrompt.position, fields);
+            setBlockedPrompt(null);
+          }}
+        />
+      )}
 
       {/* ── Floating AI bubble ────────────────────────────────────── */}
       <AIBubble workspaceId={currentWorkspace?.id} />
@@ -818,6 +1214,52 @@ export default function Dashboard() {
 
       {/* ── Onboarding checklist (new users) ─────────────────────── */}
       <OnboardingChecklist onViewChange={setView} />
+  </>); // end sharedOverlays
+
+  // ── Mobile layout ─────────────────────────────────────────────
+  if (isMobile) {
+    return (
+      <>
+        <DashboardMobile
+          workspaces={workspaces}
+          currentWorkspace={currentWorkspace}
+          onWorkspaceChange={ws => { setCurrentWorkspace(ws); setActiveSprint(null); }}
+          onNewWorkspace={() => setShowWorkspaceModal(true)}
+          activeView={view}
+          onViewChange={setView}
+          onCreateTask={() => openCreateTask("todo")}
+        >
+          {viewContent}
+        </DashboardMobile>
+        {sharedOverlays}
+      </>
+    );
+  }
+
+  // ── Desktop layout ────────────────────────────────────────────
+  return (
+    <div className="app-layout">
+      <DashboardDesktop
+        sidebarOpen={sidebarOpen}
+        onSidebarToggle={() => setSidebarOpen(v => !v)}
+        onSidebarClose={() => setSidebarOpen(false)}
+        workspaces={workspaces}
+        currentWorkspace={currentWorkspace}
+        onWorkspaceChange={ws => { setCurrentWorkspace(ws); setActiveSprint(null); }}
+        onNewWorkspace={() => setShowWorkspaceModal(true)}
+        onDeleteWorkspace={handleDeleteWorkspace}
+        activeView={view}
+        onViewChange={setView}
+        onOpenPalette={() => setCmdOpen(true)}
+        onCreateTask={() => openCreateTask("todo")}
+        onOpenSettings={() => setView("settings")}
+        onShowShortcuts={() => setShowShortcuts(true)}
+        canEdit={canEdit}
+        user={user}
+      >
+        {viewContent}
+      </DashboardDesktop>
+      {sharedOverlays}
     </div>
   );
 }

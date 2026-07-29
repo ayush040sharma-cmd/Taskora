@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/api";
+import Logo from "../components/Logo";
+import { consumeIntendedPlan } from "../utils/intendedPlan";
 
 const BACKEND_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
@@ -38,6 +40,7 @@ const ROLES = [
 
 export default function Register() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { register } = useAuth();
 
   // Step 1 = credentials, Step 2 = role selection
@@ -61,6 +64,8 @@ export default function Register() {
     setError("");
     if (form.password !== form.confirm) return setError("Passwords do not match.");
     if (form.password.length < 8) return setError("Password must be at least 8 characters.");
+    if (!/[A-Z]/.test(form.password)) return setError("Password must contain at least one uppercase letter.");
+    if (!/[0-9]/.test(form.password)) return setError("Password must contain at least one number.");
     setStep(2);
   };
 
@@ -70,9 +75,27 @@ export default function Register() {
     setError(""); setLoading(true);
     try {
       await register(form.name, form.email, form.password, selectedRole.dbRole);
-      navigate("/onboarding");
+      const intendedPlan = consumeIntendedPlan();
+      if (intendedPlan) {
+        navigate(`/payment?plan=${intendedPlan}`);
+        return;
+      }
+      const redirect = searchParams.get("redirect");
+      navigate(redirect || "/onboarding");
     } catch (err) {
-      setError(err.response?.data?.message || "Registration failed. Please try again.");
+      // CORS / network failure → err.response is null
+      if (!err.response) {
+        setError("Cannot reach the server. Please check your connection and try again.");
+        setStep(1);
+        return;
+      }
+      // Zod validation errors from backend — join all field messages
+      const fieldErrors = err.response.data?.errors;
+      if (fieldErrors?.length) {
+        setError(fieldErrors.map(e => e.message).join(" · "));
+      } else {
+        setError(err.response.data?.message || "Registration failed. Please try again.");
+      }
       setStep(1);
     } finally {
       setLoading(false);
@@ -81,7 +104,7 @@ export default function Register() {
 
   const pwStrength = form.password.length === 0 ? null
     : form.password.length < 8  ? { label: "Weak",   color: "#ef4444" }
-    : form.password.length < 12 ? { label: "Good",   color: "#6366f1" }
+    : form.password.length < 12 ? { label: "Good",   color: "var(--tk-accent, #3B82F6)" }
     :                              { label: "Strong", color: "#10b981" };
 
   return (
@@ -91,20 +114,12 @@ export default function Register() {
       <div style={S.card}>
         {/* Logo */}
         <div style={S.logoRow}>
-          <div style={S.logoMark}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <rect x="2" y="10" width="4" height="12" rx="1.5" fill="#fff"/>
-              <rect x="10" y="6" width="4" height="16" rx="1.5" fill="#fff"/>
-              <rect x="18" y="2" width="4" height="20" rx="1.5" fill="#fff"/>
-            </svg>
-          </div>
-          <span style={S.logoText}>Taskora</span>
-          <span style={{fontSize:10,fontWeight:700,color:"#6366f1",background:"rgba(99,102,241,0.1)",borderRadius:4,padding:"2px 5px"}}>AI</span>
+          <Logo iconSize={30} wordmarkSize={20} wordmarkColor="#0f172a" />
           <div style={{flex:1}} />
           {/* Step indicator */}
           <div style={S.stepIndicator}>
-            <div style={{...S.stepDot, background: "#6366f1"}} />
-            <div style={{...S.stepDot, background: step === 2 ? "#6366f1" : "#e2e8f0"}} />
+            <div style={{...S.stepDot, background: "var(--tk-accent, #3B82F6)"}} />
+            <div style={{...S.stepDot, background: step === 2 ? "var(--tk-accent, #3B82F6)" : "#e2e8f0"}} />
           </div>
         </div>
 
@@ -154,8 +169,8 @@ export default function Register() {
                 <input type="text" style={S.input} placeholder="Alex Johnson"
                   value={form.name} onChange={e => setForm({...form, name: e.target.value})}
                   required autoFocus
-                  onFocus={e => e.target.style.borderColor="#6366f1"}
-                  onBlur={e => e.target.style.borderColor="#e2e8f0"} />
+                  onFocus={e => { e.target.style.borderColor="var(--tk-accent, #3B82F6)"; e.target.style.boxShadow="0 0 0 3px rgba(59,130,246,0.12)"; }}
+                  onBlur={e => { e.target.style.borderColor="#e2e8f0"; e.target.style.boxShadow="none"; }} />
               </div>
 
               <div style={S.field}>
@@ -163,8 +178,8 @@ export default function Register() {
                 <input type="email" style={S.input} placeholder="you@company.com"
                   value={form.email} onChange={e => setForm({...form, email: e.target.value})}
                   required
-                  onFocus={e => e.target.style.borderColor="#6366f1"}
-                  onBlur={e => e.target.style.borderColor="#e2e8f0"} />
+                  onFocus={e => { e.target.style.borderColor="var(--tk-accent, #3B82F6)"; e.target.style.boxShadow="0 0 0 3px rgba(59,130,246,0.12)"; }}
+                  onBlur={e => { e.target.style.borderColor="#e2e8f0"; e.target.style.boxShadow="none"; }} />
               </div>
 
               <div style={S.field}>
@@ -174,8 +189,8 @@ export default function Register() {
                     placeholder="Min. 8 characters"
                     value={form.password} onChange={e => setForm({...form, password: e.target.value})}
                     required
-                    onFocus={e => e.target.style.borderColor="#6366f1"}
-                    onBlur={e => e.target.style.borderColor="#e2e8f0"} />
+                    onFocus={e => { e.target.style.borderColor="var(--tk-accent, #3B82F6)"; e.target.style.boxShadow="0 0 0 3px rgba(59,130,246,0.12)"; }}
+                    onBlur={e => { e.target.style.borderColor="#e2e8f0"; e.target.style.boxShadow="none"; }} />
                   <button type="button" style={S.eyeBtn} onClick={() => setShowPass(v => !v)}>
                     {showPass
                       ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
@@ -199,8 +214,8 @@ export default function Register() {
                   placeholder="Repeat password"
                   value={form.confirm} onChange={e => setForm({...form, confirm: e.target.value})}
                   required
-                  onFocus={e => e.target.style.borderColor="#6366f1"}
-                  onBlur={e => e.target.style.borderColor="#e2e8f0"} />
+                  onFocus={e => { e.target.style.borderColor="var(--tk-accent, #3B82F6)"; e.target.style.boxShadow="0 0 0 3px rgba(59,130,246,0.12)"; }}
+                  onBlur={e => { e.target.style.borderColor="#e2e8f0"; e.target.style.boxShadow="none"; }} />
               </div>
 
               <button type="submit" style={S.submitBtn}>Continue →</button>
@@ -281,15 +296,15 @@ export default function Register() {
 const S = {
   root: {
     minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center",
-    background:"linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)",
+    background:"linear-gradient(135deg, #020617 0%, #0F172A 50%, #020617 100%)",
     padding:"24px", position:"relative", overflow:"hidden",
     flexDirection:"column", gap:"24px",
   },
   blob1: { position:"absolute", width:500, height:500, borderRadius:"50%",
-    background:"radial-gradient(circle, rgba(99,102,241,0.3) 0%, transparent 70%)",
+    background:"radial-gradient(circle, rgba(59,130,246,0.3) 0%, transparent 70%)",
     top:"-100px", left:"-100px", pointerEvents:"none" },
   blob2: { position:"absolute", width:400, height:400, borderRadius:"50%",
-    background:"radial-gradient(circle, rgba(168,85,247,0.2) 0%, transparent 70%)",
+    background:"radial-gradient(circle, rgba(6,182,212,0.18) 0%, transparent 70%)",
     bottom:"-80px", right:"-80px", pointerEvents:"none" },
   card: {
     background:"#ffffff", borderRadius:20, padding:"40px 44px",
@@ -299,12 +314,12 @@ const S = {
   },
   logoRow: { display:"flex", alignItems:"center", gap:10, marginBottom:28 },
   logoMark: { width:36, height:36, borderRadius:10, flexShrink:0,
-    background:"linear-gradient(135deg, #6366f1, #8b5cf6)",
+    background:"var(--tk-accent, #3B82F6)",
     display:"flex", alignItems:"center", justifyContent:"center" },
   logoText: { fontSize:20, fontWeight:800, color:"#0f172a", letterSpacing:"-0.5px", flex:1 },
   stepIndicator: { display:"flex", gap:6, alignItems:"center" },
   stepDot: { width:8, height:8, borderRadius:"50%", transition:"background 0.3s" },
-  heading: { fontSize:26, fontWeight:800, color:"#0f172a", margin:"0 0 6px", letterSpacing:"-0.5px" },
+  heading: { fontFamily:"var(--tk-font-display, 'Syne')", fontSize:26, fontWeight:700, color:"#0f172a", margin:"0 0 6px", letterSpacing:"-0.5px" },
   subtext: { fontSize:14, color:"#64748b", margin:"0 0 24px" },
   errorBox: { display:"flex", alignItems:"center", gap:8, background:"#fef2f2",
     border:"1px solid #fecaca", color:"#dc2626", borderRadius:10,
@@ -322,18 +337,18 @@ const S = {
   strengthRow: { display:"flex", alignItems:"center", gap:4, marginTop:4 },
   strengthBar: { flex:1, height:3, borderRadius:99, transition:"background 0.3s" },
   submitBtn: { width:"100%", padding:"13px",
-    background:"linear-gradient(135deg, #6366f1, #8b5cf6)",
-    color:"#fff", border:"none", borderRadius:10, fontSize:15,
+    background:"var(--tk-accent, #3B82F6)",
+    color:"#fff", border:"none", borderRadius:10, fontSize:14,
     fontWeight:700, cursor:"pointer", marginTop:4, letterSpacing:"0.2px",
     transition:"opacity 0.15s" },
   backBtn: { display:"block", width:"100%", marginTop:10, padding:"10px",
     background:"none", border:"1.5px solid #e2e8f0", borderRadius:10,
     fontSize:14, fontWeight:600, color:"#64748b", cursor:"pointer",
     transition:"all 0.15s" },
-  divider: { textAlign:"center", margin:"22px 0 16px", fontSize:13, color:"#94a3b8" },
+  divider: { textAlign:"center", margin:"22px 0 16px", fontSize:13, color:"#64748b" },
   switchLink: { display:"block", textAlign:"center", padding:"11px",
     border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:14,
-    fontWeight:600, color:"#6366f1", textDecoration:"none" },
+    fontWeight:600, color:"var(--tk-accent, #3B82F6)", textDecoration:"none" },
   roleGrid: { display:"flex", flexDirection:"column", gap:10, marginBottom:20 },
   roleCard: {
     display:"flex", flexDirection:"column", alignItems:"flex-start",
@@ -342,15 +357,15 @@ const S = {
     textAlign:"left", position:"relative", transition:"all 0.15s",
   },
   roleCardActive: {
-    border:"2px solid #6366f1", background:"#eef2ff",
+    border:"2px solid var(--tk-accent, #3B82F6)", background:"rgba(59,130,246,0.07)",
   },
   roleIcon: { fontSize:24, marginBottom:4 },
-  roleTitle: { fontSize:15, fontWeight:700, color:"#0f172a" },
+  roleTitle: { fontSize:14, fontWeight:700, color:"#0f172a" },
   roleDesc:  { fontSize:13, color:"#64748b", lineHeight:1.4 },
   roleCheck: {
     position:"absolute", top:12, right:14,
     width:22, height:22, borderRadius:"50%",
-    background:"#6366f1", color:"#fff",
+    background:"var(--tk-accent, #3B82F6)", color:"#fff",
     display:"flex", alignItems:"center", justifyContent:"center",
     fontSize:12, fontWeight:800,
   },
@@ -367,8 +382,8 @@ const S = {
   },
   orDivider: { display:"flex", alignItems:"center", gap:10, margin:"14px 0" },
   orLine: { flex:1, height:1, background:"#f1f5f9" },
-  orText: { fontSize:12, color:"#94a3b8", fontWeight:500, flexShrink:0 },
+  orText: { fontSize:12, color:"#64748b", fontWeight:500, flexShrink:0 },
   helpRow: { display:"flex", alignItems:"center", justifyContent:"center", gap:6, marginTop:14 },
-  helpLink: { fontSize:12, color:"#94a3b8", textDecoration:"none" },
-  helpDot: { fontSize:12, color:"#cbd5e1" },
+  helpLink: { fontSize:12, color:"#64748b", textDecoration:"none" },
+  helpDot: { fontSize:12, color:"#94a3b8" },
 };

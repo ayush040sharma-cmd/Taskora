@@ -11,6 +11,12 @@ const ai      = require("../services/aiEngine");
 
 // ── Intent patterns ───────────────────────────────────────────────────────────
 const INTENTS = [
+  // ── Action / navigation intents (checked first — specific phrases)
+  { name: "help",         re: /^help$|what can (?:you|jarvis|jarvise)|how (?:do i|to)|what do you do|commands?/i },
+  { name: "add_member",   re: /add (?:a |new |team )?member|invite (?:someone|user|member|team)|add (?:someone|user|teammate)|new (?:member|teammate)/i },
+  { name: "create_task",  re: /create (?:a |new )?task|add (?:a |new )?task|new task|make (?:a )?task/i },
+  { name: "members",      re: /(?:list |show )?team (?:members?|list|roster)|who(?:'s| is) on (?:the )?team|list (?:members?|team)|team size/i },
+  // ── Task-query intents
   { name: "overdue",       re: /overdue|past due|late/i },
   { name: "high_risk",     re: /high.?risk|at.?risk|risky|danger/i },
   { name: "blocked",       re: /block(ed)?|stuck|depend/i },
@@ -66,6 +72,49 @@ router.post("/:workspaceId", auth, async (req, res) => {
     let tasks = [], answer = "", type = "tasks";
 
     switch (intent) {
+
+      case "help": {
+        type = "action";
+        answer = "Here's what I can help with:\n\n" +
+          "**Tasks:** overdue tasks · high-risk tasks · blocked tasks · unassigned tasks · my tasks · tasks due today/this week · high-priority tasks · search by keyword or person\n\n" +
+          "**Team:** team members · overloaded members · workload summary\n\n" +
+          "**Project:** sprint status · project summary · completed tasks\n\n" +
+          "Try: *\"Show overdue tasks\"*, *\"Who is overloaded?\"*, *\"Tasks for Rahul\"*, or *\"Project summary\"*.";
+        break;
+      }
+
+      case "add_member": {
+        type = "action";
+        answer = "To add a team member, go to **Settings → Members** and enter their email address. They'll receive an invite to join this workspace.\n\nOnce they join, I can help you track their tasks and workload.";
+        break;
+      }
+
+      case "create_task": {
+        type = "action";
+        answer = "To create a task, click the **+ New Task** button on the Board view, or press **N** anywhere in the app.\n\nYou can set the title, priority, due date, and assignee from the create dialog.";
+        break;
+      }
+
+      case "members": {
+        const r = await pool.query(
+          `SELECT u.name, u.email,
+                  COUNT(t.id) FILTER (WHERE t.status != 'done') AS open_tasks,
+                  COUNT(t.id) FILTER (WHERE t.status = 'done') AS done_tasks
+           FROM workspace_members wm
+           JOIN users u ON u.id = wm.user_id
+           LEFT JOIN tasks t ON t.assigned_user_id = u.id AND t.workspace_id = $1
+           WHERE wm.workspace_id = $1
+           GROUP BY u.name, u.email
+           ORDER BY open_tasks DESC`,
+          [workspaceId]
+        );
+        type = "members";
+        tasks = r.rows;
+        answer = r.rows.length === 0
+          ? "No team members found in this workspace."
+          : `Your team has **${r.rows.length} member${r.rows.length !== 1 ? "s" : ""}**. ${r.rows.map(m => `${m.name} (${m.open_tasks} open tasks)`).join(", ")}.`;
+        break;
+      }
 
       case "overdue": {
         const r = await pool.query(
@@ -275,7 +324,7 @@ router.post("/:workspaceId", auth, async (req, res) => {
         );
         tasks = r.rows;
         answer = tasks.length === 0
-          ? `No tasks found matching "${term}".`
+          ? `I couldn't find tasks matching "${term}". Try: *"overdue tasks"*, *"high-risk tasks"*, *"team workload"*, *"sprint status"*, or *"list team members"*.`
           : `Found ${tasks.length} task${tasks.length !== 1 ? "s" : ""} matching "${term}".`;
         break;
       }

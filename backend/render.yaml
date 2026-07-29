@@ -12,4 +12,12 @@ services:
       - key: JWT_SECRET
         sync: false   # set manually in Render dashboard
       - key: FRONTEND_URL
-        sync: false   # set after Vercel deploy, e.g. https://kanflow.vercel.app
+        sync: false   # production: https://taskora.io
+      - key: BACKEND_URL
+        sync: false   # this service's own public URL — Render URL, or https://api.taskora.io if configured
+      - key: RESEND_API_KEY
+        sync: false   # from resend.com — required to actually send email
+      - key: FROM_EMAIL
+        sync: false   # e.g. "Taskora <support@taskora.io>"
+      - key: EMAIL_REPLY_TO
+        sync: false   # e.g. support@taskora.io

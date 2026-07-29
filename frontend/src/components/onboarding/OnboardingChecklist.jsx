@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { analytics } from "../../utils/analytics";
+import { useIsMobile } from "../../hooks/useIsMobile";
 
 const ITEMS = [
   { id: "role",       label: "Choose your role",              check: (u) => !!u?.onboarding_role },
@@ -14,10 +15,12 @@ const STORAGE_KEY = "onboarding_checklist_dismissed";
 
 export default function OnboardingChecklist({ onViewChange }) {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [dismissed, setDismissed] = useState(() => {
     return localStorage.getItem(STORAGE_KEY) === "true";
   });
   const [minimised, setMinimised] = useState(false);
+  const [tick, setTick] = useState(0);
 
   // Don't show for users who already have role+complete status and dismissed
   if (!user || dismissed) return null;
@@ -40,9 +43,7 @@ export default function OnboardingChecklist({ onViewChange }) {
   function markItem(id) {
     localStorage.setItem(`checklist_${id}`, "true");
     analytics.checklistItemDone(id);
-    // Force re-render
-    setMinimised(v => !v);
-    setMinimised(v => !v);
+    setTick(v => v + 1);
   }
 
   const progress = (doneCount / items.length) * 100;
@@ -50,14 +51,19 @@ export default function OnboardingChecklist({ onViewChange }) {
   return (
     <div style={{
       position: "fixed",
-      bottom: 24,
+      // Mobile uses a fixed 58px bottom tab bar (.mob-tabbar, index.css) --
+      // bottom: 24 alone would sit this panel half-behind it.
+      bottom: isMobile ? 74 : 24,
       right: 24,
       width: minimised ? 220 : 280,
       background: "#0f172a",
-      border: "1.5px solid rgba(99,102,241,0.3)",
-      borderRadius: 14,
-      fontFamily: "'Inter', sans-serif",
-      zIndex: 1000,
+      border: "1.5px solid rgba(59,130,246,0.3)",
+      borderRadius: 16,
+      fontFamily: "'DM Sans', sans-serif",
+      // Below .mob-sheet-overlay (z-index: 500, index.css) so opening any
+      // mobile bottom sheet (workspace switcher, More views, profile) isn't
+      // partially hidden behind this -- still above ordinary page content.
+      zIndex: 490,
       boxShadow: "0 20px 60px rgba(0,0,0,0.6)",
       overflow: "hidden",
     }}>
@@ -70,14 +76,14 @@ export default function OnboardingChecklist({ onViewChange }) {
           alignItems: "center",
           gap: 10,
           cursor: "pointer",
-          background: "rgba(99,102,241,0.08)",
+          background: "rgba(59,130,246,0.08)",
           borderBottom: minimised ? "none" : "1px solid rgba(255,255,255,0.06)",
         }}
       >
         <div style={{
           width: 28, height: 28,
           borderRadius: "50%",
-          background: allDone ? "#34d399" : "conic-gradient(#6366f1 0%, #6366f1 " + progress + "%, #1e293b " + progress + "%)",
+          background: allDone ? "#34d399" : "conic-gradient(#3B82F6 0%, #3B82F6 " + progress + "%, #1e293b " + progress + "%)",
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 12, color: "#fff", fontWeight: 700, flexShrink: 0,
         }}>

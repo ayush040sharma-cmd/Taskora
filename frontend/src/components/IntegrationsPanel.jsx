@@ -107,7 +107,7 @@ function IntegrationCard({ type, meta, current, workspaceId, onSaved }) {
   };
 
   return (
-    <div className="integration-card" style={{ borderColor: open ? "#6366f1" : "#e2e8f0" }}>
+    <div className="integration-card" style={{ borderColor: open ? "var(--tk-accent, #3B82F6)" : "var(--border)" }}>
       <div className="integration-card-header" onClick={() => setOpen(v => !v)} style={{ cursor: "pointer" }}>
         <div className="integration-card-title">
           <span className="integration-icon">{meta.icon}</span>

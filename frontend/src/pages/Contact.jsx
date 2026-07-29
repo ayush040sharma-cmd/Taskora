@@ -1,16 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import Logo from "../components/Logo";
 
 function NavBar() {
   const navigate = useNavigate();
   return (
     <nav style={S.nav}>
       <div style={S.navInner}>
-        <div style={S.logoRow} onClick={() => navigate("/")}>
-          <div style={S.logoMark}>T</div>
-          <span style={S.logoText}>Taskora</span>
-          <span style={S.logoBadge}>AI</span>
-        </div>
+        <Logo iconSize={20} wordmarkSize={18} letterSpacing="-0.2px" style={S.logoRow} onClick={() => navigate("/")} />
         <div style={S.navLinks}>
           <a href="/#features" style={S.navLink}>Features</a>
           <a href="/#pricing" style={S.navLink}>Pricing</a>
@@ -74,22 +71,22 @@ export default function Contact() {
                 {
                   icon: "📧",
                   title: "General support",
-                  lines: ["support@taskora.app", "We reply within 24 hours"],
+                  lines: ["support@taskora.io", "We reply within 24 hours"],
                 },
                 {
                   icon: "💼",
                   title: "Enterprise & sales",
-                  lines: ["enterprise@taskora.app", "Custom plans for teams of 20+"],
+                  lines: ["enterprise@taskora.io", "Custom plans for teams of 20+"],
                 },
                 {
                   icon: "🐛",
                   title: "Bug reports",
-                  lines: ["bugs@taskora.app", "Or open a GitHub issue"],
+                  lines: ["bugs@taskora.io", "Or open a GitHub issue"],
                 },
                 {
                   icon: "🗞️",
                   title: "Press & media",
-                  lines: ["press@taskora.app", "Media kit available on request"],
+                  lines: ["press@taskora.io", "Media kit available on request"],
                 },
               ].map(c => (
                 <div key={c.title} style={S.contactItem}>
@@ -205,7 +202,7 @@ export default function Contact() {
               { q: "How does the AI work?", a: "Our AI engine analyzes workload data, task complexity, team capacity, historical patterns, and dependency signals to predict delays and recommend actions." },
               { q: "Can I import from Jira or Trello?", a: "Jira CSV import is available in the Enterprise plan. Trello import is on our roadmap. In the meantime, tasks can be bulk-created via the API." },
               { q: "Is my data private?", a: "Yes. We don't sell your data, don't train on it, and you can export or delete it at any time. Full details in our Privacy Policy." },
-              { q: "How do I report a bug?", a: "Email bugs@taskora.app or open an issue on GitHub. We treat security reports with highest priority and respond within 4 hours during business hours." },
+              { q: "How do I report a bug?", a: "Email bugs@taskora.io or open an issue on GitHub. We treat security reports with highest priority and respond within 4 hours during business hours." },
             ].map(f => (
               <div key={f.q} style={S.faqCard}>
                 <div style={S.faqQ}>{f.q}</div>
@@ -231,7 +228,7 @@ export default function Contact() {
 }
 
 const S = {
-  root: { fontFamily: "system-ui, -apple-system, sans-serif", color: "#0f172a", lineHeight: 1.6 },
+  root: { fontFamily: "var(--tk-font-body, 'DM Sans'), -apple-system, sans-serif", color: "#0f172a", lineHeight: 1.6 },
   nav: {
     position: "sticky", top: 0, zIndex: 100,
     background: "rgba(255,255,255,0.95)", backdropFilter: "blur(10px)",
@@ -244,32 +241,32 @@ const S = {
   logoRow: { display: "flex", alignItems: "center", gap: 8, cursor: "pointer", flexShrink: 0 },
   logoMark: {
     width: 32, height: 32, borderRadius: 8,
-    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+    background: "var(--tk-accent, #3B82F6)",
     display: "flex", alignItems: "center", justifyContent: "center",
     color: "#fff", fontWeight: 800, fontSize: 16,
   },
   logoText: { fontSize: 18, fontWeight: 800, color: "#0f172a" },
-  logoBadge: { fontSize: 10, fontWeight: 700, color: "#6366f1", background: "rgba(99,102,241,0.1)", borderRadius: 4, padding: "2px 5px" },
+  logoBadge: { fontSize: 10, fontWeight: 700, color: "var(--tk-accent, #3B82F6)", background: "rgba(59,130,246,0.1)", borderRadius: 4, padding: "2px 5px" },
   navLinks: { display: "flex", gap: 28, flex: 1 },
   navLink: { fontSize: 14, color: "#64748b", textDecoration: "none", fontWeight: 500 },
   navActions: { display: "flex", gap: 10 },
   ghostBtn: { padding: "8px 18px", background: "none", border: "1.5px solid #e2e8f0", borderRadius: 8, fontSize: 14, fontWeight: 600, color: "#374151", cursor: "pointer" },
-  primaryBtnSmall: { padding: "8px 18px", background: "linear-gradient(135deg, #6366f1, #8b5cf6)", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, color: "#fff", cursor: "pointer" },
+  primaryBtnSmall: { padding: "8px 18px", background: "var(--tk-accent, #3B82F6)", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, color: "#fff", cursor: "pointer" },
   hero: {
     padding: "80px 24px 64px", textAlign: "center",
-    background: "linear-gradient(135deg, #0f0c29 0%, #302b63 60%, #24243e 100%)",
+    background: "linear-gradient(135deg, #020617 0%, #0F172A 60%, #020617 100%)",
     position: "relative", overflow: "hidden",
   },
-  blob1: { position: "absolute", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(99,102,241,0.25) 0%, transparent 70%)", top: "-150px", left: "-100px", pointerEvents: "none" },
-  blob2: { position: "absolute", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(139,92,246,0.2) 0%, transparent 70%)", bottom: "-150px", right: "-100px", pointerEvents: "none" },
+  blob1: { position: "absolute", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(59,130,246,0.25) 0%, transparent 70%)", top: "-150px", left: "-100px", pointerEvents: "none" },
+  blob2: { position: "absolute", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(6,182,212,0.18) 0%, transparent 70%)", bottom: "-150px", right: "-100px", pointerEvents: "none" },
   heroContent: { position: "relative", zIndex: 1, maxWidth: 600, margin: "0 auto" },
-  eyebrow: { display: "inline-block", background: "rgba(99,102,241,0.2)", color: "#a5b4fc", borderRadius: 99, padding: "5px 16px", fontSize: 13, fontWeight: 600, marginBottom: 16 },
-  h1: { fontSize: "clamp(28px, 4vw, 44px)", fontWeight: 900, color: "#fff", margin: "0 0 16px", letterSpacing: "-1px" },
+  eyebrow: { display: "inline-block", background: "rgba(6,182,212,0.15)", color: "#06B6D4", borderRadius: 99, padding: "5px 16px", fontSize: 13, fontWeight: 600, marginBottom: 16 },
+  h1: { fontFamily: "var(--tk-font-display, 'Syne')", fontSize: "clamp(28px, 4vw, 44px)", fontWeight: 700, color: "#fff", margin: "0 0 16px", letterSpacing: "-1px" },
   heroPara: { fontSize: 16, color: "rgba(255,255,255,0.7)", maxWidth: 480, margin: "0 auto" },
   section: { padding: "72px 24px" },
   sectionInner: { maxWidth: 1100, margin: "0 auto" },
-  h2: { fontSize: "clamp(22px, 3vw, 32px)", fontWeight: 800, margin: "0 0 12px", letterSpacing: "-0.5px" },
-  para: { fontSize: 15, color: "#64748b", lineHeight: 1.8, marginBottom: 24 },
+  h2: { fontFamily: "var(--tk-font-display, 'Syne')", fontSize: "clamp(22px, 3vw, 32px)", fontWeight: 700, margin: "0 0 12px", letterSpacing: "-0.5px" },
+  para: { fontSize: 14, color: "#64748b", lineHeight: 1.8, marginBottom: 24 },
   grid: { display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: 64, alignItems: "start" },
   infoCol: {},
   contactItem: { display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 24 },
@@ -291,15 +288,15 @@ const S = {
   input: { padding: "10px 14px", border: "1.5px solid #e2e8f0", borderRadius: 8, fontSize: 14, color: "#0f172a", background: "#f8fafc", outline: "none", fontFamily: "inherit", boxSizing: "border-box" },
   select: { padding: "10px 14px", border: "1.5px solid #e2e8f0", borderRadius: 8, fontSize: 14, color: "#0f172a", background: "#f8fafc", outline: "none", fontFamily: "inherit" },
   textarea: { padding: "10px 14px", border: "1.5px solid #e2e8f0", borderRadius: 8, fontSize: 14, color: "#0f172a", background: "#f8fafc", outline: "none", fontFamily: "inherit", resize: "vertical" },
-  submitBtn: { padding: "13px", background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer" },
+  submitBtn: { padding: "13px", background: "var(--tk-accent, #3B82F6)", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: "pointer" },
   successCard: { background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: 16, padding: 40, textAlign: "center" },
   successIcon: { fontSize: 48, marginBottom: 16 },
-  successTitle: { fontSize: 22, fontWeight: 800, color: "#0f172a", margin: "0 0 8px" },
+  successTitle: { fontSize: 22, fontWeight: 700, color: "#0f172a", margin: "0 0 8px" },
   successSub: { fontSize: 14, color: "#64748b", marginBottom: 24 },
   sendAnotherBtn: { padding: "10px 24px", background: "#fff", border: "1.5px solid #bbf7d0", borderRadius: 8, fontSize: 14, fontWeight: 600, color: "#059669", cursor: "pointer" },
   faqGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20 },
   faqCard: { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 24 },
-  faqQ: { fontSize: 15, fontWeight: 700, color: "#0f172a", marginBottom: 8 },
+  faqQ: { fontSize: 14, fontWeight: 700, color: "#0f172a", marginBottom: 8 },
   faqA: { fontSize: 14, color: "#64748b", lineHeight: 1.7 },
   footer: { background: "#0f172a", padding: "20px 24px" },
   footerInner: { maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 },

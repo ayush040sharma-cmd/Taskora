@@ -13,7 +13,7 @@ from services.taskora_client import TaskoraClient
 
 logger = logging.getLogger(__name__)
 
-client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=settings.claude_timeout_seconds)
 
 
 SYSTEM_PROMPT = """You are Jarvis — the AI assistant for Taskora, a production SaaS task management platform.

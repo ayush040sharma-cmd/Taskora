@@ -9,18 +9,29 @@ const express = require("express");
 const router  = express.Router();
 const pool    = require("../db");
 const auth    = require("../middleware/auth");
+const { requireMinRole } = require("../middleware/rbac");
+const { requireFeature }  = require("../middleware/planEnforce");
+const { FEATURES }        = require("../config/licensing");
 const wl      = require("../services/workloadEngine");
 
 // ── POST /api/simulate/assign ────────────────────────────────────────────────
-// Body: { task_id, user_id, workspace_id, estimated_hours? }
-router.post("/assign", auth, async (req, res) => {
+// What-if simulation — manager+ only (mirrors MANAGER_ONLY_VIEWS simulation gate)
+router.post("/assign", auth, requireMinRole("manager"), requireFeature(FEATURES.SIMULATION), async (req, res) => {
   const { task_id, user_id, workspace_id, estimated_hours } = req.body;
   if (!task_id || !user_id || !workspace_id) {
     return res.status(400).json({ message: "task_id, user_id, workspace_id required" });
   }
   try {
-    // Fetch task
-    const taskR = await pool.query("SELECT * FROM tasks WHERE id=$1", [task_id]);
+    // Verify requesting user is a member or owner of this workspace
+    const accessR = await pool.query(
+      `SELECT 1 FROM workspaces WHERE id=$1 AND user_id=$2
+       UNION SELECT 1 FROM workspace_members WHERE workspace_id=$1 AND user_id=$2`,
+      [workspace_id, req.user.id]
+    );
+    if (!accessR.rows.length) return res.status(403).json({ message: "Access denied" });
+
+    // Fetch task — must belong to the given workspace
+    const taskR = await pool.query("SELECT * FROM tasks WHERE id=$1 AND workspace_id=$2", [task_id, workspace_id]);
     if (!taskR.rows.length) return res.status(404).json({ message: "Task not found" });
     const task = { ...taskR.rows[0], estimated_hours: estimated_hours || taskR.rows[0].estimated_hours };
 
@@ -58,11 +69,19 @@ router.post("/assign", auth, async (req, res) => {
 });
 
 // ── GET /api/simulate/suggest/:wsId/:taskId ───────────────────────────────────
-// Suggest best user(s) for a task based on availability + skills
-router.get("/suggest/:wsId/:taskId", auth, async (req, res) => {
+// AI suggestion for best assignee — manager+ only
+router.get("/suggest/:wsId/:taskId", auth, requireMinRole("manager"), requireFeature(FEATURES.SMART_ASSIGNMENT), async (req, res) => {
   const { wsId, taskId } = req.params;
   try {
-    const taskR = await pool.query("SELECT * FROM tasks WHERE id=$1", [taskId]);
+    // Verify requester is owner or member
+    const accessR = await pool.query(
+      `SELECT 1 FROM workspaces WHERE id=$1 AND user_id=$2
+       UNION SELECT 1 FROM workspace_members WHERE workspace_id=$1 AND user_id=$2`,
+      [wsId, req.user.id]
+    );
+    if (!accessR.rows.length) return res.status(403).json({ message: "Access denied" });
+
+    const taskR = await pool.query("SELECT * FROM tasks WHERE id=$1 AND workspace_id=$2", [taskId, wsId]);
     if (!taskR.rows.length) return res.status(404).json({ message: "Task not found" });
     const task = taskR.rows[0];
 

@@ -13,19 +13,34 @@ const express = require("express");
 const router  = express.Router();
 const pool    = require("../db");
 const auth    = require("../middleware/auth");
-const { requireMinRole } = require("../middleware/rbac");
 const wl = require("../services/workloadEngine");
 const { audit } = require("../services/auditService");
 
-// ── Helper: get or create capacity row ──────────────────────────────────────
+// requireMinRole checks the platform-wide users.role, which is the wrong
+// scope here -- a platform "manager" has no inherent relationship to an
+// arbitrary workspace, and a user who is a *workspace*-scoped manager
+// (workspace_members.role = 'manager') was being wrongly denied. Team
+// capacity routes are keyed by :wsId, so authorize against that workspace
+// specifically: its owner, or a workspace_members row with role='manager'.
+async function isWorkspaceManager(wsId, userId) {
+  const { rows } = await pool.query(
+    `SELECT 1 AS ok
+     WHERE EXISTS (SELECT 1 FROM workspaces WHERE id = $1 AND user_id = $2)
+        OR EXISTS (SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2 AND role = 'manager')`,
+    [wsId, userId]
+  );
+  return rows.length > 0;
+}
+
+// ── Helper: get or create capacity row (atomic upsert — no TOCTOU race) ─────
 async function getOrCreate(userId) {
-  const r = await pool.query("SELECT * FROM user_capacity WHERE user_id = $1", [userId]);
-  if (r.rows.length) return r.rows[0];
-  const ins = await pool.query(
-    "INSERT INTO user_capacity (user_id) VALUES ($1) RETURNING *",
+  const r = await pool.query(
+    `INSERT INTO user_capacity (user_id) VALUES ($1)
+     ON CONFLICT (user_id) DO UPDATE SET user_id = EXCLUDED.user_id
+     RETURNING *`,
     [userId]
   );
-  return ins.rows[0];
+  return r.rows[0];
 }
 
 // ── GET /api/capacity/me ─────────────────────────────────────────────────────
@@ -39,7 +54,7 @@ router.get("/me", auth, async (req, res) => {
       customer_facing_hours: 6,
       internal_hours:        2,
       travel_mode:           false,
-      travel_hours:          2,
+      travel_hours:          4,   // 4h = half day while travelling
       on_leave:              false,
       leave_start:           null,
       leave_end:             null,
@@ -56,7 +71,7 @@ router.get("/me", auth, async (req, res) => {
     // Return safe defaults so the UI still renders
     res.json({
       daily_hours: 8, customer_facing_hours: 6, internal_hours: 2,
-      travel_mode: false, travel_hours: 2, on_leave: false,
+      travel_mode: false, travel_hours: 4, on_leave: false,
       max_rfp: 1, max_proposals: 2, max_presentations: 2, max_upgrades: 2,
     });
   }
@@ -148,19 +163,25 @@ router.put("/leave", auth, async (req, res) => {
 
 // ── GET /api/capacity/team/:wsId ─────────────────────────────────────────────
 // Manager/Super Boss: see full team workload summary
-router.get("/team/:wsId", auth, requireMinRole("manager"), async (req, res) => {
+router.get("/team/:wsId", auth, async (req, res) => {
   const { wsId } = req.params;
   try {
-    // All members of this workspace
+    if (!(await isWorkspaceManager(wsId, req.user.id))) {
+      return res.status(403).json({ message: "Only this workspace's owner or manager can view team capacity" });
+    }
+    // All members + owner of this workspace (UNION so owner is never excluded)
     const members = await pool.query(
-      `SELECT u.id, u.name, u.email, u.role,
+      `SELECT DISTINCT u.id, u.name, u.email, u.role,
               uc.daily_hours, uc.customer_facing_hours, uc.internal_hours,
               uc.travel_mode, uc.travel_hours, uc.on_leave, uc.leave_start, uc.leave_end,
               uc.max_rfp, uc.max_proposals, uc.max_presentations, uc.max_upgrades
-       FROM workspace_members wm
-       JOIN users u ON u.id = wm.user_id
+       FROM (
+         SELECT wm.user_id FROM workspace_members wm WHERE wm.workspace_id = $1
+         UNION
+         SELECT w.user_id FROM workspaces w WHERE w.id = $1
+       ) AS combined
+       JOIN users u ON u.id = combined.user_id
        LEFT JOIN user_capacity uc ON uc.user_id = u.id
-       WHERE wm.workspace_id = $1
        ORDER BY u.name`,
       [wsId]
     );
@@ -197,11 +218,14 @@ router.get("/team/:wsId", auth, requireMinRole("manager"), async (req, res) => {
 
 // ── PUT /api/capacity/team/:wsId/:uid ────────────────────────────────────────
 // Manager: update a team member's capacity / leave / travel
-router.put("/team/:wsId/:uid", auth, requireMinRole("manager"), async (req, res) => {
+router.put("/team/:wsId/:uid", auth, async (req, res) => {
   const targetUid = parseInt(req.params.uid);
   const updates   = req.body;
 
   try {
+    if (!(await isWorkspaceManager(req.params.wsId, req.user.id))) {
+      return res.status(403).json({ message: "Only this workspace's owner or manager can update team capacity" });
+    }
     await getOrCreate(targetUid);
     const fields = [
       "daily_hours","customer_facing_hours","internal_hours",
@@ -239,16 +263,22 @@ router.put("/team/:wsId/:uid", auth, requireMinRole("manager"), async (req, res)
 
 // ── GET /api/capacity/predict/:wsId ─────────────────────────────────────────
 // AI future load prediction for team (next 14 working days)
-router.get("/predict/:wsId", auth, requireMinRole("manager"), async (req, res) => {
+router.get("/predict/:wsId", auth, async (req, res) => {
   const { wsId } = req.params;
   const days     = parseInt(req.query.days) || 14;
   try {
+    if (!(await isWorkspaceManager(wsId, req.user.id))) {
+      return res.status(403).json({ message: "Only this workspace's owner or manager can view capacity predictions" });
+    }
     const members = await pool.query(
-      `SELECT u.id, u.name, u.role, uc.*
-       FROM workspace_members wm
-       JOIN users u ON u.id = wm.user_id
-       LEFT JOIN user_capacity uc ON uc.user_id = u.id
-       WHERE wm.workspace_id = $1`,
+      `SELECT DISTINCT u.id, u.name, u.role, uc.*
+       FROM (
+         SELECT wm.user_id FROM workspace_members wm WHERE wm.workspace_id = $1
+         UNION
+         SELECT w.user_id FROM workspaces w WHERE w.id = $1
+       ) AS combined
+       JOIN users u ON u.id = combined.user_id
+       LEFT JOIN user_capacity uc ON uc.user_id = u.id`,
       [wsId]
     );
     const activeTasks = await pool.query(
@@ -268,6 +298,179 @@ router.get("/predict/:wsId", auth, requireMinRole("manager"), async (req, res) =
     }));
 
     res.json(predictions);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CAPACITY REQUESTS — leave/travel approval workflow for non-managers
+// Uses capacity_requests table (see migrations/add_capacity_requests.sql)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const { notifyOne } = require("../services/notificationService");
+
+// ── POST /api/capacity/requests ──────────────────────────────────────────────
+// Non-manager creates a leave or travel request → manager gets notified
+router.post("/requests", auth, async (req, res) => {
+  const { request_type, workspace_id, leave_start, leave_end, travel_hours, justification } = req.body;
+  if (!request_type || !workspace_id) {
+    return res.status(400).json({ message: "request_type and workspace_id are required" });
+  }
+
+  try {
+    // Find the manager of this workspace (owner or first manager-role member)
+    const managerQ = await pool.query(
+      `SELECT u.id, u.name FROM users u
+       JOIN workspaces w ON w.user_id = u.id
+       WHERE w.id = $1
+       UNION
+       SELECT u.id, u.name FROM users u
+       JOIN workspace_members wm ON wm.user_id = u.id
+       WHERE wm.workspace_id = $1 AND u.role IN ('manager','super_boss')
+       LIMIT 1`,
+      [workspace_id]
+    );
+    const manager = managerQ.rows[0];
+
+    // Insert the request record
+    const r = await pool.query(
+      `INSERT INTO capacity_requests
+         (user_id, workspace_id, manager_id, request_type, leave_start, leave_end, travel_hours, justification)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+       RETURNING *`,
+      [
+        req.user.id, workspace_id, manager?.id || null,
+        request_type,
+        leave_start || null, leave_end || null,
+        travel_hours || null,
+        justification || null,
+      ]
+    );
+
+    // Notify manager
+    if (manager?.id) {
+      await notifyOne(
+        manager.id,
+        "approval_pending",
+        `${request_type === "leave" ? "🏖️ Leave" : "✈️ Travel"} request from ${req.user.name}`,
+        `${req.user.name} has requested ${request_type} approval.`,
+        { capacity_request_id: r.rows[0].id, requester: req.user.name }
+      ).catch(() => {});
+    }
+
+    res.status(201).json(r.rows[0]);
+  } catch (err) {
+    // Gracefully handle missing table (migration not run yet)
+    if (err.code === "42P01") {
+      return res.status(202).json({ message: "Request noted (run capacity_requests migration to persist)" });
+    }
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ── GET /api/capacity/requests ───────────────────────────────────────────────
+// Manager: see all pending capacity requests for a workspace
+router.get("/requests", auth, async (req, res) => {
+  const { workspace_id } = req.query;
+  if (!workspace_id) return res.status(400).json({ message: "workspace_id required" });
+
+  try {
+    if (!(await isWorkspaceManager(workspace_id, req.user.id))) {
+      return res.status(403).json({ message: "Only this workspace's owner or manager can view capacity requests" });
+    }
+    const r = await pool.query(
+      `SELECT cr.*,
+              u.name AS requester_name, u.email AS requester_email, u.role AS requester_role
+       FROM capacity_requests cr
+       JOIN users u ON u.id = cr.user_id
+       WHERE cr.workspace_id = $1
+       ORDER BY cr.requested_at DESC`,
+      [workspace_id]
+    );
+    res.json(r.rows);
+  } catch (err) {
+    if (err.code === "42P01") return res.json([]);
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ── PUT /api/capacity/requests/:id/approve ───────────────────────────────────
+router.put("/requests/:id/approve", auth, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const reqR = await pool.query("SELECT * FROM capacity_requests WHERE id=$1", [id]);
+    if (!reqR.rows.length) return res.status(404).json({ message: "Request not found" });
+    const cr = reqR.rows[0];
+    if (!(await isWorkspaceManager(cr.workspace_id, req.user.id))) {
+      return res.status(403).json({ message: "Only this workspace's owner or manager can approve this request" });
+    }
+
+    // Apply the capacity change
+    await getOrCreate(cr.user_id);
+    if (cr.request_type === "leave") {
+      await pool.query(
+        "UPDATE user_capacity SET on_leave=true, leave_start=$1, leave_end=$2, updated_at=NOW() WHERE user_id=$3",
+        [cr.leave_start, cr.leave_end, cr.user_id]
+      );
+    } else if (cr.request_type === "travel") {
+      await pool.query(
+        "UPDATE user_capacity SET travel_mode=true, travel_hours=$1, updated_at=NOW() WHERE user_id=$2",
+        [cr.travel_hours || 4, cr.user_id]
+      );
+    }
+
+    // Mark request approved
+    const updated = await pool.query(
+      "UPDATE capacity_requests SET status='approved', manager_id=$1, resolved_at=NOW() WHERE id=$2 RETURNING *",
+      [req.user.id, id]
+    );
+
+    // Notify requester
+    await notifyOne(
+      cr.user_id,
+      "approval_resolved",
+      `${cr.request_type === "leave" ? "🏖️ Leave" : "✈️ Travel"} request approved`,
+      `Your ${cr.request_type} request has been approved by ${req.user.name}.`,
+      { capacity_request_id: cr.id }
+    ).catch(() => {});
+
+    res.json(updated.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ── PUT /api/capacity/requests/:id/reject ────────────────────────────────────
+router.put("/requests/:id/reject", auth, async (req, res) => {
+  const { id } = req.params;
+  const { rejection_reason } = req.body;
+  try {
+    const reqR = await pool.query("SELECT * FROM capacity_requests WHERE id=$1", [id]);
+    if (!reqR.rows.length) return res.status(404).json({ message: "Request not found" });
+    const cr = reqR.rows[0];
+    if (!(await isWorkspaceManager(cr.workspace_id, req.user.id))) {
+      return res.status(403).json({ message: "Only this workspace's owner or manager can reject this request" });
+    }
+
+    const updated = await pool.query(
+      "UPDATE capacity_requests SET status='rejected', rejection_reason=$1, manager_id=$2, resolved_at=NOW() WHERE id=$3 RETURNING *",
+      [rejection_reason || null, req.user.id, id]
+    );
+
+    await notifyOne(
+      cr.user_id,
+      "approval_resolved",
+      `${cr.request_type === "leave" ? "🏖️ Leave" : "✈️ Travel"} request rejected`,
+      `Your ${cr.request_type} request was rejected by ${req.user.name}. ${rejection_reason || ""}`,
+      { capacity_request_id: cr.id, rejected: true }
+    ).catch(() => {});
+
+    res.json(updated.rows[0]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });

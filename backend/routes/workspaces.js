@@ -3,12 +3,29 @@ const router = express.Router();
 const pool = require("../db");
 const auth = require("../middleware/auth");
 const { validate, schemas } = require("../utils/validate");
+const { enforceLimit } = require("../middleware/planEnforce");
+const { FEATURES }     = require("../config/licensing");
+const logger = require("../utils/logger");
+const { sendWorkspaceInvite, sendWorkspaceAddedNotification } = require("../services/emailService");
+
+const VALID_ACCESS_LEVELS = ["viewer", "editor", "full"];
+
+async function countOwnedWorkspaces(req) {
+  const { rows } = await pool.query("SELECT COUNT(*)::int AS c FROM workspaces WHERE user_id = $1", [req.user.id]);
+  return rows[0].c;
+}
 
 // GET /api/workspaces
+// Returns workspaces the user owns OR is a member of
 router.get("/", auth, async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT * FROM workspaces WHERE user_id = $1 ORDER BY created_at ASC",
+      `SELECT DISTINCT w.*,
+              CASE WHEN w.user_id = $1 THEN 'full' ELSE wm.access_level END AS my_access_level
+       FROM workspaces w
+       LEFT JOIN workspace_members wm ON wm.workspace_id = w.id AND wm.user_id = $1
+       WHERE w.user_id = $1 OR wm.user_id = $1
+       ORDER BY w.created_at ASC`,
       [req.user.id]
     );
     res.json(result.rows);
@@ -18,17 +35,172 @@ router.get("/", auth, async (req, res) => {
   }
 });
 
+const WORKSPACE_TEMPLATES = {
+  software: {
+    tasks: [
+      { title: "Set up project repository", status: "todo", priority: "high", type: "task" },
+      { title: "Define API contracts", status: "todo", priority: "high", type: "story" },
+      { title: "Write unit tests", status: "todo", priority: "medium", type: "task" },
+      { title: "Set up CI/CD pipeline", status: "todo", priority: "medium", type: "upgrade" },
+      { title: "Code review guidelines", status: "todo", priority: "low", type: "task" },
+    ],
+    teams: ["Engineering", "QA", "DevOps"],
+  },
+  marketing: {
+    tasks: [
+      { title: "Q3 campaign brief", status: "todo", priority: "high", type: "task" },
+      { title: "Content calendar planning", status: "todo", priority: "high", type: "story" },
+      { title: "Social media audit", status: "todo", priority: "medium", type: "task" },
+      { title: "Blog posts backlog", status: "todo", priority: "low", type: "task" },
+    ],
+    teams: ["Content", "Design", "Paid Media"],
+  },
+  presales: {
+    tasks: [
+      { title: "Customer discovery call", status: "todo", priority: "high", type: "task" },
+      { title: "RFP response template", status: "todo", priority: "high", type: "rfp" },
+      { title: "Demo environment setup", status: "todo", priority: "medium", type: "upgrade" },
+      { title: "Competitive analysis", status: "todo", priority: "medium", type: "task" },
+    ],
+    teams: ["Sales", "Solutions Engineering", "Marketing"],
+  },
+  recruitment: {
+    tasks: [
+      { title: "Define job requirements", status: "todo", priority: "high", type: "task" },
+      { title: "Post job openings", status: "todo", priority: "high", type: "task" },
+      { title: "Screen applications", status: "todo", priority: "medium", type: "task" },
+      { title: "Schedule interviews", status: "todo", priority: "medium", type: "task" },
+      { title: "Offer letter templates", status: "todo", priority: "low", type: "task" },
+    ],
+    teams: ["HR", "Hiring Managers", "Legal"],
+  },
+  compliance: {
+    tasks: [
+      { title: "Data privacy audit", status: "todo", priority: "high", type: "task" },
+      { title: "Policy documentation", status: "todo", priority: "high", type: "task" },
+      { title: "Security controls review", status: "todo", priority: "high", type: "upgrade" },
+      { title: "Employee compliance training", status: "todo", priority: "medium", type: "task" },
+    ],
+    teams: ["Legal", "Security", "Operations"],
+  },
+  research: {
+    tasks: [
+      { title: "Literature review", status: "todo", priority: "high", type: "task" },
+      { title: "Research hypothesis definition", status: "todo", priority: "high", type: "story" },
+      { title: "Data collection plan", status: "todo", priority: "medium", type: "task" },
+      { title: "Analysis methodology", status: "todo", priority: "medium", type: "task" },
+      { title: "Final report structure", status: "todo", priority: "low", type: "task" },
+    ],
+    teams: ["Research", "Data", "Editorial"],
+  },
+};
+
+async function seedWorkspaceTemplate(workspaceId, userId, template) {
+  const tmpl = WORKSPACE_TEMPLATES[template];
+  if (!tmpl) return;
+
+  try {
+    // Create starter tasks
+    for (let i = 0; i < tmpl.tasks.length; i++) {
+      const t = tmpl.tasks[i];
+      await pool.query(
+        `INSERT INTO tasks (title, status, priority, type, workspace_id, position)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [t.title, t.status, t.priority, t.type, workspaceId, i + 1]
+      ).catch(() => {});
+    }
+
+    // Create default teams
+    for (const teamName of tmpl.teams) {
+      const teamRes = await pool.query(
+        `INSERT INTO teams (workspace_id, name, created_by)
+         VALUES ($1,$2,$3) ON CONFLICT DO NOTHING RETURNING id`,
+        [workspaceId, teamName, userId]
+      ).catch(() => ({ rows: [] }));
+
+      const teamId = teamRes.rows[0]?.id;
+      if (teamId) {
+        await pool.query(
+          `INSERT INTO team_members (team_id, user_id, role, added_by)
+           VALUES ($1,$2,'lead',$2) ON CONFLICT DO NOTHING`,
+          [teamId, userId]
+        ).catch(() => {});
+      }
+    }
+  } catch (err) {
+    console.error("Template seed error:", err.message);
+  }
+}
+
+// Adds one invitee at workspace-creation time: existing Taskora users are
+// added directly with the chosen access_level, others get an invite email
+// carrying that access_level so it applies once they accept. Best-effort --
+// one bad invite (typo'd email, etc.) shouldn't fail the whole workspace
+// creation, so callers should catch per-invite.
+async function inviteAtCreation({ workspaceId, workspaceName, inviterId, inviterName, email, accessLevel }) {
+  const userRow = await pool.query("SELECT id, name, email FROM users WHERE email ILIKE $1", [email.trim()]);
+
+  if (!userRow.rows.length) {
+    const inviteR = await pool.query(
+      `INSERT INTO workspace_invites (workspace_id, created_by, role, access_level)
+       VALUES ($1,$2,'member',$3) RETURNING token`,
+      [workspaceId, inviterId, accessLevel]
+    );
+    await sendWorkspaceInvite({
+      toEmail: email.trim(), inviterName, workspaceName, role: "member", inviteToken: inviteR.rows[0].token,
+    }).catch(() => {});
+    return;
+  }
+
+  const target = userRow.rows[0];
+  if (target.id === inviterId) return;
+
+  await pool.query(
+    `INSERT INTO workspace_members (workspace_id, user_id, role, invited_by, access_level)
+     VALUES ($1,$2,'member',$3,$4) ON CONFLICT DO NOTHING`,
+    [workspaceId, target.id, inviterId, accessLevel]
+  );
+  await pool.query(`INSERT INTO user_capacity (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`, [target.id]);
+  sendWorkspaceAddedNotification({
+    toEmail: target.email, toName: target.name, inviterName, workspaceName, workspaceId,
+  }).catch(() => {});
+}
+
 // POST /api/workspaces
-router.post("/", auth, validate(schemas.createWorkspace), async (req, res) => {
-  const { name } = req.body;
+router.post("/", auth, validate(schemas.createWorkspace), enforceLimit(FEATURES.PROJECT_LIMIT, countOwnedWorkspaces), async (req, res) => {
+  const { name, template, workspace_type = "team", invites } = req.body;
   if (!name) return res.status(400).json({ message: "Workspace name is required" });
+  if (!["individual", "team"].includes(workspace_type)) {
+    return res.status(400).json({ message: "workspace_type must be 'individual' or 'team'" });
+  }
 
   try {
     const result = await pool.query(
-      "INSERT INTO workspaces (name, user_id) VALUES ($1, $2) RETURNING *",
-      [name, req.user.id]
+      "INSERT INTO workspaces (name, user_id, template, workspace_type) VALUES ($1, $2, $3, $4) RETURNING *",
+      [name, req.user.id, template || null, workspace_type]
     );
-    res.status(201).json(result.rows[0]);
+    const workspace = result.rows[0];
+
+    // Seed template tasks and teams (non-blocking)
+    if (template && WORKSPACE_TEMPLATES[template]) {
+      seedWorkspaceTemplate(workspace.id, req.user.id, template).catch(() => {});
+    }
+
+    // Team workspaces can optionally invite people right away, each with
+    // their own access level. Best-effort per invite.
+    if (workspace_type === "team" && Array.isArray(invites)) {
+      for (const inv of invites) {
+        if (!inv?.email) continue;
+        const accessLevel = VALID_ACCESS_LEVELS.includes(inv.access_level) ? inv.access_level : "editor";
+        inviteAtCreation({
+          workspaceId: workspace.id, workspaceName: workspace.name,
+          inviterId: req.user.id, inviterName: req.user.name,
+          email: inv.email, accessLevel,
+        }).catch(err => console.error("Invite at creation failed:", err.message));
+      }
+    }
+
+    res.status(201).json(workspace);
   } catch (err) {
     console.error("Create workspace error:", err);
     res.status(500).json({ message: "Server error" });
@@ -39,9 +211,12 @@ router.post("/", auth, validate(schemas.createWorkspace), async (req, res) => {
 router.get("/:id/summary", auth, async (req, res) => {
   const wsId = req.params.id;
   try {
-    // Verify ownership
     const ws = await pool.query(
-      "SELECT id, name FROM workspaces WHERE id = $1 AND user_id = $2",
+      `SELECT w.id, w.name FROM workspaces w
+       WHERE w.id = $1
+         AND (w.user_id = $2 OR EXISTS (
+           SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2
+         ))`,
       [wsId, req.user.id]
     );
     if (ws.rows.length === 0) return res.status(404).json({ message: "Workspace not found" });
@@ -119,14 +294,28 @@ router.get("/:id/summary", auth, async (req, res) => {
   }
 });
 
-// PUT /api/workspaces/:id — rename workspace
+// PUT /api/workspaces/:id — rename workspace and/or change its type
 router.put("/:id", auth, async (req, res) => {
-  const { name } = req.body;
-  if (!name?.trim()) return res.status(400).json({ message: "Name is required" });
+  const { name, workspace_type } = req.body;
+  if (name !== undefined && !name.trim()) return res.status(400).json({ message: "Name is required" });
+  if (workspace_type !== undefined && !["individual", "team"].includes(workspace_type)) {
+    return res.status(400).json({ message: "workspace_type must be 'individual' or 'team'" });
+  }
+  if (name === undefined && workspace_type === undefined) {
+    return res.status(400).json({ message: "Nothing to update" });
+  }
+
   try {
+    const setClauses = [];
+    const params = [];
+    let idx = 1;
+    if (name !== undefined) { setClauses.push(`name = $${idx++}`); params.push(name.trim()); }
+    if (workspace_type !== undefined) { setClauses.push(`workspace_type = $${idx++}`); params.push(workspace_type); }
+    params.push(req.params.id, req.user.id);
+
     const result = await pool.query(
-      "UPDATE workspaces SET name = $1 WHERE id = $2 AND user_id = $3 RETURNING *",
-      [name.trim(), req.params.id, req.user.id]
+      `UPDATE workspaces SET ${setClauses.join(", ")} WHERE id = $${idx++} AND user_id = $${idx} RETURNING *`,
+      params
     );
     if (!result.rows.length) return res.status(404).json({ message: "Workspace not found" });
     res.json(result.rows[0]);
@@ -138,17 +327,33 @@ router.put("/:id", auth, async (req, res) => {
 // DELETE /api/workspaces/:id
 router.delete("/:id", auth, async (req, res) => {
   try {
+    // Split the "doesn't exist" and "exists but you can't delete it" cases so
+    // the error message can actually say which one happened, instead of a
+    // single ambiguous "not found" covering both.
+    //
+    // Allowed to delete: the owner, or a workspace_members row with the
+    // per-workspace role "manager" (workspace_members.role -- distinct from
+    // the platform-wide users.role). Plain "member"/"viewer" workspace roles
+    // still cannot delete.
     const check = await pool.query(
-      "SELECT id FROM workspaces WHERE id = $1 AND user_id = $2",
+      `SELECT w.id, w.user_id,
+              (SELECT role FROM workspace_members WHERE workspace_id = w.id AND user_id = $2) AS member_role
+       FROM workspaces w WHERE w.id = $1`,
       [req.params.id, req.user.id]
     );
     if (check.rows.length === 0) {
       return res.status(404).json({ message: "Workspace not found" });
     }
+    const ws = check.rows[0];
+    const canDelete = ws.user_id === req.user.id || ws.member_role === "manager";
+    if (!canDelete) {
+      return res.status(403).json({ message: "Only the workspace owner or a workspace manager can delete this workspace" });
+    }
 
     await pool.query("DELETE FROM workspaces WHERE id = $1", [req.params.id]);
     res.json({ message: "Workspace deleted" });
   } catch (err) {
+    logger.error(`Delete workspace error: ${err.message}`, { workspaceId: req.params.id, userId: req.user.id, stack: err.stack });
     res.status(500).json({ message: "Server error" });
   }
 });

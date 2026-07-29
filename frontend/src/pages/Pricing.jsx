@@ -9,7 +9,7 @@ const PLANS = [
   {
     id: "free",
     title: "Free",
-    price: "₹0",
+    price: "$0",
     period: "forever",
     description: "For individuals getting started with personal task tracking.",
     features: [
@@ -25,7 +25,7 @@ const PLANS = [
   {
     id: "pro",
     title: "Pro",
-    price: "₹699",
+    price: "$7",
     period: "/month",
     description: "For growing teams that need unlimited projects and sprint planning.",
     badge: "Most popular",
@@ -44,7 +44,7 @@ const PLANS = [
   {
     id: "enterprise",
     title: "Enterprise",
-    price: "₹2,499",
+    price: "$25",
     period: "/month",
     description: "For organisations that need AI, integrations, and unlimited scale.",
     features: [
@@ -65,6 +65,12 @@ export default function Pricing() {
   const navigate = useNavigate();
   const [showTable, setShowTable] = useState(false);
 
+  // Admin accounts have full access — redirect away from pricing
+  if (user?.is_admin) {
+    navigate("/dashboard");
+    return null;
+  }
+
   function handleCta(plan) {
     if (!user) {
       navigate("/login");
@@ -82,7 +88,7 @@ export default function Pricing() {
     <div style={{
       minHeight: "100vh",
       background: "linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)",
-      fontFamily: "'Inter', sans-serif",
+      fontFamily: "'DM Sans', sans-serif",
       color: "#f1f5f9",
       padding: "60px 24px 80px",
     }}>
@@ -98,14 +104,14 @@ export default function Pricing() {
           >
             ← {user ? "Back to dashboard" : "Back to home"}
           </button>
-          <h1 style={{ fontSize: 40, fontWeight: 800, margin: "0 0 12px" }}>
+          <h1 style={{ fontFamily: "var(--tk-font-display, 'Syne')", fontSize: 40, fontWeight: 700, margin: "0 0 12px" }}>
             Simple,{" "}
-            <span style={{ background: "linear-gradient(90deg,#6366f1,#8b5cf6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            <span style={{ background: "linear-gradient(90deg,#3B82F6,#60a5fa)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
               transparent
             </span>{" "}
             pricing
           </h1>
-          <p style={{ color: "#94a3b8", fontSize: 17, maxWidth: 520, margin: "0 auto" }}>
+          <p style={{ color: "#94a3b8", fontSize: 14, maxWidth: 520, margin: "0 auto" }}>
             Start free, upgrade when your team grows. No hidden fees, cancel anytime.
           </p>
 
@@ -115,12 +121,12 @@ export default function Pricing() {
               alignItems: "center",
               gap: 8,
               marginTop: 18,
-              background: "rgba(99,102,241,0.1)",
-              border: "1px solid rgba(99,102,241,0.2)",
+              background: "rgba(59,130,246,0.1)",
+              border: "1px solid rgba(59,130,246,0.2)",
               borderRadius: 20,
               padding: "6px 16px",
               fontSize: 13,
-              color: "#a5b4fc",
+              color: "#06B6D4",
             }}>
               Current plan: <strong style={{ textTransform: "capitalize" }}>{user.plan}</strong>
             </div>
@@ -161,7 +167,7 @@ export default function Pricing() {
           <div style={{
             background: "rgba(255,255,255,0.03)",
             border: "1px solid rgba(255,255,255,0.07)",
-            borderRadius: 14,
+            borderRadius: 16,
             overflow: "hidden",
           }}>
             <FeatureTable highlight={user?.plan === "enterprise" ? "ent" : "pro"} />
@@ -170,7 +176,7 @@ export default function Pricing() {
 
         {/* FAQ footer */}
         <div style={{ textAlign: "center", marginTop: 48, color: "#475569", fontSize: 13 }}>
-          All prices in INR (₹) · GST applicable · Secure payment via Razorpay
+          All prices in USD · Secure payment via Razorpay
         </div>
       </div>
     </div>

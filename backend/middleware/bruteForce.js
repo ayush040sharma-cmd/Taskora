@@ -6,6 +6,7 @@
  * AND written to blocked_ips via alertService.
  */
 const alertService = require("../services/alertService");
+const pool = require("../db");
 
 const MAX_ATTEMPTS = 5;
 const WINDOW_MS    = 15 * 60 * 1000;  // 15 min rolling window
@@ -32,10 +33,20 @@ const bruteForce = {
    */
   middleware: async (req, res, next) => {
     const ip  = req.headers["x-forwarded-for"]?.split(",")[0].trim() || req.ip;
+    if (ip === "::1" || ip === "127.0.0.1" || ip === "localhost") return next();
     const now = Date.now();
     const rec = store.get(ip);
 
     if (rec?.blockedUntil && now < rec.blockedUntil) {
+      // Admin users bypass the block regardless of IP
+      if (req.body?.email) {
+        try {
+          const { rows } = await pool.query(
+            "SELECT is_admin FROM users WHERE email = $1", [req.body.email]
+          );
+          if (rows[0]?.is_admin) return next();
+        } catch {}
+      }
       const secsLeft = Math.ceil((rec.blockedUntil - now) / 1000);
       await alertService.logEvent({
         ip, method: req.method, url: req.originalUrl,
@@ -55,6 +66,7 @@ const bruteForce = {
    * Call this when a login FAILS (wrong password / unknown user).
    */
   recordFailure: async (ip, url, userAgent) => {
+    if (ip === "::1" || ip === "127.0.0.1" || ip === "localhost") return;
     const now = Date.now();
     let rec   = store.get(ip) || { count: 0, firstAt: now };
 

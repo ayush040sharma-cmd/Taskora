@@ -2,8 +2,9 @@ const express = require("express");
 const router = express.Router();
 const axios = require("axios");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const pool = require("../db");
-const { setAuthCookie } = require("../utils/cookies");
+const { setAuthCookie, setOAuthStateCookie, clearOAuthStateCookie } = require("../utils/cookies");
 
 const GOOGLE_CLIENT_ID     = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
@@ -23,6 +24,14 @@ router.get("/google", (req, res) => {
   const callbackURL = `${process.env.BACKEND_URL || "http://localhost:3001"}/api/auth/google/callback`;
   const scope = "openid email profile";
 
+  // CSRF protection: a random value only this server issued, stored in an
+  // httpOnly cookie and echoed back by Google on the callback. Without this,
+  // an attacker can trick a victim into completing an OAuth flow with the
+  // attacker's own authorization code (login CSRF) -- previously there was
+  // no state parameter here at all.
+  const state = crypto.randomBytes(24).toString("hex");
+  setOAuthStateCookie(res, state);
+
   const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   url.searchParams.set("client_id", GOOGLE_CLIENT_ID);
   url.searchParams.set("redirect_uri", callbackURL);
@@ -30,16 +39,24 @@ router.get("/google", (req, res) => {
   url.searchParams.set("scope", scope);
   url.searchParams.set("access_type", "offline");
   url.searchParams.set("prompt", "select_account");
+  url.searchParams.set("state", state);
 
   res.redirect(url.toString());
 });
 
 // GET /api/auth/google/callback  — exchange code → tokens → user
 router.get("/google/callback", async (req, res) => {
-  const { code, error } = req.query;
+  const { code, error, state } = req.query;
+  const expectedState = req.cookies?.taskora_oauth_state;
+  clearOAuthStateCookie(res); // single-use regardless of outcome
 
   if (error || !code) {
     return failRedirect(res, "Google sign-in was cancelled or failed.");
+  }
+
+  if (!state || !expectedState || state !== expectedState) {
+    console.error("Google OAuth error: state mismatch (possible CSRF attempt)");
+    return failRedirect(res, "Google sign-in failed — please try again.");
   }
 
   try {

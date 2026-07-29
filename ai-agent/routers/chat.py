@@ -5,6 +5,7 @@ from models.requests import ChatRequest
 from models.responses import ChatResponse
 from services.claude_client import run_agent
 from services.memory import short_term, LongTermMemory
+from firewall.rules import detect_prompt_injection
 from db.session import get_db
 import logging
 
@@ -25,6 +26,16 @@ async def chat(req: ChatRequest, db: AsyncSession = Depends(get_db)):
     if not history:
         history = await ltm.load_history(session_id, limit=15)
 
+    # Heuristic-only signal, never a block -- see firewall/rules.py's
+    # detect_prompt_injection docstring for why this can't be a hard
+    # boundary. Logged for audit visibility; the request proceeds either way.
+    injection_signals = detect_prompt_injection(req.message)
+    if injection_signals:
+        logger.warning(
+            "Possible prompt injection pattern in chat message",
+            extra={"session_id": session_id, "patterns_matched": len(injection_signals)},
+        )
+
     # Build messages for Claude
     messages = history + [{"role": "user", "content": req.message}]
 
@@ -35,8 +46,8 @@ async def chat(req: ChatRequest, db: AsyncSession = Depends(get_db)):
             workspace_id=req.workspace_id,
         )
     except Exception as e:
-        logger.error(f"Chat agent error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Chat agent error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Chat failed. Please try again.")
 
     # Persist to memory
     short_term.append_message(session_id, "user", req.message)
